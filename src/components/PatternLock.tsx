@@ -45,7 +45,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     }
   }, []);
   
-  const handlePointTouchStart = (id: number) => {
+  const handlePointStart = (id: number) => {
     if (selectedPattern.includes(id)) return;
     
     setIsDrawing(true);
@@ -58,6 +58,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       )
     );
   };
+
+  const handlePointMouseDown = (id: number) => {
+    handlePointStart(id);
+  };
+  
+  const handlePointTouchStart = (id: number) => {
+    handlePointStart(id);
+  };
   
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isDrawing || !containerRef.current) return;
@@ -67,16 +75,34 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     const x = touch.clientX - containerRect.left;
     const y = touch.clientY - containerRect.top;
     
-    // Check if touch position is over any point
+    checkPointSelection(x, y);
+    updateTempLine(x, y);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDrawing || !containerRef.current) return;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - containerRect.left;
+    const y = e.clientY - containerRect.top;
+    
+    checkPointSelection(x, y);
+    updateTempLine(x, y);
+  };
+
+  const checkPointSelection = (x: number, y: number) => {
+    // Check if position is over any point
     points.forEach(point => {
       const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
       
-      // If touch is over a point and that point is not already selected
+      // If over a point and that point is not already selected
       if (distance < 20 && !selectedPattern.includes(point.id)) {
-        handlePointTouchStart(point.id);
+        handlePointStart(point.id);
       }
     });
-    
+  };
+
+  const updateTempLine = (x: number, y: number) => {
     // Update line positions
     if (linesRef.current && currentPoint !== null) {
       const currentPointObj = points.find(p => p.id === currentPoint);
@@ -86,7 +112,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     }
   };
   
-  const handleTouchEnd = () => {
+  const handleEnd = () => {
     if (selectedPattern.length >= 4) {
       onPatternComplete(selectedPattern);
     }
@@ -103,6 +129,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         linesRef.current.innerHTML = '';
       }
     }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
   };
   
   const updateLineToPosition = (fromX: number, fromY: number, toX: number, toY: number) => {
@@ -171,9 +205,12 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       <h2 className="text-2xl font-bold mb-8">Desbloquear App</h2>
       <div 
         ref={containerRef} 
-        className="relative w-[320px] h-[320px] touch-none"
+        className="relative w-[320px] h-[320px] touch-none cursor-pointer"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         {/* Lines container */}
         <div ref={linesRef} className="absolute inset-0"></div>
@@ -190,10 +227,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
               top: point.y - 8,
             }}
             onTouchStart={() => handlePointTouchStart(point.id)}
+            onMouseDown={() => handlePointMouseDown(point.id)}
           />
         ))}
       </div>
       <p className="mt-8 text-gray-500">Dibuja tu patrón para acceder</p>
+      <div className="mt-4">
+        <p className="text-sm text-gray-400">Patrón de ejemplo: 1 → 5 → 9 → 6</p>
+      </div>
     </div>
   );
 };
