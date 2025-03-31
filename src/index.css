@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,4 +99,53 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.calculator-button {
+  @apply flex items-center justify-center text-2xl font-medium rounded-lg transition-colors;
+}
+
+.calculator-button:active {
+  @apply opacity-80;
+}
+
+.pattern-point {
+  @apply w-4 h-4 rounded-full border-2 border-gray-400 transition-all duration-200;
+}
+
+.pattern-point.active {
+  @apply bg-blue-500 border-blue-500;
+}
+
+.pattern-point.selected {
+  @apply bg-green-500 border-green-500;
+}
+
+.pattern-line {
+  @apply absolute bg-blue-500 rounded-full transition-all duration-200;
+  height: 2px;
+  transform-origin: left center;
+}
+
+.message-bubble {
+  @apply rounded-2xl p-3 max-w-[80%];
+}
+
+.message-bubble.sent {
+  @apply bg-messenger-bubble-sent text-white ml-auto;
+  border-bottom-right-radius: 0;
+}
+
+.message-bubble.received {
+  @apply bg-messenger-bubble-received text-gray-800;
+  border-bottom-left-radius: 0;
+}
+
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
 }
