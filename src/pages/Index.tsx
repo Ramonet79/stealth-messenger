@@ -8,6 +8,17 @@ import { toast } from '@/components/ui/use-toast';
 import { useToast } from '@/hooks/use-toast';
 import type { AppTheme } from '@/components/ThemeSelector';
 
+// Componentes para cada tema
+import WeatherApp from '@/components/ThemeApps/WeatherApp';
+import RadarApp from '@/components/ThemeApps/RadarApp';
+import BrowserApp from '@/components/ThemeApps/BrowserApp';
+import NotesApp from '@/components/ThemeApps/NotesApp';
+import FitnessApp from '@/components/ThemeApps/FitnessApp';
+import ScannerApp from '@/components/ThemeApps/ScannerApp';
+import ConverterApp from '@/components/ThemeApps/ConverterApp';
+import FlashlightApp from '@/components/ThemeApps/FlashlightApp';
+import CalendarApp from '@/components/ThemeApps/CalendarApp';
+
 // Correct pattern for authentication
 const CORRECT_PATTERN = [1, 5, 9, 6];
 
@@ -71,6 +82,34 @@ const Index = () => {
     });
   };
 
+  // Renderizar el componente de camuflaje según el tema seleccionado
+  const renderCamouflageApp = () => {
+    switch (appTheme) {
+      case 'calculator':
+        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'weather':
+        return <WeatherApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'radar':
+        return <RadarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'browser':
+        return <BrowserApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'notes':
+        return <NotesApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'fitness':
+        return <FitnessApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'scanner':
+        return <ScannerApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'converter':
+        return <ConverterApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'flashlight':
+        return <FlashlightApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      case 'calendar':
+        return <CalendarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+      default:
+        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {isAuthenticated ? (
@@ -89,10 +128,7 @@ const Index = () => {
         </>
       ) : (
         <div className="flex-1">
-          <Calculator 
-            onSettingsClick={handleSettingsClick} 
-            hasUnreadMessages={hasUnreadMessages}
-          />
+          {renderCamouflageApp()}
         </div>
       )}
       
