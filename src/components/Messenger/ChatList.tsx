@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -30,8 +30,9 @@ const ChatList: React.FC<ChatListProps> = ({
           <button 
             onClick={onBack}
             className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
+            aria-label="Cerrar sesión"
           >
-            <ArrowLeft size={20} />
+            <LogOut size={20} />
           </button>
           <h1 className="text-lg font-bold">Mensajes</h1>
         </div>
