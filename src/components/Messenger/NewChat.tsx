@@ -1,23 +1,23 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Search, UserRound } from 'lucide-react';
+import { ArrowLeft, UserRound } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NewChatProps {
-  onCreateChat: (phone: string, name: string) => void;
+  onCreateChat: (username: string, name: string) => void;
   onCancel: () => void;
 }
 
 const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
-  const [phone, setPhone] = useState('');
+  const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [step, setStep] = useState(1);
   const { t } = useLanguage();
 
-  const handleSubmitPhone = (e: React.FormEvent) => {
+  const handleSubmitUsername = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.trim()) {
+    if (username.trim()) {
       setStep(2);
     }
   };
@@ -25,7 +25,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
   const handleSubmitName = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onCreateChat(phone, name);
+      onCreateChat(username, name);
     }
   };
 
@@ -45,29 +45,29 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
 
       <div className="flex-1 p-6">
         {step === 1 ? (
-          <form onSubmit={handleSubmitPhone} className="space-y-6">
+          <form onSubmit={handleSubmitUsername} className="space-y-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                {t('phone_number')}
+                {t('username')}
               </label>
               <div className="relative">
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder={t('phone_placeholder')}
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder={t('username_placeholder')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
                   required
                 />
               </div>
               <p className="text-xs text-gray-500">
-                Introduce el número de teléfono completo con prefijo internacional
+                {t('enter_username_description')}
               </p>
             </div>
             <Button 
               type="submit"
               className="w-full bg-messenger-primary hover:bg-messenger-secondary"
-              disabled={!phone.trim()}
+              disabled={!username.trim()}
             >
               {t('continue')}
             </Button>
