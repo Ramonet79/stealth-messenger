@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Contact {
   id: string;
@@ -29,6 +30,8 @@ const ChatList: React.FC<ChatListProps> = ({
   hasPendingRequests,
   onBack 
 }) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="flex flex-col h-full bg-messenger-background">
       <div className="flex items-center justify-between p-4 border-b">
@@ -73,15 +76,15 @@ const ChatList: React.FC<ChatListProps> = ({
         {contacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6">
             <UserPlus size={48} className="mb-4 text-gray-400" />
-            <p className="text-center">No tienes conversaciones</p>
+            <p className="text-center">{t('no_conversations')}</p>
             <p className="text-sm text-center text-gray-400 mt-2">
-              Comparte tu nombre de usuario con personas de confianza para iniciar conversaciones
+              {t('share_username')}
             </p>
             <button 
               onClick={onNewChat}
               className="mt-4 px-4 py-2 bg-messenger-primary text-white rounded-lg hover:bg-messenger-secondary transition-colors"
             >
-              Nuevo mensaje
+              {t('new_message')}
             </button>
           </div>
         ) : (

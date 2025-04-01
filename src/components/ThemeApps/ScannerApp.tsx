@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
-import { Settings, Upload, Camera, Image, Scan } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Settings, Upload, Camera, Image, Scan, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ScannerAppProps {
   onSettingsClick: () => void;
@@ -11,15 +12,54 @@ interface ScannerAppProps {
 const ScannerApp: React.FC<ScannerAppProps> = ({ onSettingsClick, hasUnreadMessages = false }) => {
   const [activeTab, setActiveTab] = useState<'scan'|'gallery'>('scan');
   const [scanning, setScanning] = useState(false);
+  const [scannedDocuments, setScannedDocuments] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
 
+  // Función para simular el escaneo de documentos
   const handleScan = () => {
     setScanning(true);
     
     // Simular escaneo
     setTimeout(() => {
+      // Crear una imagen simulada con timestamp para hacerla única
+      const timestamp = new Date().getTime();
+      const mockDocument = `document-${timestamp}.jpg`;
+      
+      setScannedDocuments(prev => [mockDocument, ...prev]);
       setScanning(false);
+      
+      // Auto cambiar a la galería cuando hay documentos
+      if (scannedDocuments.length === 0) {
+        setActiveTab('gallery');
+      }
     }, 2000);
+  };
+  
+  // Manejador para abrir el selector de archivos
+  const handleBrowseFiles = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  // Manejador para subir archivos seleccionados
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Crear URLs para los archivos seleccionados
+      const newDocuments = Array.from(files).map(file => URL.createObjectURL(file));
+      setScannedDocuments(prev => [...newDocuments, ...prev]);
+      
+      // Cambiar a la galería
+      setActiveTab('gallery');
+    }
+  };
+  
+  // Eliminar documento de la galería
+  const handleDeleteDocument = (index: number) => {
+    setScannedDocuments(docs => docs.filter((_, i) => i !== index));
   };
 
   return (
@@ -68,19 +108,19 @@ const ScannerApp: React.FC<ScannerAppProps> = ({ onSettingsClick, hasUnreadMessa
               {scanning ? (
                 <div className="animate-pulse flex flex-col items-center">
                   <Scan className="h-16 w-16 text-gray-400 animate-bounce" />
-                  <p className="mt-4 text-gray-500">Escaneando...</p>
+                  <p className="mt-4 text-gray-500">{t('scanning')}</p>
                 </div>
               ) : (
                 <>
                   <Camera className="h-16 w-16 text-gray-400" />
                   <p className="mt-4 text-gray-500">
-                    {isMobile ? "Pulse para escanear" : "Haga clic para escanear un documento"}
+                    {isMobile ? t('tap_scan') : t('click_scan')}
                   </p>
                   <button 
                     onClick={handleScan}
                     className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    Escanear ahora
+                    {t('scan_now')}
                   </button>
                 </>
               )}
@@ -88,35 +128,77 @@ const ScannerApp: React.FC<ScannerAppProps> = ({ onSettingsClick, hasUnreadMessa
             
             <div className="mt-4">
               <p className="text-sm text-gray-500 text-center">
-                Formatos soportados: PDF, JPG, PNG
+                {t('supported_formats')}
               </p>
             </div>
           </div>
         ) : (
           <div className="flex flex-col h-full">
-            <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center bg-gray-50">
-              <Upload className="h-16 w-16 text-gray-400" />
-              <p className="mt-4 text-gray-500">
-                Arrastre y suelte documentos o
-              </p>
-              <button 
-                className="mt-4 bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Explorar archivos
-              </button>
-            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*, application/pdf" 
+              onChange={handleFileUpload}
+              multiple
+            />
             
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="aspect-square bg-gray-200 rounded-md flex items-center justify-center">
-                <p className="text-gray-500 text-xs">Vacío</p>
+            {scannedDocuments.length === 0 ? (
+              <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center bg-gray-50">
+                <Upload className="h-16 w-16 text-gray-400" />
+                <p className="mt-4 text-gray-500">
+                  Arrastre y suelte documentos o
+                </p>
+                <button 
+                  onClick={handleBrowseFiles}
+                  className="mt-4 bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  {t('browse_files')}
+                </button>
               </div>
-              <div className="aspect-square bg-gray-200 rounded-md flex items-center justify-center">
-                <p className="text-gray-500 text-xs">Vacío</p>
+            ) : (
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {scannedDocuments.map((doc, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square bg-gray-100 rounded-md overflow-hidden border border-gray-200">
+                      {doc.endsWith('.pdf') ? (
+                        <div className="h-full flex items-center justify-center">
+                          <p className="text-gray-500">PDF</p>
+                        </div>
+                      ) : (
+                        <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+                          {doc.startsWith('document-') ? (
+                            <p className="text-xs text-gray-500">Documento escaneado</p>
+                          ) : (
+                            <img 
+                              src={doc} 
+                              alt={`Document ${index}`} 
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'placeholder.svg';
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteDocument(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+                <div 
+                  onClick={handleBrowseFiles}
+                  className="aspect-square bg-gray-100 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                >
+                  <Upload size={24} className="text-gray-400" />
+                </div>
               </div>
-              <div className="aspect-square bg-gray-200 rounded-md flex items-center justify-center">
-                <p className="text-gray-500 text-xs">Vacío</p>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

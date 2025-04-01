@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, UserRound } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NewChatProps {
   onCreateChat: (phone: string, name: string) => void;
@@ -12,6 +13,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [step, setStep] = useState(1);
+  const { t } = useLanguage();
 
   const handleSubmitPhone = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h2 className="font-medium">Nuevo mensaje</h2>
+          <h2 className="font-medium">{t('new_message')}</h2>
         </div>
       </div>
 
@@ -46,14 +48,14 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
           <form onSubmit={handleSubmitPhone} className="space-y-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Número de teléfono
+                {t('phone_number')}
               </label>
               <div className="relative">
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Introduce el número"
+                  placeholder={t('phone_placeholder')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
                   required
                 />
@@ -67,7 +69,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
               className="w-full bg-messenger-primary hover:bg-messenger-secondary"
               disabled={!phone.trim()}
             >
-              Continuar
+              {t('continue')}
             </Button>
           </form>
         ) : (
@@ -80,13 +82,13 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
             
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Nombre de contacto
+                {t('contact_name')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Introduce un nombre"
+                placeholder={t('name_placeholder')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
                 required
               />
@@ -99,14 +101,14 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
                 variant="outline"
                 className="flex-1"
               >
-                Atrás
+                {t('back')}
               </Button>
               <Button 
                 type="submit"
                 className="flex-1 bg-messenger-primary hover:bg-messenger-secondary"
                 disabled={!name.trim()}
               >
-                Guardar
+                {t('save')}
               </Button>
             </div>
           </form>
