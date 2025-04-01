@@ -13,7 +13,7 @@ interface Point {
 }
 
 interface PatternLockProps {
-  onPatternComplete: (pattern: number[]) => void;
+  onPatternComplete: (pattern: number[]) => boolean; // Changed to return boolean
 }
 
 const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
@@ -167,7 +167,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     if (isLocked) return;
 
     if (selectedPattern.length >= 4) {
-      // Verificar el patrón
+      // Verificar el patrón - corregido el problema de verificación de booleano
       const isCorrect = onPatternComplete(selectedPattern);
 
       // Si el patrón es incorrecto
@@ -197,6 +197,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       } else {
         // Si el patrón es correcto, resetear los intentos fallidos
         setFailedAttempts(0);
+        // No mostramos la notificación de éxito según lo solicitado
       }
     }
     

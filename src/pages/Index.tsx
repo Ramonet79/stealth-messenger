@@ -74,11 +74,6 @@ const Index = () => {
       setHasUnreadMessages(false);
       return true; // Patrón correcto
     } else {
-      toast({
-        variant: "destructive",
-        title: "Patrón incorrecto",
-        description: "Por favor, inténtalo de nuevo",
-      });
       return false; // Patrón incorrecto
     }
   };
