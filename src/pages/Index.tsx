@@ -28,8 +28,25 @@ const Index = () => {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(true);
   const [appTheme, setAppTheme] = useState<AppTheme>('calculator');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [language, setLanguage] = useState<string>('es-ES'); // Default language
   
   const { toast } = useToast();
+  
+  // Detect system language on first load
+  useEffect(() => {
+    const systemLanguage = navigator.language;
+    const supportedLanguages = [
+      'es-ES', 'en-US', 'en-GB', 'fr', 'it', 'de', 
+      'es-419', 'es-MX', 'nl', 'fi', 'ar', 'zh', 'hi'
+    ];
+    
+    if (supportedLanguages.includes(systemLanguage)) {
+      setLanguage(systemLanguage);
+    } else {
+      // If not supported, default to English (US)
+      setLanguage('en-US');
+    }
+  }, []);
   
   // For demo purpose, simulate a new message after some time
   useEffect(() => {
@@ -58,7 +75,7 @@ const Index = () => {
       setHasUnreadMessages(false);
       toast({
         title: "Autenticación exitosa",
-        description: "Bienvenido a la aplicación de mensajería",
+        description: "Bienvenido a dScrt",
       });
     } else {
       toast({
