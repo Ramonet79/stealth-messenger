@@ -1,5 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface Point {
   id: number;
@@ -17,9 +21,18 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   const [selectedPattern, setSelectedPattern] = useState<number[]>([]);
   const [currentPoint, setCurrentPoint] = useState<number | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockEndTime, setLockEndTime] = useState<Date | null>(null);
+  const [showLockoutDialog, setShowLockoutDialog] = useState(false);
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [remainingTime, setRemainingTime] = useState('');
   
   const containerRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const mockUserEmail = "usuario@ejemplo.com"; // En una implementación real, esto vendría de la base de datos
   
   // Initialize points
   useEffect(() => {
@@ -44,9 +57,31 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       setPoints(initialPoints);
     }
   }, []);
+
+  // Check if we should unlock based on time
+  useEffect(() => {
+    if (isLocked && lockEndTime) {
+      const timer = setInterval(() => {
+        const now = new Date();
+        if (now >= lockEndTime) {
+          setIsLocked(false);
+          setLockEndTime(null);
+          clearInterval(timer);
+        } else {
+          // Calculate remaining time
+          const diff = Math.floor((lockEndTime.getTime() - now.getTime()) / 1000);
+          const minutes = Math.floor(diff / 60);
+          const seconds = diff % 60;
+          setRemainingTime(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+        }
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [isLocked, lockEndTime]);
   
   const handlePointStart = (id: number) => {
-    if (selectedPattern.includes(id)) return;
+    if (selectedPattern.includes(id) || isLocked) return;
     
     setIsDrawing(true);
     setCurrentPoint(id);
@@ -68,7 +103,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   };
   
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isDrawing || !containerRef.current) return;
+    if (!isDrawing || !containerRef.current || isLocked) return;
     
     const containerRect = containerRef.current.getBoundingClientRect();
     const touch = e.touches[0];
@@ -80,7 +115,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !containerRef.current) return;
+    if (!isDrawing || !containerRef.current || isLocked) return;
     
     const containerRect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - containerRect.left;
@@ -111,10 +146,58 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       }
     }
   };
+
+  const sendRecoveryEmail = () => {
+    // En una implementación real, enviaríamos un email desde el backend
+    // Generamos un código de 4 dígitos aleatorio
+    const recoveryPattern = Array.from({ length: 4 }, () => Math.floor(Math.random() * 9) + 1);
+    console.log("Patrón de recuperación generado:", recoveryPattern.join(''));
+    
+    // Aquí simularíamos el envío con supabase o un servicio de email
+    toast({
+      title: "Código de recuperación enviado",
+      description: `Se ha enviado un código a ${mockUserEmail}`,
+      variant: "default",
+    });
+    
+    setShowRecoveryDialog(false);
+  };
   
   const handleEnd = () => {
+    if (isLocked) return;
+
     if (selectedPattern.length >= 4) {
-      onPatternComplete(selectedPattern);
+      // Verificar el patrón
+      const isCorrect = onPatternComplete(selectedPattern);
+
+      // Si el patrón es incorrecto
+      if (!isCorrect) {
+        const newFailedAttempts = failedAttempts + 1;
+        setFailedAttempts(newFailedAttempts);
+        
+        if (newFailedAttempts >= 3) {
+          // Si es el segundo bloque de 3 intentos fallidos
+          if (newFailedAttempts >= 6) {
+            setShowRecoveryDialog(true);
+          } else {
+            // Primer bloque de 3 intentos fallidos, bloquear por 5 minutos
+            const lockEndTime = new Date();
+            lockEndTime.setMinutes(lockEndTime.getMinutes() + 5);
+            setLockEndTime(lockEndTime);
+            setIsLocked(true);
+            setShowLockoutDialog(true);
+          }
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Patrón incorrecto",
+          description: "Por favor, inténtalo de nuevo",
+        });
+      } else {
+        // Si el patrón es correcto, resetear los intentos fallidos
+        setFailedAttempts(0);
+      }
     }
     
     // Reset after a short delay
@@ -203,9 +286,19 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gray-100">
       <h2 className="text-2xl font-bold mb-8">Desbloquear App</h2>
+      
+      {isLocked && (
+        <Alert className="mb-4 max-w-md">
+          <AlertDescription>
+            La entrada está bloqueada por demasiados intentos fallidos. 
+            Tiempo restante: {remainingTime}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div 
         ref={containerRef} 
-        className="relative w-[320px] h-[320px] touch-none cursor-pointer"
+        className={`relative w-[320px] h-[320px] touch-none cursor-pointer ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseMove={handleMouseMove}
@@ -235,6 +328,40 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       <div className="mt-4">
         <p className="text-sm text-gray-400">Patrón de ejemplo: 1 → 5 → 9 → 6</p>
       </div>
+
+      {/* Diálogo de bloqueo temporal */}
+      <Dialog open={showLockoutDialog} onOpenChange={setShowLockoutDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cuenta temporalmente bloqueada</DialogTitle>
+            <DialogDescription>
+              Has excedido el número máximo de intentos fallidos. Por seguridad, 
+              la autenticación se ha bloqueado durante 5 minutos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowLockoutDialog(false)}>Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de recuperación por email */}
+      <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Envío de patrón de recuperación</DialogTitle>
+            <DialogDescription>
+              Has excedido el número máximo de intentos permitidos. 
+              Enviaremos un código de recuperación a tu correo electrónico registrado:
+              <p className="font-medium mt-2">{mockUserEmail}</p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShowRecoveryDialog(false)}>Cancelar</Button>
+            <Button onClick={sendRecoveryEmail}>Enviar código</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

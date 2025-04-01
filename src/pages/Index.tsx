@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Calculator from '@/components/Calculator';
 import PatternLock from '@/components/PatternLock';
@@ -73,16 +72,14 @@ const Index = () => {
       setShowPatternLock(false);
       setIsAuthenticated(true);
       setHasUnreadMessages(false);
-      toast({
-        title: "Autenticación exitosa",
-        description: "Bienvenido a dScrt",
-      });
+      return true; // Patrón correcto
     } else {
       toast({
         variant: "destructive",
         title: "Patrón incorrecto",
         description: "Por favor, inténtalo de nuevo",
       });
+      return false; // Patrón incorrecto
     }
   };
   
