@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -22,7 +21,6 @@ const Auth = () => {
   const { user, loading, signIn, signUp, sendPasswordResetEmail } = useSupabaseAuth();
   const { toast } = useToast();
 
-  // Si el usuario está autenticado, redirigir a la página principal
   if (user && !isCreatePattern) {
     return <Navigate to="/" />;
   }
@@ -55,7 +53,7 @@ const Auth = () => {
     }
   };
 
-  const handlePatternCreate = async (pattern: number[]) => {
+  const handlePatternCreate = async (pattern: number[]): Promise<boolean> => {
     if (step === 1) {
       setNewPattern(pattern);
       setStep(2);

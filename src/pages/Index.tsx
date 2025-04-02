@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -76,7 +75,7 @@ const Index = () => {
     setShowPatternLock(true);
   };
   
-  const handlePatternComplete = async (pattern: number[]) => {
+  const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
     // Verificar patrón con Supabase o usar el patrón predeterminado
     let isCorrect = false;
     

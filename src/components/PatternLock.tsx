@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,7 +14,7 @@ interface Point {
 }
 
 interface PatternLockProps {
-  onPatternComplete: (pattern: number[]) => boolean; // Changed to return boolean
+  onPatternComplete: (pattern: number[]) => Promise<boolean> | boolean;
 }
 
 const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
@@ -35,10 +34,8 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
 
-  // Email del usuario autenticado o email de ejemplo
   const userEmail = user?.email || "usuario@ejemplo.com";
   
-  // Initialize points
   useEffect(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.clientWidth;
@@ -62,7 +59,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     }
   }, []);
 
-  // Check if we should unlock based on time
   useEffect(() => {
     if (isLocked && lockEndTime) {
       const timer = setInterval(() => {
@@ -72,7 +68,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
           setLockEndTime(null);
           clearInterval(timer);
         } else {
-          // Calculate remaining time
           const diff = Math.floor((lockEndTime.getTime() - now.getTime()) / 1000);
           const minutes = Math.floor(diff / 60);
           const seconds = diff % 60;
@@ -130,11 +125,9 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   };
 
   const checkPointSelection = (x: number, y: number) => {
-    // Check if position is over any point
     points.forEach(point => {
       const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
       
-      // If over a point and that point is not already selected
       if (distance < 20 && !selectedPattern.includes(point.id)) {
         handlePointStart(point.id);
       }
@@ -142,7 +135,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   };
 
   const updateTempLine = (x: number, y: number) => {
-    // Update line positions
     if (linesRef.current && currentPoint !== null) {
       const currentPointObj = points.find(p => p.id === currentPoint);
       if (currentPointObj) {
@@ -153,10 +145,8 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
 
   const sendRecoveryEmail = async () => {
     if (user) {
-      // En una implementación real, usaríamos Supabase para enviar un email de recuperación
       try {
-        await patternService.savePattern(user.id, [1, 2, 3, 4]); // Reset to simple pattern
-        
+        await patternService.savePattern(user.id, [1, 2, 3, 4]);
         toast({
           title: "Patrón restablecido",
           description: "Se ha enviado un correo con instrucciones para restablecer tu patrón",
@@ -170,7 +160,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         });
       }
     } else {
-      // Para modo demostración sin autenticación
       toast({
         title: "Código de recuperación enviado",
         description: `Se ha enviado un código a ${userEmail}`,
@@ -188,7 +177,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       let isCorrect = false;
 
       if (user) {
-        // Verificar con el patrón guardado en Supabase si el usuario está autenticado
         try {
           isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
         } catch (error) {
@@ -196,21 +184,23 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
           isCorrect = false;
         }
       } else {
-        // Verificar con onPatternComplete (que puede estar usando el patrón por defecto)
-        isCorrect = onPatternComplete(selectedPattern);
+        try {
+          const result = await Promise.resolve(onPatternComplete(selectedPattern));
+          isCorrect = result;
+        } catch (error) {
+          console.error("Error en onPatternComplete:", error);
+          isCorrect = false;
+        }
       }
 
-      // Si el patrón es incorrecto
       if (!isCorrect) {
         const newFailedAttempts = failedAttempts + 1;
         setFailedAttempts(newFailedAttempts);
         
         if (newFailedAttempts >= 3) {
-          // Si es el segundo bloque de 3 intentos fallidos
           if (newFailedAttempts >= 6) {
             setShowRecoveryDialog(true);
           } else {
-            // Primer bloque de 3 intentos fallidos, bloquear por 5 minutos
             const lockEndTime = new Date();
             lockEndTime.setMinutes(lockEndTime.getMinutes() + 5);
             setLockEndTime(lockEndTime);
@@ -225,19 +215,16 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
           description: "Por favor, inténtalo de nuevo",
         });
       } else {
-        // Si el patrón es correcto, resetear los intentos fallidos
         setFailedAttempts(0);
       }
     }
     
-    // Reset after a short delay
     setTimeout(() => {
       setIsDrawing(false);
       setCurrentPoint(null);
       setSelectedPattern([]);
       setPoints(prevPoints => prevPoints.map(point => ({ ...point, selected: false })));
       
-      // Clear lines
       if (linesRef.current) {
         linesRef.current.innerHTML = '';
       }
@@ -255,17 +242,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   const updateLineToPosition = (fromX: number, fromY: number, toX: number, toY: number) => {
     if (!linesRef.current) return;
     
-    // Remove any temporary lines
     const tempLine = linesRef.current.querySelector('.temp-line');
     if (tempLine) {
       tempLine.remove();
     }
     
-    // Calculate line parameters
     const length = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
     const angle = Math.atan2(toY - fromY, toX - fromX) * (180 / Math.PI);
     
-    // Create new line element
     const line = document.createElement('div');
     line.className = 'pattern-line temp-line';
     line.style.width = `${length}px`;
@@ -300,14 +284,11 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     linesRef.current.appendChild(line);
   };
   
-  // Draw lines between selected points
   useEffect(() => {
     if (!linesRef.current) return;
     
-    // Clear existing lines
     linesRef.current.innerHTML = '';
     
-    // Draw lines between points
     for (let i = 0; i < selectedPattern.length - 1; i++) {
       drawLineBetweenPoints(selectedPattern[i], selectedPattern[i + 1]);
     }
@@ -335,10 +316,8 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Lines container */}
         <div ref={linesRef} className="absolute inset-0"></div>
         
-        {/* Points */}
         {points.map((point) => (
           <div
             key={point.id}
@@ -356,7 +335,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       </div>
       <p className="mt-8 text-gray-500">Dibuja tu patrón para acceder</p>
 
-      {/* Diálogo de bloqueo temporal */}
       <Dialog open={showLockoutDialog} onOpenChange={setShowLockoutDialog}>
         <DialogContent>
           <DialogHeader>
@@ -372,7 +350,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de recuperación por email */}
       <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
         <DialogContent>
           <DialogHeader>
