@@ -1,1 +1,5 @@
+
 project_id = "edacjnnrjmnftlhdcjab"
+
+[functions.recovery]
+verify_jwt = false

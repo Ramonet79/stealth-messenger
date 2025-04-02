@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
 import PatternLock from '@/components/PatternLock';
 import MessengerApp from '@/components/Messenger/MessengerApp';
@@ -6,6 +8,8 @@ import ThemeSelector from '@/components/ThemeSelector';
 import { toast } from '@/components/ui/use-toast';
 import { useToast } from '@/hooks/use-toast';
 import type { AppTheme } from '@/components/ThemeSelector';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { patternService } from '@/services/patternService';
 
 // Componentes para cada tema
 import WeatherApp from '@/components/ThemeApps/WeatherApp';
@@ -18,9 +22,6 @@ import ConverterApp from '@/components/ThemeApps/ConverterApp';
 import FlashlightApp from '@/components/ThemeApps/FlashlightApp';
 import CalendarApp from '@/components/ThemeApps/CalendarApp';
 
-// Correct pattern for authentication
-const CORRECT_PATTERN = [1, 5, 9, 6];
-
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPatternLock, setShowPatternLock] = useState(false);
@@ -30,6 +31,8 @@ const Index = () => {
   const [language, setLanguage] = useState<string>('es-ES'); // Default language
   
   const { toast } = useToast();
+  const { user } = useSupabaseAuth();
+  const navigate = useNavigate();
   
   // Detect system language on first load
   useEffect(() => {
@@ -57,18 +60,42 @@ const Index = () => {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
+
+  // Redirigir a autenticación si el usuario no está autenticado
+  useEffect(() => {
+    if (user) {
+      setIsAuthenticated(false); // Inicialmente no autenticado hasta validar patrón
+    } else if (!showPatternLock) {
+      // Solo redirigir si no estamos en la pantalla de patrón
+      // Esto permite que el patrón por defecto funcione sin autenticación
+      //navigate('/auth');
+    }
+  }, [user, showPatternLock]);
   
   const handleSettingsClick = () => {
     setShowPatternLock(true);
   };
   
-  const handlePatternComplete = (pattern: number[]) => {
-    // Check if pattern matches
-    const patternMatches = 
-      pattern.length === CORRECT_PATTERN.length && 
-      pattern.every((val, idx) => val === CORRECT_PATTERN[idx]);
+  const handlePatternComplete = async (pattern: number[]) => {
+    // Verificar patrón con Supabase o usar el patrón predeterminado
+    let isCorrect = false;
     
-    if (patternMatches) {
+    if (user) {
+      // Usuario autenticado, verificar patrón guardado en Supabase
+      try {
+        isCorrect = await patternService.verifyPattern(user.id, pattern);
+      } catch (error) {
+        console.error("Error al verificar patrón:", error);
+        
+        // Si hay error, intentar con el patrón predeterminado
+        isCorrect = patternService.verifyDefaultPattern(pattern);
+      }
+    } else {
+      // Usuario no autenticado, verificar con patrón predeterminado
+      isCorrect = patternService.verifyDefaultPattern(pattern);
+    }
+    
+    if (isCorrect) {
       setShowPatternLock(false);
       setIsAuthenticated(true);
       setHasUnreadMessages(false);

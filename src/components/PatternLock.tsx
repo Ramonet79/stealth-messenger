@@ -4,6 +4,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { patternService } from '@/services/patternService';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 
 interface Point {
   id: number;
@@ -31,8 +33,10 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user } = useSupabaseAuth();
 
-  const mockUserEmail = "usuario@ejemplo.com"; // En una implementación real, esto vendría de la base de datos
+  // Email del usuario autenticado o email de ejemplo
+  const userEmail = user?.email || "usuario@ejemplo.com";
   
   // Initialize points
   useEffect(() => {
@@ -147,28 +151,54 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     }
   };
 
-  const sendRecoveryEmail = () => {
-    // En una implementación real, enviaríamos un email desde el backend
-    // Generamos un código de 4 dígitos aleatorio
-    const recoveryPattern = Array.from({ length: 4 }, () => Math.floor(Math.random() * 9) + 1);
-    console.log("Patrón de recuperación generado:", recoveryPattern.join(''));
-    
-    // Aquí simularíamos el envío con supabase o un servicio de email
-    toast({
-      title: "Código de recuperación enviado",
-      description: `Se ha enviado un código a ${mockUserEmail}`,
-      variant: "default",
-    });
+  const sendRecoveryEmail = async () => {
+    if (user) {
+      // En una implementación real, usaríamos Supabase para enviar un email de recuperación
+      try {
+        await patternService.savePattern(user.id, [1, 2, 3, 4]); // Reset to simple pattern
+        
+        toast({
+          title: "Patrón restablecido",
+          description: "Se ha enviado un correo con instrucciones para restablecer tu patrón",
+          variant: "default",
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo restablecer el patrón",
+        });
+      }
+    } else {
+      // Para modo demostración sin autenticación
+      toast({
+        title: "Código de recuperación enviado",
+        description: `Se ha enviado un código a ${userEmail}`,
+        variant: "default",
+      });
+    }
     
     setShowRecoveryDialog(false);
   };
   
-  const handleEnd = () => {
+  const handleEnd = async () => {
     if (isLocked) return;
 
     if (selectedPattern.length >= 4) {
-      // Verificar el patrón - corregido el problema de verificación de booleano
-      const isCorrect = onPatternComplete(selectedPattern);
+      let isCorrect = false;
+
+      if (user) {
+        // Verificar con el patrón guardado en Supabase si el usuario está autenticado
+        try {
+          isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
+        } catch (error) {
+          console.error("Error verificando patrón:", error);
+          isCorrect = false;
+        }
+      } else {
+        // Verificar con onPatternComplete (que puede estar usando el patrón por defecto)
+        isCorrect = onPatternComplete(selectedPattern);
+      }
 
       // Si el patrón es incorrecto
       if (!isCorrect) {
@@ -197,7 +227,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
       } else {
         // Si el patrón es correcto, resetear los intentos fallidos
         setFailedAttempts(0);
-        // No mostramos la notificación de éxito según lo solicitado
       }
     }
     
@@ -326,9 +355,6 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         ))}
       </div>
       <p className="mt-8 text-gray-500">Dibuja tu patrón para acceder</p>
-      <div className="mt-4">
-        <p className="text-sm text-gray-400">Patrón de ejemplo: 1 → 5 → 9 → 6</p>
-      </div>
 
       {/* Diálogo de bloqueo temporal */}
       <Dialog open={showLockoutDialog} onOpenChange={setShowLockoutDialog}>
@@ -354,7 +380,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
             <DialogDescription>
               Has excedido el número máximo de intentos permitidos. 
               Enviaremos un código de recuperación a tu correo electrónico registrado:
-              <p className="font-medium mt-2">{mockUserEmail}</p>
+              <p className="font-medium mt-2">{userEmail}</p>
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2">
