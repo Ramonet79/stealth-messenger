@@ -1,11 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
 import NewChat from './NewChat';
 import RequestsList from './RequestsList';
-import { Settings, UserPlus } from 'lucide-react';
+import ContactDirectory from './ContactDirectory';
+import ContactLockPattern from './ContactLockPattern';
+import { Settings, UserPlus, BookOpen } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import PatternLock from '@/components/PatternLock';
+import { patternService } from '@/services/patternService';
+import { useToast } from '@/hooks/use-toast';
 
 interface Contact {
   id: string;
@@ -14,6 +20,9 @@ interface Contact {
   lastMessage: string;
   timestamp: string;
   unread: boolean;
+  fullName?: string | null;
+  notes?: string | null;
+  hasCustomLock?: boolean;
 }
 
 interface Message {
@@ -34,7 +43,7 @@ interface Request {
   status: 'pending' | 'accepted' | 'rejected' | 'blocked';
 }
 
-export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings';
+export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' | 'directory' | 'contactLock';
 
 interface MessengerAppProps {
   onLogout: () => void;
@@ -129,22 +138,100 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
   const [view, setView] = useState<AppView>('list');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [username] = useState<string>('dscrt_user123');
+  const [showPatternLock, setShowPatternLock] = useState<boolean>(false);
+  const [contactsWithActiveLock, setContactsWithActiveLock] = useState<string[]>([]);
   
-  const handleSelectContact = (contactId: string) => {
-    setSelectedContactId(contactId);
-    setView('conversation');
+  const { user } = useSupabaseAuth();
+  const { toast } = useToast();
+
+  // Función para verificar cuales contactos tienen patrón activo
+  useEffect(() => {
+    const checkContactsWithLock = async () => {
+      if (!user) return;
+      
+      const activeLocksIds: string[] = [];
+      
+      for (const contact of contacts) {
+        try {
+          const hasLock = await patternService.contactHasActivePattern(user.id, contact.id);
+          if (hasLock) {
+            activeLocksIds.push(contact.id);
+          }
+        } catch (error) {
+          console.error("Error checking contact lock status:", error);
+        }
+      }
+      
+      setContactsWithActiveLock(activeLocksIds);
+      
+      // Actualizar el estado de los contactos con información de bloqueo
+      setContacts(contacts.map(contact => ({
+        ...contact,
+        hasCustomLock: activeLocksIds.includes(contact.id)
+      })));
+    };
     
-    // Mark messages as read
-    setContacts(contacts.map(contact => 
-      contact.id === contactId ? { ...contact, unread: false } : contact
-    ));
+    checkContactsWithLock();
+  }, [user]);
+  
+  const handleSelectContact = async (contactId: string) => {
+    // Verificar si el contacto tiene patrón de desbloqueo
+    if (user && contactsWithActiveLock.includes(contactId)) {
+      setSelectedContactId(contactId);
+      setShowPatternLock(true);
+    } else {
+      setSelectedContactId(contactId);
+      setView('conversation');
+      
+      // Mark messages as read
+      setContacts(contacts.map(contact => 
+        contact.id === contactId ? { ...contact, unread: false } : contact
+      ));
+      
+      // Update message status
+      setMessages(messages.map(message =>
+        message.contactId === contactId && !message.sent 
+          ? { ...message, status: 'read' } 
+          : message
+      ));
+    }
+  };
+  
+  const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
+    if (!user || !selectedContactId) return false;
     
-    // Update message status
-    setMessages(messages.map(message =>
-      message.contactId === contactId && !message.sent 
-        ? { ...message, status: 'read' } 
-        : message
-    ));
+    try {
+      const isValid = await patternService.verifyContactPattern(user.id, selectedContactId, pattern);
+      
+      if (isValid) {
+        setShowPatternLock(false);
+        setView('conversation');
+        
+        // Mark messages as read
+        setContacts(contacts.map(contact => 
+          contact.id === selectedContactId ? { ...contact, unread: false } : contact
+        ));
+        
+        // Update message status
+        setMessages(messages.map(message =>
+          message.contactId === selectedContactId && !message.sent 
+            ? { ...message, status: 'read' } 
+            : message
+        ));
+        
+        return true;
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Patrón incorrecto",
+          description: "El patrón introducido no es válido",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Error verifying pattern:", error);
+      return false;
+    }
   };
   
   const handleSendMessage = (text: string, type: 'text' | 'image' | 'audio' = 'text', mediaUrl?: string) => {
@@ -230,8 +317,61 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     ));
   };
   
+  const handleEditContact = (contactId: string, data: Partial<Contact>) => {
+    setContacts(contacts.map(contact =>
+      contact.id === contactId ? { ...contact, ...data } : contact
+    ));
+    
+    toast({
+      title: "Contacto actualizado",
+      description: "La información del contacto ha sido actualizada",
+    });
+  };
+  
+  const handleDeleteContact = (contactId: string) => {
+    setContacts(contacts.filter(contact => contact.id !== contactId));
+    
+    // También eliminar mensajes asociados a este contacto
+    setMessages(messages.filter(message => message.contactId !== contactId));
+    
+    toast({
+      title: "Contacto eliminado",
+      description: "El contacto ha sido eliminado de tu agenda",
+    });
+  };
+  
+  const handleSaveContactPattern = async (contactId: string, pattern: number[], enabled: boolean): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      const { error } = await patternService.saveContactPattern(user.id, contactId, pattern, enabled);
+      
+      if (error) {
+        console.error("Error saving contact pattern:", error);
+        return false;
+      }
+      
+      // Actualizar lista de contactos con bloqueo activo
+      if (enabled && !contactsWithActiveLock.includes(contactId)) {
+        setContactsWithActiveLock([...contactsWithActiveLock, contactId]);
+      } else if (!enabled && contactsWithActiveLock.includes(contactId)) {
+        setContactsWithActiveLock(contactsWithActiveLock.filter(id => id !== contactId));
+      }
+      
+      // Actualizar el estado del contacto
+      setContacts(contacts.map(contact =>
+        contact.id === contactId ? { ...contact, hasCustomLock: enabled } : contact
+      ));
+      
+      return true;
+    } catch (error) {
+      console.error("Error saving contact pattern:", error);
+      return false;
+    }
+  };
+  
   const handleBack = () => {
-    if (view === 'conversation' || view === 'new' || view === 'requests' || view === 'settings') {
+    if (view === 'conversation' || view === 'new' || view === 'requests' || view === 'directory' || view === 'contactLock') {
       setView('list');
       setSelectedContactId(null);
     } else {
@@ -259,6 +399,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
           onSelectContact={handleSelectContact}
           onNewChat={() => setView('new')}
           onShowRequests={() => setView('requests')}
+          onShowDirectory={() => setView('directory')}
           hasPendingRequests={hasPendingRequests}
           onBack={onLogout}
         />
@@ -267,9 +408,19 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
       {view === 'conversation' && selectedContact && (
         <ChatConversation 
           contactName={selectedContact.name}
+          contactId={selectedContact.id}
           messages={contactMessages}
           onSendMessage={handleSendMessage}
           onBack={handleBack}
+          onOpenContactSettings={(id) => {
+            setSelectedContactId(id);
+            setView('directory');
+          }}
+          onOpenContactLock={(id) => {
+            setSelectedContactId(id);
+            setView('contactLock');
+          }}
+          hasCustomLock={selectedContact.hasCustomLock}
         />
       )}
       
@@ -288,6 +439,36 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
           onBlock={handleBlockRequest}
           onBack={() => setView('list')}
         />
+      )}
+      
+      {view === 'directory' && (
+        <ContactDirectory 
+          contacts={contacts}
+          onBack={handleBack}
+          onEditContact={handleEditContact}
+          onDeleteContact={handleDeleteContact}
+        />
+      )}
+      
+      {view === 'contactLock' && selectedContact && (
+        <ContactLockPattern 
+          contactId={selectedContact.id}
+          contactName={selectedContact.name}
+          onSavePattern={handleSaveContactPattern}
+          onBack={handleBack}
+          isEnabled={selectedContact.hasCustomLock}
+        />
+      )}
+      
+      {showPatternLock && (
+        <div className="fixed inset-0 bg-white z-10">
+          <div className="flex flex-col items-center justify-center h-full">
+            <h2 className="text-xl font-medium mb-8">
+              Introduce el patrón para desbloquear el chat con {selectedContact?.name}
+            </h2>
+            <PatternLock onPatternComplete={handlePatternComplete} />
+          </div>
+        </div>
       )}
     </div>
   );

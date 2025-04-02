@@ -7,6 +7,14 @@ export interface PatternData {
   pattern: string;
 }
 
+export interface ContactPatternData {
+  id?: string;
+  user_id: string;
+  contact_id: string;
+  pattern: string;
+  is_enabled: boolean;
+}
+
 export const patternService = {
   // Guardar o actualizar un patrón de desbloqueo
   savePattern: async (userId: string, pattern: number[]): Promise<{data: any, error: any}> => {
@@ -83,5 +91,113 @@ export const patternService = {
     }
     
     return DEFAULT_PATTERN.every((val, idx) => val === inputPattern[idx]);
+  },
+
+  // Nuevas funciones para patrones de contactos
+  
+  // Guardar o actualizar un patrón de desbloqueo para un contacto
+  saveContactPattern: async (userId: string, contactId: string, pattern: number[], isEnabled: boolean): Promise<{data: any, error: any}> => {
+    // Convertir el array de números a string
+    const patternStr = pattern.join(',');
+    
+    // Verificar si ya existe un patrón para este contacto
+    const { data: existingPattern } = await supabase
+      .from('contact_unlock_patterns')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('contact_id', contactId)
+      .single();
+    
+    if (existingPattern) {
+      // Actualizar el patrón existente
+      const { data, error } = await supabase
+        .from('contact_unlock_patterns')
+        .update({ 
+          pattern: patternStr, 
+          is_enabled: isEnabled,
+          updated_at: new Date() 
+        })
+        .eq('user_id', userId)
+        .eq('contact_id', contactId);
+      
+      return { data, error };
+    } else {
+      // Crear un nuevo patrón para el contacto
+      const { data, error } = await supabase
+        .from('contact_unlock_patterns')
+        .insert([
+          { 
+            user_id: userId, 
+            contact_id: contactId, 
+            pattern: patternStr,
+            is_enabled: isEnabled 
+          },
+        ]);
+      
+      return { data, error };
+    }
+  },
+  
+  // Obtener el patrón para un contacto específico
+  getContactPattern: async (userId: string, contactId: string): Promise<{data: ContactPatternData | null, error: any}> => {
+    const { data, error } = await supabase
+      .from('contact_unlock_patterns')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('contact_id', contactId)
+      .single();
+    
+    if (error || !data) {
+      return { data: null, error: error || new Error('No pattern found') };
+    }
+    
+    const patternArray = data.pattern.split(',').map(Number);
+    
+    return { 
+      data: {
+        id: data.id,
+        user_id: data.user_id,
+        contact_id: data.contact_id,
+        pattern: data.pattern,
+        is_enabled: data.is_enabled
+      }, 
+      error: null 
+    };
+  },
+  
+  // Verificar si un patrón coincide con el almacenado para un contacto
+  verifyContactPattern: async (userId: string, contactId: string, inputPattern: number[]): Promise<boolean> => {
+    const { data, error } = await patternService.getContactPattern(userId, contactId);
+    
+    if (error || !data) {
+      console.error('Error verificando patrón de contacto:', error);
+      return false;
+    }
+    
+    // Si el patrón está desactivado, no verificamos
+    if (!data.is_enabled) {
+      return true;
+    }
+    
+    // Convertir el string a array de números
+    const storedPattern = data.pattern.split(',').map(Number);
+    
+    // Comparar los patrones
+    if (storedPattern.length !== inputPattern.length) {
+      return false;
+    }
+    
+    return storedPattern.every((val, idx) => val === inputPattern[idx]);
+  },
+  
+  // Verificar si un contacto tiene patrón de desbloqueo activo
+  contactHasActivePattern: async (userId: string, contactId: string): Promise<boolean> => {
+    const { data, error } = await patternService.getContactPattern(userId, contactId);
+    
+    if (error || !data) {
+      return false;
+    }
+    
+    return data.is_enabled;
   }
 };

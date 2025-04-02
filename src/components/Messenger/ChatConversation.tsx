@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, SendHorizontal, Paperclip, Mic, Check, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, SendHorizontal, Paperclip, Mic, Check, Image as ImageIcon, Smile, Lock, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import EmojiKeyboard from './EmojiKeyboard';
 
 interface Message {
   id: string;
@@ -16,21 +17,30 @@ interface Message {
 
 interface ChatConversationProps {
   contactName: string;
+  contactId: string;
   messages: Message[];
   onSendMessage: (text: string, type?: 'text' | 'image' | 'audio', mediaUrl?: string) => void;
   onBack: () => void;
+  onOpenContactSettings?: (contactId: string) => void;
+  onOpenContactLock?: (contactId: string) => void;
+  hasCustomLock?: boolean;
 }
 
 const ChatConversation: React.FC<ChatConversationProps> = ({
   contactName,
+  contactId,
   messages,
   onSendMessage,
-  onBack
+  onBack,
+  onOpenContactSettings,
+  onOpenContactLock,
+  hasCustomLock = false
 }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [showEmojiKeyboard, setShowEmojiKeyboard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
@@ -133,19 +143,49 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
     }
   };
 
+  // Manejar selección de emoji
+  const handleSelectEmoji = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiKeyboard(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-messenger-background">
       {/* Header */}
-      <div className="flex items-center p-4 border-b bg-white">
-        <button
-          onClick={onBack}
-          className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
-          aria-label={t('back')}
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h2 className="font-medium">{contactName}</h2>
+      <div className="flex items-center justify-between p-4 border-b bg-white">
+        <div className="flex items-center">
+          <button
+            onClick={onBack}
+            className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
+            aria-label={t('back')}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h2 className="font-medium">{contactName}</h2>
+          </div>
+        </div>
+        
+        <div className="flex space-x-1">
+          {onOpenContactLock && (
+            <button 
+              onClick={() => onOpenContactLock(contactId)}
+              className={`p-2 rounded-full ${hasCustomLock ? 'text-messenger-primary' : 'text-gray-500'} hover:bg-gray-100`}
+              title={t('contactLock.title') || "Patrón de desbloqueo"}
+            >
+              <Lock size={20} />
+            </button>
+          )}
+          
+          {onOpenContactSettings && (
+            <button 
+              onClick={() => onOpenContactSettings(contactId)}
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-100"
+              title={t('contactSettings.title') || "Ajustes de contacto"}
+            >
+              <Settings size={20} />
+            </button>
+          )}
         </div>
       </div>
       
@@ -249,6 +289,14 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           )}
         </div>
         
+        <button
+          type="button" 
+          onClick={() => setShowEmojiKeyboard(!showEmojiKeyboard)}
+          className="ml-2 p-2 rounded-full text-gray-500 hover:bg-gray-100"
+        >
+          <Smile size={22} />
+        </button>
+        
         {newMessage.trim() ? (
           <button
             type="submit"
@@ -268,6 +316,13 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           >
             <Mic size={22} />
           </button>
+        )}
+        
+        {showEmojiKeyboard && (
+          <EmojiKeyboard 
+            onSelectEmoji={handleSelectEmoji} 
+            onClose={() => setShowEmojiKeyboard(false)} 
+          />
         )}
       </form>
     </div>

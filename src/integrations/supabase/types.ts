@@ -36,12 +36,13 @@ export type Database = {
         }
         Relationships: []
       }
-      contacts: {
+      contact_unlock_patterns: {
         Row: {
           contact_id: string
           created_at: string
           id: string
-          name: string
+          is_enabled: boolean
+          pattern: string
           updated_at: string
           user_id: string
         }
@@ -49,7 +50,8 @@ export type Database = {
           contact_id: string
           created_at?: string
           id?: string
-          name: string
+          is_enabled?: boolean
+          pattern: string
           updated_at?: string
           user_id: string
         }
@@ -57,7 +59,41 @@ export type Database = {
           contact_id?: string
           created_at?: string
           id?: string
+          is_enabled?: boolean
+          pattern?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          full_name: string | null
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          full_name?: string | null
+          id?: string
           name?: string
+          notes?: string | null
           updated_at?: string
           user_id?: string
         }
