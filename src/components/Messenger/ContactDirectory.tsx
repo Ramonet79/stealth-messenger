@@ -10,9 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 interface Contact {
   id: string;
   name: string;
-  fullName: string | null;
-  notes: string | null;
+  lastMessage?: string;
+  timestamp?: string;
+  unread?: boolean;
   phone?: string;
+  fullName?: string | null;
+  notes?: string | null;
+  hasCustomLock?: boolean;
 }
 
 interface ContactDirectoryProps {

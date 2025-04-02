@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,6 +9,10 @@ interface Contact {
   lastMessage: string;
   timestamp: string;
   unread: boolean;
+  phone?: string;
+  fullName?: string | null;
+  notes?: string | null;
+  hasCustomLock?: boolean;
 }
 
 interface ChatListProps {
@@ -16,7 +21,7 @@ interface ChatListProps {
   onSelectContact: (id: string) => void;
   onNewChat: () => void;
   onShowRequests: () => void;
-  onShowDirectory: () => void; // Added missing prop
+  onShowDirectory: () => void;
   hasPendingRequests: boolean;
   onBack: () => void;
 }
@@ -27,7 +32,7 @@ const ChatList: React.FC<ChatListProps> = ({
   onSelectContact, 
   onNewChat,
   onShowRequests,
-  onShowDirectory, // Added prop usage
+  onShowDirectory,
   hasPendingRequests,
   onBack 
 }) => {
