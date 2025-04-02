@@ -32,7 +32,7 @@ export const patternService = {
       // Actualizar el patrón existente
       const { data, error } = await supabase
         .from('unlock_patterns')
-        .update({ pattern: patternStr, updated_at: new Date() })
+        .update({ pattern: patternStr, updated_at: new Date().toISOString() })
         .eq('user_id', userId);
       
       return { data, error };
@@ -101,12 +101,16 @@ export const patternService = {
     const patternStr = pattern.join(',');
     
     // Verificar si ya existe un patrón para este contacto
-    const { data: existingPattern } = await supabase
+    const { data: existingPattern, error: fetchError } = await supabase
       .from('contact_unlock_patterns')
       .select('*')
       .eq('user_id', userId)
       .eq('contact_id', contactId)
-      .single();
+      .maybeSingle();
+    
+    if (fetchError) {
+      return { data: null, error: fetchError };
+    }
     
     if (existingPattern) {
       // Actualizar el patrón existente
@@ -115,7 +119,7 @@ export const patternService = {
         .update({ 
           pattern: patternStr, 
           is_enabled: isEnabled,
-          updated_at: new Date() 
+          updated_at: new Date().toISOString() 
         })
         .eq('user_id', userId)
         .eq('contact_id', contactId);
@@ -131,7 +135,7 @@ export const patternService = {
             contact_id: contactId, 
             pattern: patternStr,
             is_enabled: isEnabled 
-          },
+          }
         ]);
       
       return { data, error };
@@ -145,24 +149,22 @@ export const patternService = {
       .select('*')
       .eq('user_id', userId)
       .eq('contact_id', contactId)
-      .single();
+      .maybeSingle();
     
     if (error || !data) {
-      return { data: null, error: error || new Error('No pattern found') };
+      return { data: null, error: error || new Error('No pattern found for contact') };
     }
     
-    const patternArray = data.pattern.split(',').map(Number);
-    
-    return { 
-      data: {
-        id: data.id,
-        user_id: data.user_id,
-        contact_id: data.contact_id,
-        pattern: data.pattern,
-        is_enabled: data.is_enabled
-      }, 
-      error: null 
+    // Extraer los datos del patrón del contacto
+    const contactPattern: ContactPatternData = {
+      id: data.id,
+      user_id: data.user_id,
+      contact_id: data.contact_id,
+      pattern: data.pattern,
+      is_enabled: data.is_enabled
     };
+    
+    return { data: contactPattern, error: null };
   },
   
   // Verificar si un patrón coincide con el almacenado para un contacto

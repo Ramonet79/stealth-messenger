@@ -1,8 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
-import { Search, PlusCircle, Bell, BookOpen, LogOut } from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Badge } from '@/components/ui/badge';
 
 interface Contact {
   id: string;
@@ -15,137 +13,110 @@ interface Contact {
 interface ChatListProps {
   username: string;
   contacts: Contact[];
-  onSelectContact: (contactId: string) => void;
+  onSelectContact: (id: string) => void;
   onNewChat: () => void;
   onShowRequests: () => void;
-  onShowDirectory: () => void;
+  onShowDirectory: () => void; // Added missing prop
   hasPendingRequests: boolean;
   onBack: () => void;
 }
 
-const ChatList = ({
+const ChatList: React.FC<ChatListProps> = ({ 
   username,
-  contacts,
-  onSelectContact,
+  contacts, 
+  onSelectContact, 
   onNewChat,
   onShowRequests,
-  onShowDirectory,
+  onShowDirectory, // Added prop usage
   hasPendingRequests,
-  onBack
-}: ChatListProps) => {
+  onBack 
+}) => {
   const { t } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  useEffect(() => {
-    document.title = 'dScrt'; // Set the page title
-  }, []);
-
+  
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="p-4 border-b flex justify-between items-center">
+    <div className="flex flex-col h-full bg-messenger-background">
+      <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center">
-          <h1 className="text-lg font-medium">{t('messages') || 'Mensajes'}</h1>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={onShowRequests}
-            className="relative p-2 rounded-full hover:bg-gray-100"
+          <button 
+            onClick={onBack}
+            className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
+            aria-label="Cerrar sesión"
           >
-            <Bell size={24} />
+            <LogOut size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">dScrt</h1>
+            <div className="flex items-center">
+              <p className="text-xs text-gray-500 mr-2">@{username}</p>
+              <button className="text-xs text-blue-500">Copiar</button>
+            </div>
+          </div>
+        </div>
+        <div className="flex">
+          <button 
+            onClick={onShowRequests}
+            className="p-2 mr-2 rounded-full hover:bg-gray-200 transition-colors relative"
+          >
+            <Bell size={20} />
             {hasPendingRequests && (
-              <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[0.6rem] bg-red-500">
+              <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
                 !
-              </Badge>
+              </span>
             )}
           </button>
           <button 
-            onClick={onShowDirectory}
-            className="p-2 rounded-full hover:bg-gray-100"
-            title={t('contacts.directory') || 'Agenda dScrt'}
+            onClick={onShowDirectory} 
+            className="p-2 mr-2 rounded-full hover:bg-gray-200 transition-colors"
           >
-            <BookOpen size={24} />
+            <BookOpen size={20} />
           </button>
-          <button
-            onClick={onBack}
-            className="p-2 rounded-full hover:bg-gray-100"
+          <button 
+            onClick={onNewChat}
+            className="p-2 rounded-full bg-messenger-primary text-white hover:bg-messenger-secondary transition-colors"
           >
-            <LogOut size={24} />
+            <Plus size={20} />
           </button>
         </div>
       </div>
-
-      {/* Search bar */}
-      <div className="p-3 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder={t('search') || 'Buscar'}
-            className="w-full pl-10 pr-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Contacts list */}
+      
       <div className="flex-1 overflow-y-auto">
-        {filteredContacts.length > 0 ? (
-          <div className="divide-y">
-            {filteredContacts.map((contact) => (
-              <div
-                key={contact.id}
-                className="p-3 flex items-start hover:bg-gray-50 cursor-pointer"
-                onClick={() => onSelectContact(contact.id)}
-              >
-                {/* Contact avatar (placeholder circle) */}
-                <div className="w-12 h-12 rounded-full bg-messenger-primary text-white flex items-center justify-center mr-3">
-                  {contact.name[0].toUpperCase()}
-                </div>
-
-                {/* Contact details */}
-                <div className="flex-1">
-                  <div className="flex justify-between items-center">
-                    <h3 className={`${contact.unread ? 'font-medium' : ''}`}>{contact.name}</h3>
-                    <span className="text-xs text-gray-500">{contact.timestamp}</span>
-                  </div>
-                  <p
-                    className={`text-sm truncate max-w-[230px] ${
-                      contact.unread ? 'text-black font-medium' : 'text-gray-500'
-                    }`}
-                  >
-                    {contact.lastMessage}
-                  </p>
-                </div>
-
-                {/* Unread indicator */}
-                {contact.unread && (
-                  <div className="ml-2 w-3 h-3 rounded-full bg-messenger-primary self-center"></div>
-                )}
-              </div>
-            ))}
+        {contacts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6">
+            <UserPlus size={48} className="mb-4 text-gray-400" />
+            <p className="text-center">{t('no_conversations')}</p>
+            <p className="text-sm text-center text-gray-400 mt-2">
+              {t('share_username')}
+            </p>
+            <button 
+              onClick={onNewChat}
+              className="mt-4 px-4 py-2 bg-messenger-primary text-white rounded-lg hover:bg-messenger-secondary transition-colors"
+            >
+              {t('new_message')}
+            </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <p className="mb-4">{t('no_conversations') || 'No hay conversaciones'}</p>
-          </div>
+          contacts.map((contact) => (
+            <div 
+              key={contact.id}
+              onClick={() => onSelectContact(contact.id)}
+              className="flex items-center p-4 hover:bg-gray-100 cursor-pointer border-b"
+            >
+              <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center text-lg font-medium mr-3">
+                {contact.name.charAt(0)}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{contact.name}</span>
+                  <span className="text-xs text-gray-500">{contact.timestamp}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 truncate max-w-[200px]">{contact.lastMessage}</span>
+                  {contact.unread && <div className="h-5 w-5 rounded-full bg-messenger-primary flex items-center justify-center text-xs text-white">!</div>}
+                </div>
+              </div>
+            </div>
+          ))
         )}
-      </div>
-
-      {/* New chat button */}
-      <div className="p-4 border-t flex justify-center">
-        <button
-          onClick={onNewChat}
-          className="flex items-center px-4 py-2 bg-messenger-primary text-white rounded-full hover:bg-messenger-secondary transition-colors"
-        >
-          <PlusCircle className="mr-2" size={20} />
-          {t('new_chat') || 'Nueva conversación'}
-        </button>
       </div>
     </div>
   );

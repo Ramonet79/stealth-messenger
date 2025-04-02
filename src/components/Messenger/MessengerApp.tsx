@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
@@ -144,7 +143,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
-  // Función para verificar cuales contactos tienen patrón activo
   useEffect(() => {
     const checkContactsWithLock = async () => {
       if (!user) return;
@@ -164,7 +162,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
       
       setContactsWithActiveLock(activeLocksIds);
       
-      // Actualizar el estado de los contactos con información de bloqueo
       setContacts(contacts.map(contact => ({
         ...contact,
         hasCustomLock: activeLocksIds.includes(contact.id)
@@ -175,7 +172,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
   }, [user]);
   
   const handleSelectContact = async (contactId: string) => {
-    // Verificar si el contacto tiene patrón de desbloqueo
     if (user && contactsWithActiveLock.includes(contactId)) {
       setSelectedContactId(contactId);
       setShowPatternLock(true);
@@ -183,12 +179,10 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
       setSelectedContactId(contactId);
       setView('conversation');
       
-      // Mark messages as read
       setContacts(contacts.map(contact => 
         contact.id === contactId ? { ...contact, unread: false } : contact
       ));
       
-      // Update message status
       setMessages(messages.map(message =>
         message.contactId === contactId && !message.sent 
           ? { ...message, status: 'read' } 
@@ -207,12 +201,10 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
         setShowPatternLock(false);
         setView('conversation');
         
-        // Mark messages as read
         setContacts(contacts.map(contact => 
           contact.id === selectedContactId ? { ...contact, unread: false } : contact
         ));
         
-        // Update message status
         setMessages(messages.map(message =>
           message.contactId === selectedContactId && !message.sent 
             ? { ...message, status: 'read' } 
@@ -253,7 +245,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     
     setMessages([...messages, newMessage]);
     
-    // Update last message and timestamp in contact
     setContacts(contacts.map(contact => 
       contact.id === selectedContactId 
         ? { ...contact, lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio', timestamp } 
@@ -283,14 +274,13 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     const request = pendingRequests.find(req => req.id === requestId);
     
     if (request) {
-      // Create new contact from request
       const now = new Date();
       const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
       
       const newContact: Contact = {
         id: uuidv4(),
         name: request.username,
-        phone: '', // No phone number for username-based contacts
+        phone: '',
         lastMessage: 'Contacto añadido',
         timestamp,
         unread: false
@@ -298,7 +288,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
       
       setContacts([newContact, ...contacts]);
       
-      // Update request status
       setPendingRequests(pendingRequests.map(req => 
         req.id === requestId ? { ...req, status: 'accepted' } : req
       ));
@@ -331,7 +320,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
   const handleDeleteContact = (contactId: string) => {
     setContacts(contacts.filter(contact => contact.id !== contactId));
     
-    // También eliminar mensajes asociados a este contacto
     setMessages(messages.filter(message => message.contactId !== contactId));
     
     toast({
@@ -351,14 +339,12 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
         return false;
       }
       
-      // Actualizar lista de contactos con bloqueo activo
       if (enabled && !contactsWithActiveLock.includes(contactId)) {
         setContactsWithActiveLock([...contactsWithActiveLock, contactId]);
       } else if (!enabled && contactsWithActiveLock.includes(contactId)) {
         setContactsWithActiveLock(contactsWithActiveLock.filter(id => id !== contactId));
       }
       
-      // Actualizar el estado del contacto
       setContacts(contacts.map(contact =>
         contact.id === contactId ? { ...contact, hasCustomLock: enabled } : contact
       ));
@@ -379,15 +365,12 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     }
   };
   
-  // Get the selected contact
   const selectedContact = contacts.find(contact => contact.id === selectedContactId);
   
-  // Get messages for the selected contact
   const contactMessages = messages.filter(
     message => message.contactId === selectedContactId
   );
   
-  // Has pending requests
   const hasPendingRequests = pendingRequests.some(req => req.status === 'pending');
 
   return (
@@ -421,23 +404,6 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
             setView('contactLock');
           }}
           hasCustomLock={selectedContact.hasCustomLock}
-        />
-      )}
-      
-      {view === 'new' && (
-        <NewChat 
-          onCreateChat={handleCreateChat}
-          onCancel={() => setView('list')}
-        />
-      )}
-      
-      {view === 'requests' && (
-        <RequestsList
-          requests={pendingRequests.filter(req => req.status === 'pending')}
-          onAccept={handleAcceptRequest}
-          onReject={handleRejectRequest}
-          onBlock={handleBlockRequest}
-          onBack={() => setView('list')}
         />
       )}
       

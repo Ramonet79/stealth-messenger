@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowLeft, LogOut, Plus, UserPlus, Bell } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Contact {
@@ -17,6 +17,7 @@ interface ChatListProps {
   onSelectContact: (id: string) => void;
   onNewChat: () => void;
   onShowRequests: () => void;
+  onShowDirectory: () => void; // Added missing prop
   hasPendingRequests: boolean;
   onBack: () => void;
 }
@@ -27,6 +28,7 @@ const ChatList: React.FC<ChatListProps> = ({
   onSelectContact, 
   onNewChat,
   onShowRequests,
+  onShowDirectory, // Added prop usage
   hasPendingRequests,
   onBack 
 }) => {
@@ -62,6 +64,12 @@ const ChatList: React.FC<ChatListProps> = ({
                 !
               </span>
             )}
+          </button>
+          <button 
+            onClick={onShowDirectory} 
+            className="p-2 mr-2 rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <BookOpen size={20} />
           </button>
           <button 
             onClick={onNewChat}
