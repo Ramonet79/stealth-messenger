@@ -60,7 +60,7 @@ const RequestsList: React.FC<RequestsListProps> = ({
       
       <div className="flex-1 overflow-y-auto">
         {requests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
             <p>{t('no_pending_requests')}</p>
           </div>
         ) : (

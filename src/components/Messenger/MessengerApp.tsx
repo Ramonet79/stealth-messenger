@@ -40,6 +40,7 @@ interface Request {
   username: string;
   timestamp: string;
   status: 'pending' | 'accepted' | 'rejected' | 'blocked';
+  expirationDate?: string;
 }
 
 export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' | 'directory' | 'contactLock';
@@ -246,9 +247,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     setMessages([...messages, newMessage]);
     
     setContacts(contacts.map(contact => 
-      contact.id === selectedContactId 
-        ? { ...contact, lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio', timestamp } 
-        : contact
+      contact.id === selectedContactId ? { ...contact, lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio', timestamp } : contact
     ));
   };
   
@@ -288,22 +287,34 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
       
       setContacts([newContact, ...contacts]);
       
-      setPendingRequests(pendingRequests.map(req => 
-        req.id === requestId ? { ...req, status: 'accepted' } : req
-      ));
+      setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+      
+      toast({
+        title: "Solicitud aceptada",
+        description: `Has aceptado la solicitud de ${request.username}`,
+      });
+      
+      setView('list');
     }
   };
   
   const handleRejectRequest = (requestId: string) => {
-    setPendingRequests(pendingRequests.map(req => 
-      req.id === requestId ? { ...req, status: 'rejected' } : req
-    ));
+    setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+    
+    toast({
+      title: "Solicitud rechazada",
+      description: "La solicitud ha sido rechazada",
+    });
   };
   
   const handleBlockRequest = (requestId: string) => {
-    setPendingRequests(pendingRequests.map(req => 
-      req.id === requestId ? { ...req, status: 'blocked' } : req
-    ));
+    setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+    
+    toast({
+      variant: "destructive",
+      title: "Usuario bloqueado",
+      description: "El usuario ha sido bloqueado y no podrá enviarte más solicitudes",
+    });
   };
   
   const handleEditContact = (contactId: string, data: Partial<Contact>) => {
@@ -374,7 +385,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
   const hasPendingRequests = pendingRequests.some(req => req.status === 'pending');
 
   return (
-    <div className="h-full bg-gray-100">
+    <div className="h-screen bg-gray-100">
       {view === 'list' && (
         <ChatList 
           username={username}
@@ -404,6 +415,23 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
             setView('contactLock');
           }}
           hasCustomLock={selectedContact.hasCustomLock}
+        />
+      )}
+      
+      {view === 'new' && (
+        <NewChat 
+          onCreateChat={handleCreateChat}
+          onBack={handleBack}
+        />
+      )}
+      
+      {view === 'requests' && (
+        <RequestsList 
+          requests={pendingRequests.filter(req => req.status === 'pending')}
+          onAccept={handleAcceptRequest}
+          onReject={handleRejectRequest}
+          onBlock={handleBlockRequest}
+          onBack={handleBack}
         />
       )}
       
