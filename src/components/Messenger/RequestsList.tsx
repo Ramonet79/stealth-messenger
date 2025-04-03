@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, Check, X, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -44,6 +44,23 @@ const RequestsList: React.FC<RequestsListProps> = ({
     
     return `${diffHours} h`;
   };
+
+  // Notificamos a la aplicación principal sobre solicitudes pendientes
+  useEffect(() => {
+    // Actualizar el estado global de notificaciones
+    const event = new CustomEvent('unreadRequestsUpdate', { 
+      detail: { hasUnreadRequests: requests.length > 0 }
+    });
+    window.dispatchEvent(event);
+    
+    return () => {
+      // Al desmontar, indicamos que ya no hay solicitudes pendientes visibles
+      const cleanupEvent = new CustomEvent('unreadRequestsUpdate', { 
+        detail: { hasUnreadRequests: false }
+      });
+      window.dispatchEvent(cleanupEvent);
+    };
+  }, [requests.length]);
 
   return (
     <div className="flex flex-col h-full bg-messenger-background">

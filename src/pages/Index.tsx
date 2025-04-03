@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -28,6 +29,8 @@ const Index = () => {
   const [appTheme, setAppTheme] = useState<AppTheme>('calculator');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [language, setLanguage] = useState<string>('es-ES'); // Default language
+  // Nuevo estado para controlar la aureola
+  const [logoAura, setLogoAura] = useState<'none' | 'green' | 'red'>('none');
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -49,15 +52,51 @@ const Index = () => {
     }
   }, []);
   
-  // For demo purpose, simulate a new message after some time
+  // Actualizar la aureola según el estado de mensajes no leídos
   useEffect(() => {
+    if (isAuthenticated) {
+      // Si está autenticado, la aureola no es necesaria
+      setLogoAura('none');
+    } else {
+      // Si no está autenticado, mostrar la aureola según haya mensajes
+      setLogoAura(hasUnreadMessages ? 'red' : 'green');
+    }
+  }, [isAuthenticated, hasUnreadMessages]);
+  
+  // Escuchar eventos de actualización de mensajes no leídos
+  useEffect(() => {
+    const handleUnreadMessages = (event: CustomEvent) => {
+      setHasUnreadMessages(event.detail.hasUnreadMessages);
+    };
+    
+    const handleUnreadRequests = (event: CustomEvent) => {
+      // También actualizamos basándonos en solicitudes pendientes
+      if (event.detail.hasUnreadRequests) {
+        setHasUnreadMessages(true);
+      }
+    };
+    
+    // Añadir escuchas de eventos
+    window.addEventListener('unreadMessagesUpdate', handleUnreadMessages as EventListener);
+    window.addEventListener('unreadRequestsUpdate', handleUnreadRequests as EventListener);
+    
+    // For demo purpose, simulate a new message after some time
     if (!isAuthenticated) {
       const timer = setTimeout(() => {
         setHasUnreadMessages(true);
       }, 30000); // 30 seconds
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('unreadMessagesUpdate', handleUnreadMessages as EventListener);
+        window.removeEventListener('unreadRequestsUpdate', handleUnreadRequests as EventListener);
+      };
     }
+    
+    return () => {
+      window.removeEventListener('unreadMessagesUpdate', handleUnreadMessages as EventListener);
+      window.removeEventListener('unreadRequestsUpdate', handleUnreadRequests as EventListener);
+    };
   }, [isAuthenticated]);
 
   // Redirigir a autenticación si el usuario no está autenticado
@@ -119,29 +158,30 @@ const Index = () => {
 
   // Renderizar el componente de camuflaje según el tema seleccionado
   const renderCamouflageApp = () => {
+    // Añadimos la prop de logoAura a todos los componentes de tema
     switch (appTheme) {
       case 'calculator':
-        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'weather':
-        return <WeatherApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <WeatherApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'radar':
-        return <RadarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <RadarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'browser':
-        return <BrowserApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <BrowserApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'notes':
-        return <NotesApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <NotesApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'fitness':
-        return <FitnessApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <FitnessApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'scanner':
-        return <ScannerApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <ScannerApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'converter':
-        return <ConverterApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <ConverterApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'flashlight':
-        return <FlashlightApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <FlashlightApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       case 'calendar':
-        return <CalendarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <CalendarApp onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
       default:
-        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} />;
+        return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
     }
   };
 
@@ -149,7 +189,10 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {isAuthenticated ? (
         <>
-          <MessengerApp onLogout={handleLogout} />
+          <MessengerApp 
+            onLogout={handleLogout} 
+            onUnreadMessagesChange={setHasUnreadMessages}
+          />
           
           {/* Settings button that's always available */}
           <div className="fixed bottom-4 right-4">

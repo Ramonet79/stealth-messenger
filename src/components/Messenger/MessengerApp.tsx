@@ -47,9 +47,10 @@ export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' 
 
 interface MessengerAppProps {
   onLogout: () => void;
+  onUnreadMessagesChange?: (hasUnread: boolean) => void;
 }
 
-const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
+const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesChange }) => {
   const [contacts, setContacts] = useState<Contact[]>([
     {
       id: '1',
@@ -171,6 +172,19 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout }) => {
     
     checkContactsWithLock();
   }, [user]);
+  
+  useEffect(() => {
+    const hasUnread = contacts.some(contact => contact.unread);
+    
+    if (onUnreadMessagesChange) {
+      onUnreadMessagesChange(hasUnread);
+    }
+    
+    const event = new CustomEvent('unreadMessagesUpdate', {
+      detail: { hasUnreadMessages: hasUnread }
+    });
+    window.dispatchEvent(event);
+  }, [contacts, onUnreadMessagesChange]);
   
   const handleSelectContact = async (contactId: string) => {
     if (user && contactsWithActiveLock.includes(contactId)) {

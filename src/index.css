@@ -50,6 +50,10 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Colores para la aureola del logo */
+    --aura-green: 142 76% 36%;
+    --aura-red: 0 84% 60%;
   }
 
   .dark {
@@ -88,6 +92,10 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Los mismos colores pero pueden ser diferentes en modo oscuro */
+    --aura-green: 142 76% 36%;
+    --aura-red: 0 84% 60%;
   }
 }
 
@@ -139,6 +147,24 @@
 .message-bubble.received {
   @apply bg-messenger-bubble-received text-gray-800;
   border-bottom-left-radius: 0;
+}
+
+/* Clases para la aureola del logo */
+.logo-container {
+  @apply relative inline-block;
+}
+
+.logo-aura {
+  @apply absolute inset-0 rounded-full transition-all duration-300 z-[-1];
+  box-shadow: 0 0 15px 5px;
+}
+
+.logo-aura-green {
+  box-shadow: 0 0 15px 5px hsl(var(--aura-green));
+}
+
+.logo-aura-red {
+  box-shadow: 0 0 15px 5px hsl(var(--aura-red));
 }
 
 #root {
