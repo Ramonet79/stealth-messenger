@@ -435,6 +435,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
       {view === 'new' && (
         <NewChat 
           onCreateChat={handleCreateChat}
+          onCancel={handleBack}
           onBack={handleBack}
         />
       )}

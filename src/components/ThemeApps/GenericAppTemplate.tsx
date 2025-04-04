@@ -8,6 +8,7 @@ interface GenericAppProps {
   title: string;
   icon: string;
   color: string;
+  logoAura?: 'none' | 'green' | 'red';
 }
 
 const GenericAppTemplate: React.FC<GenericAppProps> = ({ 
@@ -15,7 +16,8 @@ const GenericAppTemplate: React.FC<GenericAppProps> = ({
   hasUnreadMessages = false,
   title,
   icon,
-  color
+  color,
+  logoAura = 'none'
 }) => {
   return (
     <div className={`flex flex-col h-full ${color}`}>
@@ -29,6 +31,9 @@ const GenericAppTemplate: React.FC<GenericAppProps> = ({
           <Settings size={24} />
           {hasUnreadMessages && (
             <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
+          )}
+          {logoAura !== 'none' && (
+            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${logoAura === 'green' ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-pulse`}></span>
           )}
         </button>
       </div>

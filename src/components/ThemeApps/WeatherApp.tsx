@@ -5,6 +5,7 @@ import { Settings, Cloud, CloudRain, Sun, CloudSun, Compass } from 'lucide-react
 interface WeatherAppProps {
   onSettingsClick: () => void;
   hasUnreadMessages?: boolean;
+  logoAura?: 'none' | 'green' | 'red';
 }
 
 interface WeatherData {
@@ -15,7 +16,7 @@ interface WeatherData {
   wind: number;
 }
 
-const WeatherApp: React.FC<WeatherAppProps> = ({ onSettingsClick, hasUnreadMessages = false }) => {
+const WeatherApp: React.FC<WeatherAppProps> = ({ onSettingsClick, hasUnreadMessages = false, logoAura = 'none' }) => {
   const [weatherData, setWeatherData] = useState<WeatherData>({
     location: 'Madrid',
     temperature: 23,
@@ -77,6 +78,9 @@ const WeatherApp: React.FC<WeatherAppProps> = ({ onSettingsClick, hasUnreadMessa
           <Settings size={24} />
           {hasUnreadMessages && (
             <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
+          )}
+          {logoAura !== 'none' && (
+            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${logoAura === 'green' ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-pulse`}></span>
           )}
         </button>
       </div>
