@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -106,7 +105,6 @@ const Auth = () => {
         .single();
       
       if (error && error.code === 'PGRST116') {
-        // PGRST116 significa que no se encontraron resultados
         setUsernameAvailable(true);
       } else {
         setUsernameAvailable(false);
@@ -122,12 +120,10 @@ const Auth = () => {
   useEffect(() => {
     const username = signupForm.watch('username');
     
-    // Limpiar el timeout anterior si existe
     if (typingTimeout) {
       clearTimeout(typingTimeout);
     }
     
-    // Crear un nuevo timeout
     if (username && username.length >= 3) {
       const timeout = setTimeout(() => {
         checkUsernameAvailability(username);
@@ -167,7 +163,6 @@ const Auth = () => {
     const { data: authData, error } = await signUp(email, password);
     
     if (!error && authData?.user) {
-      // Guardar el nombre de usuario y email de recuperación en el perfil
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -191,7 +186,6 @@ const Auth = () => {
         description: "Por favor, crea tu patrón de desbloqueo",
       });
       
-      // Ir al paso de creación de patrón
       setIsCreatePattern(true);
     }
   };
@@ -213,7 +207,6 @@ const Auth = () => {
       });
       return true;
     } else {
-      // Comparar patrones
       const patternsMatch = pattern.length === newPattern.length && 
         pattern.every((val, idx) => val === newPattern[idx]);
       
@@ -269,9 +262,9 @@ const Auth = () => {
         {!isResetPassword ? (
           <>
             <div className="flex justify-center mb-6">
-              <img src="/lovable-uploads/8185c5d9-bbd3-4143-a4a8-0d524ebfaeec.png" 
+              <img src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
                 alt="dScrt Logo" 
-                className="h-16 w-16" />
+                className="h-20 w-20 rounded-lg" />
             </div>
             <h1 className="text-2xl font-bold mb-6 text-center">
               {isLogin ? "Iniciar sesión en dScrt" : "Crear cuenta en dScrt"}
