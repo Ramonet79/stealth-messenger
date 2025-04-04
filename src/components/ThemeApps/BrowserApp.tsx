@@ -5,9 +5,10 @@ import GenericAppTemplate from './GenericAppTemplate';
 interface BrowserAppProps {
   onSettingsClick: () => void;
   hasUnreadMessages?: boolean;
+  logoAura?: 'none' | 'green' | 'red';
 }
 
-const BrowserApp: React.FC<BrowserAppProps> = ({ onSettingsClick, hasUnreadMessages = false }) => {
+const BrowserApp: React.FC<BrowserAppProps> = ({ onSettingsClick, hasUnreadMessages = false, logoAura = 'none' }) => {
   return (
     <GenericAppTemplate
       title="Navegador"
@@ -15,6 +16,7 @@ const BrowserApp: React.FC<BrowserAppProps> = ({ onSettingsClick, hasUnreadMessa
       color="bg-gradient-to-b from-indigo-400 to-indigo-600 text-white"
       onSettingsClick={onSettingsClick}
       hasUnreadMessages={hasUnreadMessages}
+      logoAura={logoAura}
     />
   );
 };

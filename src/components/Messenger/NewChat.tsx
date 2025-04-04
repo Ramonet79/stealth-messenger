@@ -7,13 +7,23 @@ import { useLanguage } from '@/contexts/LanguageContext';
 interface NewChatProps {
   onCreateChat: (username: string, name: string) => void;
   onCancel: () => void;
+  onBack?: () => void; // Añadimos esta prop para mantener compatibilidad
 }
 
-const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
+const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [step, setStep] = useState(1);
   const { t } = useLanguage();
+
+  // Esta función utiliza onCancel o onBack, lo que esté disponible
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      onCancel();
+    }
+  };
 
   const handleSubmitUsername = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +43,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel }) => {
     <div className="flex flex-col h-full bg-messenger-background">
       <div className="flex items-center p-4 border-b bg-white">
         <button
-          onClick={onCancel}
+          onClick={handleBack}
           className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
         >
           <ArrowLeft size={20} />

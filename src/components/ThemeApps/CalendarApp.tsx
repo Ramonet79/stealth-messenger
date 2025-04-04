@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Settings, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 interface CalendarAppProps {
   onSettingsClick: () => void;
   hasUnreadMessages?: boolean;
+  logoAura?: 'none' | 'green' | 'red';
 }
 
 interface Event {
@@ -14,7 +14,7 @@ interface Event {
   color: string;
 }
 
-const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMessages = false }) => {
+const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMessages = false, logoAura = 'none' }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
@@ -57,12 +57,10 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
   const numDays = daysInMonth(currentMonth, currentYear);
   const firstDay = firstDayOfMonth(currentMonth, currentYear);
   
-  // Add empty cells for days before the first day of the month
   for (let i = 0; i < firstDay; i++) {
     days.push(<div key={`empty-${i}`} className="h-10"></div>);
   }
   
-  // Add cells for days in the month
   for (let i = 1; i <= numDays; i++) {
     days.push(
       <div 
@@ -78,7 +76,6 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 border-b">
         <h1 className="text-xl font-semibold">Calendario</h1>
         <button 
@@ -89,10 +86,12 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
           {hasUnreadMessages && (
             <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
           )}
+          {logoAura !== 'none' && (
+            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${logoAura === 'green' ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-pulse`}></span>
+          )}
         </button>
       </div>
       
-      {/* Month Navigation */}
       <div className="flex justify-between items-center p-4">
         <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full">
           <ChevronLeft size={24} />
@@ -103,7 +102,6 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
         </button>
       </div>
       
-      {/* Calendar Grid */}
       <div className="px-4 mb-4">
         <div className="grid grid-cols-7 gap-1 mb-2">
           {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
@@ -115,7 +113,6 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
         </div>
       </div>
       
-      {/* Events for Selected Day */}
       <div className="flex-1 p-4 bg-gray-50">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-medium">Eventos para el día {selectedDay}</h3>
@@ -137,7 +134,6 @@ const CalendarApp: React.FC<CalendarAppProps> = ({ onSettingsClick, hasUnreadMes
         </div>
       </div>
       
-      {/* Bottom Navigation */}
       <div className="grid grid-cols-4 border-t">
         <button className="p-4 flex flex-col items-center">
           <div className="h-2 w-6 bg-blue-500 rounded-full mb-1"></div>

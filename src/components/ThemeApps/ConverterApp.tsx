@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Settings, ArrowDown, RotateCcw } from 'lucide-react';
 
 interface ConverterAppProps {
   onSettingsClick: () => void;
   hasUnreadMessages?: boolean;
+  logoAura?: 'none' | 'green' | 'red';
 }
 
 type ConversionType = 'currency' | 'length' | 'weight' | 'temperature';
@@ -16,7 +16,7 @@ interface ConversionOption {
   rate?: number;
 }
 
-const ConverterApp: React.FC<ConverterAppProps> = ({ onSettingsClick, hasUnreadMessages = false }) => {
+const ConverterApp: React.FC<ConverterAppProps> = ({ onSettingsClick, hasUnreadMessages = false, logoAura = 'none' }) => {
   const [conversionType, setConversionType] = useState<ConversionType>('currency');
   const [amount, setAmount] = useState<string>('1');
   const [fromOption, setFromOption] = useState<string>('eur');
@@ -109,6 +109,9 @@ const ConverterApp: React.FC<ConverterAppProps> = ({ onSettingsClick, hasUnreadM
           <Settings size={24} />
           {hasUnreadMessages && (
             <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
+          )}
+          {logoAura !== 'none' && (
+            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${logoAura === 'green' ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-pulse`}></span>
           )}
         </button>
       </div>
