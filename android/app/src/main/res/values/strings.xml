@@ -1,0 +1,8 @@
+
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">dScrt</string>
+    <string name="title_activity_main">dScrt</string>
+    <string name="package_name">app.lovable.ca70e353ea8f4f748cd44e57c75305d7</string>
+    <string name="custom_url_scheme">app.lovable.ca70e353ea8f4f748cd44e57c75305d7</string>
+</resources>

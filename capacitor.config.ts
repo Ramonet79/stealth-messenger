@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.ca70e353ea8f4f748cd44e57c75305d7',
-  appName: 'stealth-messenger',
+  appName: 'dScrt',
   webDir: 'dist',
   // Cambiamos la configuración para usar la versión empaquetada local
   // en lugar de intentar cargar la URL remota que no está disponible
