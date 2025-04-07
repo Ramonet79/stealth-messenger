@@ -11,20 +11,23 @@ export interface AuthError {
   message: string;
 }
 
-// Interfaz básica para respuestas de autenticación
+// Interface for authentication responses
 export interface AuthResponse {
   data?: any;
   error: AuthError | null;
 }
 
-// Interfaz específica para respuestas de recuperación de cuenta
-// Completamente independiente para evitar recursión
+// Profile data structure for recovery responses
+export interface ProfileData {
+  id?: string;
+  username?: string;
+  recovery_email?: string;
+  [key: string]: any;
+}
+
+// Interface for account recovery responses
+// Completely independent to avoid recursion
 export interface RecoveryResponse {
   error: AuthError | null;
-  profile: {
-    id?: string;
-    username?: string;
-    recovery_email?: string;
-    [key: string]: any;
-  } | null;
+  profile: ProfileData | null;
 }

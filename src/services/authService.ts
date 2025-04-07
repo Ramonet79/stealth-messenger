@@ -92,22 +92,37 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
 
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
-    // Verificar si existe un perfil con este correo de recuperación
-    const { data, error: profileError } = await supabase
+    // Check if migration for recovery_email has been applied
+    // First try to check if the column exists by querying profiles
+    const { error: checkError } = await supabase
       .from('profiles')
-      .select('id, username, recovery_email')
-      .eq('recovery_email', email)
-      .maybeSingle();
+      .select('id')
+      .limit(1);
     
-    // Manejar el caso de error de consulta
-    if (profileError) {
+    // If there's an error mentioning recovery_email, the column likely doesn't exist
+    if (checkError && checkError.message.includes('recovery_email')) {
+      console.error('Error de esquema:', checkError.message);
       return { 
-        error: { message: profileError.message },
+        error: { message: "Error con la tabla de perfiles. La columna de correo de recuperación podría no existir." },
         profile: null
       };
     }
     
-    // Manejar el caso de que no se encuentre el perfil
+    // Now try to find a profile using the recovery_email
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .eq('recovery_email', email)
+      .maybeSingle();
+    
+    if (profileError) {
+      console.error('Error al buscar perfil:', profileError);
+      return { 
+        error: { message: `Error al buscar perfil: ${profileError.message}` },
+        profile: null
+      };
+    }
+    
     if (!data) {
       return { 
         error: { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
@@ -115,22 +130,24 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       };
     }
     
-    // Si encontramos el perfil, recuperamos la cuenta del usuario asociado
+    // If we found the profile, send a reset password email
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     
     if (error) {
       return { error: { message: error.message }, profile: null };
     }
     
+    // Return the profile data safely
     return { 
       error: null, 
       profile: {
         id: data.id,
         username: data.username,
-        recovery_email: data.recovery_email
+        recovery_email: email // Use the email that was passed in
       }
     };
   } catch (error: any) {
-    return { error: { message: error.message }, profile: null };
+    console.error('Error en recuperación de cuenta:', error);
+    return { error: { message: error.message || 'Error desconocido' }, profile: null };
   }
 };
