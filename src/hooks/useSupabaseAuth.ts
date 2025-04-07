@@ -110,45 +110,23 @@ export const useSupabaseAuth = () => {
     if (response.error) {
       console.error("Error de inicio de sesión:", response.error);
       
-      // Si el error es de email no confirmado, intentamos confirmar y volver a iniciar sesión
+      // Si el error es de email no confirmado, informamos al usuario
       if (response.error.message.includes("Email not confirmed") || 
           response.error.message.includes("Email no confirmado")) {
         
-        console.log("Intentando solucionar error de email no confirmado");
-        
-        // Confirmar correo electrónico automáticamente
-        try {
-          // Primero, intentamos obtener el usuario por correo electrónico
-          const { data: userData } = await supabase
-            .from('auth.users')
-            .select('id')
-            .eq('email', email)
-            .single();
-            
-          if (userData?.id) {
-            // Confirmar email automáticamente
-            await supabase.auth.admin.updateUserById(
-              userData.id,
-              { email_confirm: true }
-            );
-            
-            // Volver a intentar iniciar sesión
-            const retryResponse = await signInUser(email, password);
-            if (!retryResponse.error) {
-              console.log("Inicio de sesión exitoso después de confirmar email");
-              return retryResponse;
-            }
-          }
-        } catch (e) {
-          console.error("Error al intentar confirmar email:", e);
-        }
+        console.log("Email no confirmado, se intentará confirmar automáticamente");
+        toast({
+          variant: "destructive",
+          title: "Email no confirmado",
+          description: "Tu email no ha sido confirmado. Contacta al administrador.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: response.error.message,
+        });
       }
-      
-      toast({
-        variant: "destructive",
-        title: "Error de inicio de sesión",
-        description: response.error.message,
-      });
     } else {
       console.log("Inicio de sesión exitoso:", response.data?.user?.id);
       

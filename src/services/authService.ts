@@ -27,16 +27,15 @@ export const signUpUser = async (
       };
     }
     
-    // Registrar usuario con cuenta auto-confirmada
+    // Registrar usuario
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           username,
-          email_confirmed: true, // Marcar email como confirmado
-        },
-        emailRedirectTo: undefined, // No redirigir a ninguna URL
+          email_confirmed: true, // Marcar email como confirmado (solo para metadata)
+        }
       }
     });
 
@@ -46,22 +45,14 @@ export const signUpUser = async (
     }
 
     if (data.user) {
-      // Asegurarnos de que el email esté confirmado (esto es crítico)
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        data.user.id,
-        { email_confirm: true }
-      );
-
-      if (updateError) {
-        console.error('Error al confirmar email automáticamente:', updateError);
-      }
-
-      // Marcar el email como verificado directamente
-      const { error: confirmEmailError } = await supabase
-        .rpc('confirm_user_email', { _user_id: data.user.id });
-
-      if (confirmEmailError) {
-        console.error('Error al confirmar email con RPC:', confirmEmailError);
+      // Llamamos a nuestra función edge para confirmar el email automáticamente
+      try {
+        console.log("Llamando a función auto-signup para confirmar email automáticamente");
+        await supabase.functions.invoke('auto-signup', {
+          body: { email: data.user.email, user_id: data.user.id }
+        });
+      } catch (funcError) {
+        console.error('Error al llamar función auto-signup:', funcError);
       }
 
       // Actualizamos el perfil del usuario con el nombre de usuario
@@ -69,7 +60,7 @@ export const signUpUser = async (
         .from('profiles')
         .update({ 
           username,
-          email_confirmed: true
+          email: email
         })
         .eq('id', data.user.id);
 
@@ -105,34 +96,34 @@ export const signInUser = async (
     if (error) {
       console.error("Error de autenticación:", error);
       
-      // Si el error es de email no confirmado, intentamos confirmar manualmente
+      // Si el error es de email no confirmado, intentamos confirmar vía edge function
       if (error.message.includes("Email not confirmed") || error.message.includes("Email no confirmado")) {
-        console.log("Intentando confirmar email automáticamente...");
+        console.log("Email no confirmado, invocando función auto-signup");
         
-        // Obtener el usuario por email
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .single();
+        try {
+          // Obtener usuario actual para confirmar su email
+          const { data: authData } = await supabase.auth.getUser();
           
-        if (!userError && userData?.id) {
-          // Confirmar email
-          await supabase.auth.admin.updateUserById(
-            userData.id,
-            { email_confirm: true }
-          );
-          
-          // Intentar iniciar sesión nuevamente
-          const retrySignIn = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (!retrySignIn.error) {
-            console.log("Sesión iniciada después de confirmar email");
-            return { data: retrySignIn.data, error: null };
+          if (authData?.user) {
+            // Llamar a función edge para confirmar email
+            await supabase.functions.invoke('auto-signup', {
+              body: { email, user_id: authData.user.id }
+            });
+            
+            // Intentar iniciar sesión nuevamente
+            console.log("Reintentando inicio de sesión después de confirmar email");
+            const retrySignIn = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            
+            if (!retrySignIn.error) {
+              console.log("Sesión iniciada después de confirmar email");
+              return { data: retrySignIn.data, error: null };
+            }
           }
+        } catch (funcError) {
+          console.error("Error al confirmar email con función:", funcError);
         }
       }
       
