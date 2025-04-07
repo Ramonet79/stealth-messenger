@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -177,55 +178,64 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
     if (selectedPattern.length >= 4) {
       let isCorrect = false;
 
-      if (isCreationMode) {
-        // En modo creación, siempre consideramos válido el patrón
-        try {
-          const result = await Promise.resolve(onPatternComplete(selectedPattern));
-          isCorrect = result;
-        } catch (error) {
-          console.error("Error en onPatternComplete:", error);
-          isCorrect = false;
-        }
-      } else if (user) {
-        try {
-          isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
-        } catch (error) {
-          console.error("Error verificando patrón:", error);
-          isCorrect = false;
-        }
-      } else {
-        try {
-          const result = await Promise.resolve(onPatternComplete(selectedPattern));
-          isCorrect = result;
-        } catch (error) {
-          console.error("Error en onPatternComplete:", error);
-          isCorrect = false;
-        }
-      }
-
-      if (!isCorrect) {
-        const newFailedAttempts = failedAttempts + 1;
-        setFailedAttempts(newFailedAttempts);
+      try {
+        console.log("Processing pattern completion:", selectedPattern);
         
-        if (newFailedAttempts >= 3 && !isCreationMode) {
-          if (newFailedAttempts >= 6) {
-            setShowRecoveryDialog(true);
+        if (isCreationMode) {
+          // En modo creación, consideramos válido el patrón
+          console.log("Creation mode - calling onPatternComplete");
+          isCorrect = await Promise.resolve(onPatternComplete(selectedPattern));
+          console.log("Pattern creation result:", isCorrect);
+        } else {
+          // En modo verificación
+          if (user) {
+            console.log("Verifying pattern for user:", user.id);
+            isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
+            console.log("Pattern verification result:", isCorrect);
+            
+            if (isCorrect) {
+              // Si es correcto, también llamamos a onPatternComplete para la transición
+              console.log("Pattern correct, calling onPatternComplete for transition");
+              await Promise.resolve(onPatternComplete(selectedPattern));
+            }
           } else {
-            const lockEndTime = new Date();
-            lockEndTime.setMinutes(lockEndTime.getMinutes() + 5);
-            setLockEndTime(lockEndTime);
-            setIsLocked(true);
-            setShowLockoutDialog(true);
+            console.log("No user found, calling onPatternComplete directly");
+            isCorrect = await Promise.resolve(onPatternComplete(selectedPattern));
+            console.log("Pattern completion result:", isCorrect);
           }
         }
-        
+
+        if (!isCorrect) {
+          const newFailedAttempts = failedAttempts + 1;
+          setFailedAttempts(newFailedAttempts);
+          
+          if (newFailedAttempts >= 3 && !isCreationMode) {
+            if (newFailedAttempts >= 6) {
+              setShowRecoveryDialog(true);
+            } else {
+              const lockEndTime = new Date();
+              lockEndTime.setMinutes(lockEndTime.getMinutes() + 5);
+              setLockEndTime(lockEndTime);
+              setIsLocked(true);
+              setShowLockoutDialog(true);
+            }
+          }
+          
+          toast({
+            variant: "destructive",
+            title: "Patrón incorrecto",
+            description: "Por favor, inténtalo de nuevo",
+          });
+        } else {
+          setFailedAttempts(0);
+        }
+      } catch (error) {
+        console.error("Error during pattern verification:", error);
         toast({
           variant: "destructive",
-          title: "Patrón incorrecto",
-          description: "Por favor, inténtalo de nuevo",
+          title: "Error de verificación",
+          description: "Ha ocurrido un error al verificar el patrón",
         });
-      } else {
-        setFailedAttempts(0);
       }
     } else {
       if (selectedPattern.length > 0) {

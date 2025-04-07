@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PatternData {
@@ -18,6 +17,8 @@ export interface ContactPatternData {
 export const patternService = {
   // Guardar o actualizar un patrón de desbloqueo
   savePattern: async (userId: string, pattern: number[]): Promise<{data: any, error: any}> => {
+    console.log("savePattern called with userId:", userId, "pattern:", pattern);
+    
     if (!userId) {
       console.error("savePattern: UserId es requerido");
       return { data: null, error: new Error("UserId es requerido") };
@@ -87,12 +88,12 @@ export const patternService = {
   
   // Obtener el patrón de un usuario
   getPattern: async (userId: string): Promise<{data: number[] | null, error: any}> => {
+    console.log(`getPattern called for userId: ${userId}`);
+    
     if (!userId) {
       console.error("getPattern: UserId es requerido");
       return { data: null, error: new Error("UserId es requerido") };
     }
-    
-    console.log(`Obteniendo patrón para usuario ${userId}`);
     
     try {
       const { data, error } = await supabase
@@ -123,29 +124,30 @@ export const patternService = {
   
   // Verificar si un patrón coincide con el almacenado
   verifyPattern: async (userId: string, inputPattern: number[]): Promise<boolean> => {
+    console.log(`verifyPattern called for userId: ${userId}, inputPattern: ${inputPattern.join(',')}`);
+    
     if (!userId || !inputPattern || inputPattern.length < 4) {
       console.error("verifyPattern: Parámetros inválidos");
       return false;
     }
-    
-    console.log(`Verificando patrón para usuario ${userId}`);
     
     try {
       const { data: storedPattern, error } = await patternService.getPattern(userId);
       
       if (error || !storedPattern) {
         console.error('Error verificando patrón:', error);
+        console.log("Fallback to default pattern verification");
         return patternService.verifyDefaultPattern(inputPattern);
       }
       
       // Comparar los patrones
       if (storedPattern.length !== inputPattern.length) {
-        console.log("Longitud de patrones diferente");
+        console.log(`Longitud de patrones diferente. Stored: ${storedPattern.length}, Input: ${inputPattern.length}`);
         return false;
       }
       
       const matches = storedPattern.every((val, idx) => val === inputPattern[idx]);
-      console.log(`Patrones coinciden: ${matches}`);
+      console.log(`Patrones coinciden: ${matches}. Stored: [${storedPattern}], Input: [${inputPattern}]`);
       return matches;
     } catch (error) {
       console.error("Error inesperado al verificar patrón:", error);
@@ -155,13 +157,17 @@ export const patternService = {
 
   // Para usuarios sin autenticación, verificamos contra el patrón hardcoded
   verifyDefaultPattern: (inputPattern: number[]): boolean => {
+    console.log("verifyDefaultPattern called with:", inputPattern);
     const DEFAULT_PATTERN = [1, 5, 9, 6];
     
     if (DEFAULT_PATTERN.length !== inputPattern.length) {
+      console.log(`Longitud de patrones diferente. Default: ${DEFAULT_PATTERN.length}, Input: ${inputPattern.length}`);
       return false;
     }
     
-    return DEFAULT_PATTERN.every((val, idx) => val === inputPattern[idx]);
+    const matches = DEFAULT_PATTERN.every((val, idx) => val === inputPattern[idx]);
+    console.log(`Patrones coinciden con default: ${matches}`);
+    return matches;
   },
 
   // Nuevas funciones para patrones de contactos
