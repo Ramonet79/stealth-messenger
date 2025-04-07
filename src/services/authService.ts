@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -9,9 +8,34 @@ export const signUpUser = async (
   recoveryEmail: string
 ): Promise<AuthResponse> => {
   try {
+    // Primero verificamos si el username ya existe
+    const { data: existingUser, error: usernameCheckError } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', username)
+      .maybeSingle();
+    
+    if (usernameCheckError) {
+      console.error('Error al verificar nombre de usuario:', usernameCheckError);
+    }
+    
+    if (existingUser) {
+      return { 
+        data: null, 
+        error: { message: 'Este nombre de usuario ya está en uso. Por favor, elige otro.' } 
+      };
+    }
+    
+    // Procedemos con el registro
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username,
+          recovery_email: recoveryEmail
+        }
+      }
     });
 
     if (error) {
@@ -28,6 +52,7 @@ export const signUpUser = async (
         .eq('id', data.user.id);
 
       if (profileError) {
+        console.error('Error al actualizar perfil:', profileError);
         return { 
           data, 
           error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
@@ -37,6 +62,7 @@ export const signUpUser = async (
 
     return { data, error: null };
   } catch (error: any) {
+    console.error('Error en el registro de usuario:', error);
     return { data: null, error: { message: error.message } };
   }
 };
@@ -107,23 +133,8 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     // Buscar el perfil con el correo de recuperación mediante una consulta separada
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username');
-    
-    // Procesamiento manual para evitar el error de tipos
-    let matchingProfile = null;
-    if (data && data.length > 0) {
-      // Buscar manualmente el perfil que coincida con el correo
-      for (const profile of data) {
-        if (profile.id) {
-          matchingProfile = {
-            id: profile.id,
-            username: profile.username || '',
-            recovery_email: email
-          };
-          break;
-        }
-      }
-    }
+      .select('id, username, recovery_email')
+      .eq('recovery_email', email);
     
     if (error) {
       console.error('Error al buscar perfil:', error);
@@ -133,15 +144,29 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       };
     }
     
-    if (!matchingProfile) {
+    if (!data || data.length === 0) {
       return { 
         error: { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
         profile: null
       };
     }
     
-    // Enviar correo de restablecimiento
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+    // Usar el primer perfil encontrado
+    const matchingProfile = data[0];
+    
+    // Enviar correo de restablecimiento - usamos el correo principal, no el de recuperación
+    const userResult = await supabase
+      .from('auth')
+      .select('email')
+      .eq('id', matchingProfile.id)
+      .single();
+    
+    let userEmail = email;
+    if (!userResult.error && userResult.data && userResult.data.email) {
+      userEmail = userResult.data.email;
+    }
+    
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(userEmail);
     
     if (resetError) {
       return { error: { message: resetError.message }, profile: null };

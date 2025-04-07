@@ -40,6 +40,7 @@ type SignupFormProps = {
 export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const { signUp } = useSupabaseAuth();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -108,22 +109,43 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
 
   // Manejar registro
   const handleSignup = async (data: z.infer<typeof signupSchema>) => {
-    const { email, password, username, recoveryEmail } = data;
-    
-    const { data: authData, error } = await signUp(
-      email, 
-      password, 
-      username, 
-      recoveryEmail || "" // Pasamos el correo de recuperación o una cadena vacía
-    );
-    
-    if (!error && authData?.user) {
-      toast({
-        title: "Registro exitoso",
-        description: "Por favor, crea tu patrón de desbloqueo",
-      });
+    try {
+      setIsSubmitting(true);
+      const { email, password, username, recoveryEmail } = data;
       
-      onSuccess();
+      const { data: authData, error } = await signUp(
+        email, 
+        password, 
+        username, 
+        recoveryEmail || "" // Pasamos el correo de recuperación o una cadena vacía
+      );
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error de registro",
+          description: error.message,
+        });
+        return;
+      }
+      
+      if (authData?.user) {
+        toast({
+          title: "Registro exitoso",
+          description: "Por favor, crea tu patrón de desbloqueo",
+        });
+        
+        onSuccess();
+      }
+    } catch (error: any) {
+      console.error('Error en el proceso de registro:', error);
+      toast({
+        variant: "destructive",
+        title: "Error inesperado",
+        description: error.message || "Ocurrió un error durante el registro",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -230,9 +252,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         <Button 
           type="submit" 
           className="w-full"
-          disabled={form.formState.isSubmitting || usernameAvailable === false || checkingUsername}
+          disabled={isSubmitting || usernameAvailable === false || checkingUsername}
         >
-          {form.formState.isSubmitting ? (
+          {isSubmitting ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : null}
           Registrarse

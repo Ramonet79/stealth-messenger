@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +28,7 @@ export const useSupabaseAuth = () => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth event:", event);
         setAuthState({
           session,
           user: session?.user ?? null,
@@ -39,6 +39,7 @@ export const useSupabaseAuth = () => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Session found" : "No session");
       setAuthState({
         session,
         user: session?.user ?? null,
@@ -50,14 +51,18 @@ export const useSupabaseAuth = () => {
   }, []);
 
   const signUp = async (email: string, password: string, username: string, recoveryEmail: string): Promise<AuthResponse> => {
+    console.log("Iniciando registro:", { email, username, recoveryEmail: recoveryEmail ? "Provided" : "Not provided" });
     const response = await signUpUser(email, password, username, recoveryEmail);
     
     if (response.error) {
+      console.error("Error de registro:", response.error);
       toast({
         variant: "destructive",
         title: "Error de registro",
         description: response.error.message,
       });
+    } else {
+      console.log("Registro exitoso:", response.data?.user?.id);
     }
     
     return response;
@@ -67,6 +72,7 @@ export const useSupabaseAuth = () => {
     const response = await signInUser(email, password);
     
     if (response.error) {
+      console.error("Error de inicio de sesión:", response.error);
       toast({
         variant: "destructive",
         title: "Error de inicio de sesión",
@@ -81,6 +87,7 @@ export const useSupabaseAuth = () => {
     const response = await signOutUser();
     
     if (response.error) {
+      console.error("Error al cerrar sesión:", response.error);
       toast({
         variant: "destructive",
         title: "Error al cerrar sesión",
@@ -95,12 +102,14 @@ export const useSupabaseAuth = () => {
     const response = await sendPasswordReset(email);
     
     if (response.error) {
+      console.error("Error al enviar correo de restablecimiento de contraseña:", response.error);
       toast({
         variant: "destructive",
         title: "Error",
         description: response.error.message,
       });
     } else {
+      console.log("Correo de restablecimiento de contraseña enviado");
       toast({
         title: "Correo enviado",
         description: "Revisa tu bandeja de entrada para restablecer tu contraseña",
@@ -111,15 +120,18 @@ export const useSupabaseAuth = () => {
   };
 
   const recoverAccount = async (email: string): Promise<RecoveryResponse> => {
+    console.log("Iniciando recuperación de cuenta para:", email);
     const response = await recoverAccountWithEmail(email);
     
     if (response.error) {
+      console.error("Error de recuperación:", response.error);
       toast({
         variant: "destructive",
         title: "Error de recuperación",
         description: response.error.message,
       });
     } else {
+      console.log("Recuperación iniciada para perfil:", response.profile?.id);
       toast({
         title: "Correo enviado",
         description: "Revisa tu bandeja de entrada para restablecer tu acceso",
