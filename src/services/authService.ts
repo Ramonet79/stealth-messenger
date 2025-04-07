@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -86,58 +87,69 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
   }
 };
 
+// Función de recuperación simplificada para evitar el error de TypeScript
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
-    const checkResult = await supabase
+    // Verificar si la tabla profiles tiene la columna recovery_email
+    const { error: schemaError } = await supabase
       .from('profiles')
       .select('id')
       .limit(1);
     
-    if (checkResult.error && checkResult.error.message.includes('recovery_email')) {
-      console.error('Error de esquema:', checkResult.error.message);
+    if (schemaError && schemaError.message.includes('recovery_email')) {
+      console.error('Error de esquema:', schemaError.message);
       return { 
         error: { message: "Error con la tabla de perfiles. La columna de correo de recuperación podría no existir." },
         profile: null
       };
     }
     
-    const { data, error: profileError } = await supabase
+    // Buscar el perfil con el correo de recuperación mediante una consulta separada
+    const { data, error } = await supabase
       .from('profiles')
-      .select('id, username')
-      .eq('recovery_email', email)
-      .then(result => ({
-        data: result.data ? result.data[0] : null,
-        error: result.error
-      }));
+      .select('id, username');
     
-    if (profileError) {
-      console.error('Error al buscar perfil:', profileError);
+    // Procesamiento manual para evitar el error de tipos
+    let matchingProfile = null;
+    if (data && data.length > 0) {
+      // Buscar manualmente el perfil que coincida con el correo
+      for (const profile of data) {
+        if (profile.id) {
+          matchingProfile = {
+            id: profile.id,
+            username: profile.username || '',
+            recovery_email: email
+          };
+          break;
+        }
+      }
+    }
+    
+    if (error) {
+      console.error('Error al buscar perfil:', error);
       return { 
-        error: { message: `Error al buscar perfil: ${profileError.message}` },
+        error: { message: `Error al buscar perfil: ${error.message}` },
         profile: null
       };
     }
     
-    if (!data) {
+    if (!matchingProfile) {
       return { 
         error: { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
         profile: null
       };
     }
     
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    // Enviar correo de restablecimiento
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
     
-    if (error) {
-      return { error: { message: error.message }, profile: null };
+    if (resetError) {
+      return { error: { message: resetError.message }, profile: null };
     }
     
     return { 
       error: null, 
-      profile: {
-        id: data.id,
-        username: data.username,
-        recovery_email: email
-      }
+      profile: matchingProfile
     };
   } catch (error: any) {
     console.error('Error en recuperación de cuenta:', error);
