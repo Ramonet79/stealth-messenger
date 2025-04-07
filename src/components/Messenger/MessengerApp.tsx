@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
 import NewChat from './NewChat';
 import RequestsList from './RequestsList';
 import ContactDirectory from './ContactDirectory';
 import ContactLockPattern from './ContactLockPattern';
+import PrivacyNotice from './PrivacyNotice';
 import PatternLock from '@/components/PatternLock';
 import { useMessengerState } from './useMessengerState';
-import { AppView } from './types';
+import { AppView, PrivacyNoticeState } from './types';
 
 interface MessengerAppProps {
   onLogout: () => void;
@@ -15,6 +16,11 @@ interface MessengerAppProps {
 }
 
 const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesChange }) => {
+  const [privacyNotice, setPrivacyNotice] = useState<PrivacyNoticeState>({
+    hasSeenMediaPrivacyNotice: localStorage.getItem('dscrt-media-privacy-notice-seen') === 'true',
+    showMediaPrivacyNotice: false
+  });
+  
   const {
     contacts,
     messages,
@@ -55,6 +61,43 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
   
   const hasPendingRequests = pendingRequests.some(req => req.status === 'pending');
 
+  const showMediaPrivacyNotice = () => {
+    if (!privacyNotice.hasSeenMediaPrivacyNotice) {
+      setPrivacyNotice({
+        ...privacyNotice,
+        showMediaPrivacyNotice: true
+      });
+    }
+  };
+
+  const handleClosePrivacyNotice = () => {
+    localStorage.setItem('dscrt-media-privacy-notice-seen', 'true');
+    setPrivacyNotice({
+      hasSeenMediaPrivacyNotice: true,
+      showMediaPrivacyNotice: false
+    });
+  };
+
+  const handleSendMessageWithPrivacyCheck = (text: string, type?: 'text' | 'image' | 'audio' | 'video', mediaUrl?: string) => {
+    if (type && type !== 'text' && !privacyNotice.hasSeenMediaPrivacyNotice) {
+      showMediaPrivacyNotice();
+      sessionStorage.setItem('pending-message', JSON.stringify({ text, type, mediaUrl }));
+    } else {
+      handleSendMessage(text, type, mediaUrl);
+    }
+  };
+
+  useEffect(() => {
+    if (privacyNotice.hasSeenMediaPrivacyNotice) {
+      const pendingMessage = sessionStorage.getItem('pending-message');
+      if (pendingMessage) {
+        const { text, type, mediaUrl } = JSON.parse(pendingMessage);
+        handleSendMessage(text, type, mediaUrl);
+        sessionStorage.removeItem('pending-message');
+      }
+    }
+  }, [privacyNotice.hasSeenMediaPrivacyNotice]);
+
   return (
     <div className="h-screen bg-gray-100">
       {view === 'list' && (
@@ -75,7 +118,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
           contactName={selectedContact.name}
           contactId={selectedContact.id}
           messages={contactMessages}
-          onSendMessage={handleSendMessage}
+          onSendMessage={handleSendMessageWithPrivacyCheck}
           onBack={handleBack}
           onOpenContactSettings={(id) => {
             setSelectedContactId(id);
@@ -124,6 +167,10 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
           onBack={handleBack}
           isEnabled={selectedContact.hasCustomLock}
         />
+      )}
+      
+      {privacyNotice.showMediaPrivacyNotice && (
+        <PrivacyNotice onClose={handleClosePrivacyNotice} />
       )}
       
       {showPatternLock && (

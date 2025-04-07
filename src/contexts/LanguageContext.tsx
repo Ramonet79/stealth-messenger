@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // Lista de idiomas soportados según la hoja de ruta
@@ -57,6 +56,8 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
     'supported_formats': 'Formatos soportados: PDF, JPG, PNG',
     'browse_files': 'Explorar archivos',
     'empty': 'Vacío',
+    'media_privacy_notice': 'Para garantizar tu privacidad y seguridad, dScrt no accede a tus fotos, vídeos o archivos de audio existentes en tu dispositivo. Cuando eliges enviar contenido multimedia (imagen, audio o vídeo) a través de dScrt, lo crearás directamente dentro de la aplicación usando tu cámara o micrófono. Esto te permite controlar exactamente lo que compartes. Este mensaje solo aparecerá la primera vez que utilices estas funciones.',
+    'understand': 'Entendido',
   },
   'en-US': {
     'welcome': 'Welcome to dScrt',
@@ -84,8 +85,9 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
     'supported_formats': 'Supported formats: PDF, JPG, PNG',
     'browse_files': 'Browse files',
     'empty': 'Empty',
+    'media_privacy_notice': 'To ensure your privacy and security, dScrt does not access your existing photos, videos, or audio files on your device. When you choose to send media (image, audio, or video) through dScrt, you\'ll create it directly within the app using your camera or microphone. This allows you to control exactly what you share. This message will only appear the first time you use these features.',
+    'understand': 'I understand',
   },
-  // Se implementan traducciones iniciales para inglés británico
   'en-GB': {
     'welcome': 'Welcome to dScrt',
     'app_description': 'The app for discreet communications',
@@ -112,8 +114,9 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
     'supported_formats': 'Supported formats: PDF, JPG, PNG',
     'browse_files': 'Browse files',
     'empty': 'Empty',
+    'media_privacy_notice': 'To ensure your privacy and security, dScrt does not access your existing photos, videos, or audio files on your device. When you choose to send media (image, audio, or video) through dScrt, you\'ll create it directly within the app using your camera or microphone. This allows you to control exactly what you share. This message will only appear the first time you use these features.',
+    'understand': 'I understand',
   },
-  // Versiones iniciales para los demás idiomas (se completarían con traducciones adecuadas)
   'fr': { /* Traducciones en francés */ },
   'it': { /* Traducciones en italiano */ },
   'de': { /* Traducciones en alemán */ },

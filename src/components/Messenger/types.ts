@@ -34,3 +34,8 @@ export interface Request {
 export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' | 'directory' | 'contactLock';
 
 export type MediaCaptureMode = 'image' | 'audio' | 'video' | null;
+
+export interface PrivacyNoticeState {
+  hasSeenMediaPrivacyNotice: boolean;
+  showMediaPrivacyNotice: boolean;
+}
