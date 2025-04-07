@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,12 @@ export interface AuthState {
 // Definir una interfaz para los errores para evitar la recursión infinita
 export interface AuthError {
   message: string;
+}
+
+export interface AuthResponse {
+  data?: any;
+  error: AuthError | null;
+  profile?: any;
 }
 
 export const useSupabaseAuth = () => {
@@ -47,7 +52,7 @@ export const useSupabaseAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, username: string, recoveryEmail: string) => {
+  const signUp = async (email: string, password: string, username: string, recoveryEmail: string): Promise<AuthResponse> => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -60,7 +65,7 @@ export const useSupabaseAuth = () => {
           title: "Error de registro",
           description: error.message,
         });
-        return { data: null, error: { message: error.message } as AuthError };
+        return { data: null, error: { message: error.message } };
       }
 
       // Si el registro fue exitoso y tenemos un usuario
@@ -91,11 +96,11 @@ export const useSupabaseAuth = () => {
         title: "Error de registro",
         description: error.message,
       });
-      return { data: null, error: { message: error.message } as AuthError };
+      return { data: null, error: { message: error.message } };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -108,7 +113,7 @@ export const useSupabaseAuth = () => {
           title: "Error de inicio de sesión",
           description: error.message,
         });
-        return { data: null, error: { message: error.message } as AuthError };
+        return { data: null, error: { message: error.message } };
       }
 
       return { data, error: null };
@@ -118,11 +123,11 @@ export const useSupabaseAuth = () => {
         title: "Error de inicio de sesión",
         description: error.message,
       });
-      return { data: null, error: { message: error.message } as AuthError };
+      return { data: null, error: { message: error.message } };
     }
   };
 
-  const signOut = async () => {
+  const signOut = async (): Promise<AuthResponse> => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -131,7 +136,7 @@ export const useSupabaseAuth = () => {
           title: "Error al cerrar sesión",
           description: error.message,
         });
-        return { error: { message: error.message } as AuthError };
+        return { error: { message: error.message } };
       }
       return { error: null };
     } catch (error: any) {
@@ -140,11 +145,11 @@ export const useSupabaseAuth = () => {
         title: "Error al cerrar sesión",
         description: error.message,
       });
-      return { error: { message: error.message } as AuthError };
+      return { error: { message: error.message } };
     }
   };
 
-  const sendPasswordResetEmail = async (email: string) => {
+  const sendPasswordResetEmail = async (email: string): Promise<AuthResponse> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       
@@ -154,7 +159,7 @@ export const useSupabaseAuth = () => {
           title: "Error",
           description: error.message,
         });
-        return { error: { message: error.message } as AuthError };
+        return { error: { message: error.message } };
       }
 
       toast({
@@ -169,11 +174,11 @@ export const useSupabaseAuth = () => {
         title: "Error",
         description: error.message,
       });
-      return { error: { message: error.message } as AuthError };
+      return { error: { message: error.message } };
     }
   };
 
-  const recoverAccountWithEmail = async (email: string) => {
+  const recoverAccountWithEmail = async (email: string): Promise<AuthResponse> => {
     try {
       // Verificar si existe un perfil con este correo de recuperación
       const { data: profile, error: profileError } = await supabase
@@ -190,8 +195,8 @@ export const useSupabaseAuth = () => {
         });
         return { 
           error: profileError 
-            ? { message: profileError.message } as AuthError 
-            : { message: "No se encontró la cuenta" } as AuthError,
+            ? { message: profileError.message } 
+            : { message: "No se encontró la cuenta" },
           profile: null
         };
       }
@@ -205,7 +210,7 @@ export const useSupabaseAuth = () => {
           title: "Error de recuperación",
           description: error.message,
         });
-        return { error: { message: error.message } as AuthError, profile: null };
+        return { error: { message: error.message }, profile: null };
       }
 
       toast({
@@ -220,7 +225,7 @@ export const useSupabaseAuth = () => {
         title: "Error de recuperación",
         description: error.message,
       });
-      return { error: { message: error.message } as AuthError, profile: null };
+      return { error: { message: error.message }, profile: null };
     }
   };
 
