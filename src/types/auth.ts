@@ -11,12 +11,14 @@ export interface AuthError {
   message: string;
 }
 
+// Interfaz básica para respuestas de autenticación
 export interface AuthResponse {
   data?: any;
   error: AuthError | null;
 }
 
-// Adding a specific response type for account recovery to avoid deep type recursion
+// Interfaz específica para respuestas de recuperación de cuenta
+// Esto evita la recursión infinita en tipos
 export interface RecoveryResponse {
   error: AuthError | null;
   profile: any | null;
