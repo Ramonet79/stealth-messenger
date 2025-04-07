@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -18,9 +17,7 @@ export const signUpUser = async (
       return { data: null, error: { message: error.message } };
     }
 
-    // Si el registro fue exitoso y tenemos un usuario
     if (data.user) {
-      // Actualizar el perfil del usuario con el nombre de usuario y el correo de recuperación
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -30,7 +27,6 @@ export const signUpUser = async (
         .eq('id', data.user.id);
 
       if (profileError) {
-        // Aunque haya error en el perfil, el usuario ya está creado
         return { 
           data, 
           error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
@@ -92,14 +88,11 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
 
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
-    // Check if migration for recovery_email has been applied
-    // First try to check if the column exists by querying profiles
     const checkResult = await supabase
       .from('profiles')
       .select('id')
       .limit(1);
     
-    // If there's an error mentioning recovery_email, the column likely doesn't exist
     if (checkResult.error && checkResult.error.message.includes('recovery_email')) {
       console.error('Error de esquema:', checkResult.error.message);
       return { 
@@ -108,17 +101,14 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       };
     }
     
-    // Now try to find a profile using the recovery_email
-    // This approach avoids the deep type instantiation problem
-    const rawResponse = await supabase
+    const { data, error: profileError } = await supabase
       .from('profiles')
       .select('id, username')
       .eq('recovery_email', email)
-      .maybeSingle();
-    
-    // Extract the data and error manually to avoid deep type instantiation
-    const data = rawResponse.data;
-    const profileError = rawResponse.error;
+      .then(result => ({
+        data: result.data ? result.data[0] : null,
+        error: result.error
+      }));
     
     if (profileError) {
       console.error('Error al buscar perfil:', profileError);
@@ -135,14 +125,12 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       };
     }
     
-    // If we found the profile, send a reset password email
-    const resetResult = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
     
-    if (resetResult.error) {
-      return { error: { message: resetResult.error.message }, profile: null };
+    if (error) {
+      return { error: { message: error.message }, profile: null };
     }
     
-    // Return the profile data safely
     return { 
       error: null, 
       profile: {
