@@ -20,7 +20,7 @@ export interface Message {
   status?: 'sent' | 'delivered' | 'read';
   type?: 'text' | 'image' | 'audio' | 'video';
   mediaUrl?: string;
-  duration?: number; // For audio messages
+  duration?: number; // Para mensajes de audio
 }
 
 export interface Request {
@@ -32,3 +32,5 @@ export interface Request {
 }
 
 export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' | 'directory' | 'contactLock';
+
+export type MediaCaptureMode = 'image' | 'audio' | 'video' | null;

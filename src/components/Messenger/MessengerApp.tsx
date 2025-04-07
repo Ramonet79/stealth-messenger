@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
@@ -38,6 +37,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
     handleSaveContactPattern,
   } = useMessengerState(onUnreadMessagesChange);
 
+  
   const handleBack = () => {
     if (view === 'conversation' || view === 'new' || view === 'requests' || view === 'directory' || view === 'contactLock') {
       setView('list');
