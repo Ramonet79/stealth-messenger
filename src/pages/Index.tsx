@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -9,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { AppTheme } from '@/components/ThemeSelector';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { patternService } from '@/services/patternService';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Componentes para cada tema
 import WeatherApp from '@/components/ThemeApps/WeatherApp';
@@ -28,8 +30,12 @@ const Index = () => {
   const [appTheme, setAppTheme] = useState<AppTheme>('calculator');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [language, setLanguage] = useState<string>('es-ES'); // Default language
-  // Nuevo estado para controlar la aureola
+  // Estado para la aureola y notificaciones
   const [logoAura, setLogoAura] = useState<'none' | 'green' | 'red'>('none');
+  // Estado para mostrar notificación de cambio de logo
+  const [showLogoChangeAlert, setShowLogoChangeAlert] = useState(false);
+  // Estado para mostrar instrucciones de patrón
+  const [showPatternInstructions, setShowPatternInstructions] = useState(false);
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -102,6 +108,20 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       setIsAuthenticated(false); // Inicialmente no autenticado hasta validar patrón
+      
+      // Mostrar alerta de cambio de logo si es la primera sesión después de confirmación
+      const isFirstTimeAfterConfirmation = sessionStorage.getItem('firstLoginAfterConfirmation') === 'true';
+      
+      if (isFirstTimeAfterConfirmation) {
+        setShowLogoChangeAlert(true);
+        setShowPatternInstructions(true);
+        sessionStorage.removeItem('firstLoginAfterConfirmation');
+        
+        toast({
+          title: "Logo cambiado",
+          description: "El logo de la aplicación ha cambiado a modo camuflaje",
+        });
+      }
     } else if (!showPatternLock) {
       // Si no hay usuario autenticado y no estamos en la pantalla de patrón,
       // simplemente seguimos mostrando la aplicación de camuflaje
@@ -149,10 +169,20 @@ const Index = () => {
   const handleSelectTheme = (theme: AppTheme) => {
     setAppTheme(theme);
     setShowThemeSelector(false);
+    
+    // Notificar al usuario del cambio de tema y que el logo ha cambiado
     toast({
       title: "Tema cambiado",
-      description: `El tema se ha cambiado a ${theme}`,
+      description: `El tema se ha cambiado a ${theme}. El logo de la app ahora refleja este tema.`,
     });
+  };
+  
+  const dismissLogoAlert = () => {
+    setShowLogoChangeAlert(false);
+  };
+  
+  const dismissPatternInstructions = () => {
+    setShowPatternInstructions(false);
   };
 
   // Renderizar el componente de camuflaje según el tema seleccionado
@@ -204,8 +234,45 @@ const Index = () => {
           </div>
         </>
       ) : (
-        <div className="flex-1">
+        <div className="flex-1 relative">
           {renderCamouflageApp()}
+          
+          {/* Alerta de cambio de logo */}
+          {showLogoChangeAlert && (
+            <div className="fixed inset-x-0 top-0 p-4 z-50">
+              <Alert className="max-w-md mx-auto shadow-lg">
+                <AlertDescription className="flex justify-between items-center">
+                  <span>El logo de la aplicación ha cambiado a modo camuflaje.</span>
+                  <button 
+                    onClick={dismissLogoAlert}
+                    className="ml-2 text-sm font-medium underline"
+                  >
+                    Entendido
+                  </button>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          
+          {/* Instrucciones de patrón */}
+          {showPatternInstructions && (
+            <div className="fixed inset-x-0 bottom-0 p-4 z-50">
+              <Alert className="max-w-md mx-auto shadow-lg">
+                <AlertDescription className="flex justify-between items-center">
+                  <span>
+                    Para acceder al chat dScrt, pulsa el icono de configuración (⚙️) y 
+                    usa tu patrón de desbloqueo.
+                  </span>
+                  <button 
+                    onClick={dismissPatternInstructions}
+                    className="ml-2 text-sm font-medium underline"
+                  >
+                    Entendido
+                  </button>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
         </div>
       )}
       

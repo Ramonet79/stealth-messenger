@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { useSupabaseAuth } from "./hooks/useSupabaseAuth";
+import { useEffect } from "react";
 
 // Set page title
 document.title = "dScrt";
@@ -17,6 +18,13 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useSupabaseAuth();
+
+  // Identificar si es la primera vez que el usuario accede después de confirmar cuenta
+  useEffect(() => {
+    if (user && window.location.href.includes('confirmSuccess=true')) {
+      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+    }
+  }, [user]);
 
   if (loading) {
     return (
