@@ -18,7 +18,7 @@ export interface Message {
   sent: boolean;
   timestamp: string;
   status?: 'sent' | 'delivered' | 'read';
-  type?: 'text' | 'image' | 'audio';
+  type?: 'text' | 'image' | 'audio' | 'video';
   mediaUrl?: string;
   duration?: number; // For audio messages
 }

@@ -65,6 +65,21 @@ const ConversationMessage: React.FC<ConversationMessageProps> = ({ message }) =>
           </div>
         )}
         
+        {message.type === 'video' && message.mediaUrl && (
+          <div className="mb-1">
+            <video 
+              src={message.mediaUrl} 
+              controls
+              className="rounded-md max-h-48 w-auto"
+              onError={(e) => {
+                console.error("Error loading video:", e);
+              }}
+            >
+              Tu navegador no soporta videos.
+            </video>
+          </div>
+        )}
+        
         {message.type === 'audio' && (
           <div className="flex items-center mb-1 bg-black/5 rounded-full px-3 py-2">
             <div className="w-32 h-4 mx-2 bg-black/10 rounded-full overflow-hidden">

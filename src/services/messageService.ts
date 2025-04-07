@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const messageService = {
   // Enviar un nuevo mensaje
-  sendMessage: async (senderId: string, receiverId: string, text: string, type: 'text' | 'image' | 'audio' = 'text', mediaUrl?: string): Promise<{ data: Message | null, error: any }> => {
+  sendMessage: async (senderId: string, receiverId: string, text: string, type: 'text' | 'image' | 'audio' | 'video' = 'text', mediaUrl?: string): Promise<{ data: Message | null, error: any }> => {
     console.log(`📨 Enviando mensaje de ${senderId} a ${receiverId}: ${text}`);
     
     const timestamp = new Date().toISOString();
@@ -87,7 +87,7 @@ export const messageService = {
         sent: msg.sender_id === userId,
         timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: msg.status as 'sent' | 'delivered' | 'read',
-        type: msg.type as 'text' | 'image' | 'audio',
+        type: msg.type as 'text' | 'image' | 'audio' | 'video',
         mediaUrl: msg.media_url
       }));
       
@@ -147,7 +147,7 @@ export const messageService = {
             sent: false,
             timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             status: msg.status as 'sent' | 'delivered' | 'read',
-            type: msg.type as 'text' | 'image' | 'audio',
+            type: msg.type as 'text' | 'image' | 'audio' | 'video',
             mediaUrl: msg.media_url
           };
           

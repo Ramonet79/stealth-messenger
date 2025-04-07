@@ -9,7 +9,7 @@ interface ChatConversationProps {
   contactName: string;
   contactId: string;
   messages: Message[];
-  onSendMessage: (text: string, type?: 'text' | 'image' | 'audio', mediaUrl?: string) => void;
+  onSendMessage: (text: string, type?: 'text' | 'image' | 'audio' | 'video', mediaUrl?: string) => void;
   onBack: () => void;
   onOpenContactSettings?: (contactId: string) => void;
   onOpenContactLock?: (contactId: string) => void;

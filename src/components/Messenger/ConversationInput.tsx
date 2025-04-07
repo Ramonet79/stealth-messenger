@@ -1,10 +1,10 @@
 
 import React, { useState, useRef } from 'react';
-import { SendHorizontal, Paperclip, Mic, Image as ImageIcon, Smile } from 'lucide-react';
+import { SendHorizontal, Paperclip, Mic, Image as ImageIcon, Video, Smile } from 'lucide-react';
 import EmojiKeyboard from './EmojiKeyboard';
 
 interface ConversationInputProps {
-  onSendMessage: (text: string, type?: 'text' | 'image' | 'audio', mediaUrl?: string) => void;
+  onSendMessage: (text: string, type?: 'text' | 'image' | 'audio' | 'video', mediaUrl?: string) => void;
 }
 
 const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) => {
@@ -14,6 +14,7 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
   const [showEmojiKeyboard, setShowEmojiKeyboard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Format recording time
   const formatTime = (seconds: number): string => {
@@ -66,6 +67,13 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     }
   };
 
+  // Handle video upload
+  const handleVideoUpload = () => {
+    if (videoInputRef.current) {
+      videoInputRef.current.click();
+    }
+  };
+
   // Process selected image
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -78,6 +86,21 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
       onSendMessage("📷 Imagen", 'image', imageUrl);
       
       // Clear input to allow selecting the same image again
+      e.target.value = '';
+    }
+  };
+
+  // Process selected video
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Create a temporary URL for the video
+      const videoUrl = URL.createObjectURL(files[0]);
+      
+      // Send message with video
+      onSendMessage("🎥 Video", 'video', videoUrl);
+      
+      // Clear input to allow selecting the same video again
       e.target.value = '';
     }
   };
@@ -98,12 +121,28 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
         onChange={handleFileChange}
       />
       
+      <input 
+        type="file"
+        ref={videoInputRef}
+        accept="video/*"
+        className="hidden"
+        onChange={handleVideoChange}
+      />
+      
       <button
         type="button"
         onClick={handleImageUpload}
         className="p-2 rounded-full text-gray-500 hover:bg-gray-100 mr-1"
       >
         <ImageIcon size={22} />
+      </button>
+      
+      <button
+        type="button"
+        onClick={handleVideoUpload}
+        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 mr-1"
+      >
+        <Video size={22} />
       </button>
       
       <button
