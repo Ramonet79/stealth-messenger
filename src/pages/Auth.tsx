@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -33,7 +34,7 @@ const signupSchema = z.object({
     .regex(/[A-Z]/, "Debe incluir al menos una letra mayúscula")
     .regex(/[a-z]/, "Debe incluir al menos una letra minúscula")
     .regex(/[0-9]/, "Debe incluir al menos un número"),
-  recoveryEmail: z.string().email("Email de recuperación inválido"),
+  recoveryEmail: z.string().email("Email de recuperación inválido").optional(),
 });
 
 // Esquema para el inicio de sesión
@@ -47,9 +48,15 @@ const resetSchema = z.object({
   email: z.string().email("Email inválido"),
 });
 
+// Esquema para la recuperación de acceso por email de recuperación
+const recoverySchema = z.object({
+  email: z.string().email("Email inválido"),
+});
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isResetPassword, setIsResetPassword] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [isCreatePattern, setIsCreatePattern] = useState(false);
   const [newPattern, setNewPattern] = useState<number[]>([]);
   const [step, setStep] = useState(1);
@@ -57,7 +64,7 @@ const Auth = () => {
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  const { user, loading, signIn, signUp, sendPasswordResetEmail } = useSupabaseAuth();
+  const { user, loading, signIn, signUp, sendPasswordResetEmail, recoverAccountWithEmail } = useSupabaseAuth();
   const { toast } = useToast();
 
   // Formulario para inicio de sesión
@@ -83,6 +90,14 @@ const Auth = () => {
   // Formulario para recuperación de contraseña
   const resetForm = useForm<z.infer<typeof resetSchema>>({
     resolver: zodResolver(resetSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  // Formulario para recuperación por email secundario
+  const recoveryForm = useForm<z.infer<typeof recoverySchema>>({
+    resolver: zodResolver(recoverySchema),
     defaultValues: {
       email: "",
     },
@@ -160,27 +175,14 @@ const Auth = () => {
   const handleSignup = async (data: z.infer<typeof signupSchema>) => {
     const { email, password, username, recoveryEmail } = data;
     
-    const { data: authData, error } = await signUp(email, password);
+    const { data: authData, error } = await signUp(
+      email, 
+      password, 
+      username, 
+      recoveryEmail || "" // Pasamos el correo de recuperación o una cadena vacía
+    );
     
     if (!error && authData?.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          username,
-          recovery_email: recoveryEmail
-        })
-        .eq('id', authData.user.id);
-      
-      if (profileError) {
-        console.error('Error al guardar perfil:', profileError);
-        toast({
-          variant: "destructive",
-          title: "Error al guardar perfil",
-          description: profileError.message,
-        });
-        return;
-      }
-      
       toast({
         title: "Registro exitoso",
         description: "Por favor, crea tu patrón de desbloqueo",
@@ -194,6 +196,16 @@ const Auth = () => {
   const handleReset = async (data: z.infer<typeof resetSchema>) => {
     const { email } = data;
     await sendPasswordResetEmail(email);
+    setIsResetPassword(false);
+    setIsLogin(true);
+  };
+
+  // Manejar recuperación por email secundario
+  const handleRecovery = async (data: z.infer<typeof recoverySchema>) => {
+    const { email } = data;
+    await recoverAccountWithEmail(email);
+    setIsRecoveryMode(false);
+    setIsLogin(true);
   };
 
   // Manejar creación de patrón
@@ -259,7 +271,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        {!isResetPassword ? (
+        {!isResetPassword && !isRecoveryMode ? (
           <>
             <div className="flex justify-center mb-6">
               <img src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
@@ -405,7 +417,7 @@ const Auth = () => {
                     name="recoveryEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Correo de recuperación (opcional)</FormLabel>
+                        <FormLabel>Correo de recuperación</FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
@@ -435,12 +447,19 @@ const Auth = () => {
               </Form>
             )}
             
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center space-y-2">
               <button
                 onClick={() => setIsResetPassword(true)}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline block"
               >
                 ¿Olvidaste tu contraseña?
+              </button>
+              
+              <button
+                onClick={() => setIsRecoveryMode(true)}
+                className="text-sm text-blue-600 hover:underline block"
+              >
+                ¿Olvidaste tu patrón de desbloqueo?
               </button>
             </div>
             
@@ -462,7 +481,7 @@ const Auth = () => {
               </button>
             </div>
           </>
-        ) : (
+        ) : isResetPassword ? (
           <>
             <h1 className="text-2xl font-bold mb-6 text-center">
               Restablecer contraseña
@@ -505,6 +524,59 @@ const Auth = () => {
                 onClick={() => {
                   setIsResetPassword(false);
                   resetForm.reset();
+                }}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Volver al inicio de sesión
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold mb-6 text-center">
+              Recuperar acceso por correo de recuperación
+            </h1>
+            <p className="text-sm text-gray-600 mb-4 text-center">
+              Si olvidaste tu patrón de desbloqueo, puedes recuperar el acceso usando tu correo de recuperación.
+            </p>
+            <Form {...recoveryForm}>
+              <form onSubmit={recoveryForm.handleSubmit(handleRecovery)} className="space-y-4">
+                <FormField
+                  control={recoveryForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Correo de recuperación</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="email" 
+                          placeholder="recuperacion@email.com" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={recoveryForm.formState.isSubmitting}
+                >
+                  {recoveryForm.formState.isSubmitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Recuperar acceso
+                </Button>
+              </form>
+            </Form>
+            
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => {
+                  setIsRecoveryMode(false);
+                  recoveryForm.reset();
                 }}
                 className="text-sm text-blue-600 hover:underline"
               >
