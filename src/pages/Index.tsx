@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -35,7 +34,7 @@ const Index = () => {
   const [isCreatingFirstPattern, setIsCreatingFirstPattern] = useState(false);
   const [newPattern, setNewPattern] = useState<number[]>([]);
   const [patternStep, setPatternStep] = useState(1);
-  const [patternSuccess, setPatternSuccess] = useState(false); // Nuevo estado para controlar la transición
+  const [patternVerified, setPatternVerified] = useState(false);
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -95,22 +94,14 @@ const Index = () => {
     };
   }, [isAuthenticated]);
   
-  // Nuevo efecto para controlar la transición después de un patrón correcto
   useEffect(() => {
-    if (patternSuccess) {
-      console.log("Patrón correcto detectado, cambiando a modo autenticado");
-      // Aseguramos que primero se establezca la autenticación
+    if (patternVerified) {
+      console.log("🔑 Pattern verified flag activated - setting authenticated to true");
       setIsAuthenticated(true);
-      // Luego ocultamos el patrón después de un breve retraso para permitir la transición
-      const transitionTimer = setTimeout(() => {
-        setShowPatternLock(false);
-        setPatternSuccess(false); // Reiniciamos el estado para futuras validaciones
-        setHasUnreadMessages(false);
-      }, 200);
-      
-      return () => clearTimeout(transitionTimer);
+      setPatternVerified(false);
+      setShowPatternLock(false);
     }
-  }, [patternSuccess]);
+  }, [patternVerified]);
   
   useEffect(() => {
     if (user) {
@@ -139,7 +130,7 @@ const Index = () => {
     } else if (!showPatternLock) {
       console.log("No hay usuario autenticado, mostrando aplicación de camuflaje");
     }
-  }, [user, showPatternLock]);
+  }, [user]);
   
   const handleSettingsClick = () => {
     console.log("Settings button clicked, showing pattern lock screen");
@@ -147,24 +138,24 @@ const Index = () => {
   };
   
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
-    console.log("Pattern complete handler called with pattern:", pattern);
+    console.log("🔑 Pattern complete handler called with pattern:", pattern);
     let isCorrect = false;
     
     try {
       if (user) {
-        console.log("Verifying pattern for user:", user.id);
+        console.log("🔑 Verifying pattern for user:", user.id);
         isCorrect = await patternService.verifyPattern(user.id, pattern);
-        console.log("Pattern verification result:", isCorrect);
+        console.log("🔑 Pattern verification result:", isCorrect);
       } else {
-        console.log("No user, using default pattern verification");
+        console.log("🔑 No user, using default pattern verification");
         isCorrect = patternService.verifyDefaultPattern(pattern);
-        console.log("Default pattern verification result:", isCorrect);
+        console.log("🔑 Default pattern verification result:", isCorrect);
       }
       
       if (isCorrect) {
-        console.log("Pattern correct, setting patternSuccess to trigger transition");
-        // En lugar de cambiar directamente el estado, utilizamos el nuevo estado de éxito
-        setPatternSuccess(true);
+        console.log("🔑 PATTERN CORRECT - triggering authentication flow");
+        
+        setPatternVerified(true);
         
         toast({
           title: "Acceso correcto",
@@ -173,19 +164,20 @@ const Index = () => {
         
         return true;
       } else {
-        console.log("Pattern incorrect");
+        console.log("🔑 Pattern incorrect");
         return false;
       }
     } catch (error) {
       console.error("Error al verificar patrón:", error);
       
-      console.log("Fallback to default pattern verification");
+      console.log("🔑 Fallback to default pattern verification");
       isCorrect = patternService.verifyDefaultPattern(pattern);
-      console.log("Fallback pattern verification result:", isCorrect);
+      console.log("🔑 Fallback pattern verification result:", isCorrect);
       
       if (isCorrect) {
-        console.log("Fallback pattern correct, setting patternSuccess to trigger transition");
-        setPatternSuccess(true);
+        console.log("🔑 Fallback pattern correct, triggering authentication flow");
+        
+        setPatternVerified(true);
         
         toast({
           title: "Acceso correcto",
@@ -263,10 +255,10 @@ const Index = () => {
     }
   };
 
-  console.log("Estado actual:", { 
+  console.log("🔄 Current App State:", { 
     isAuthenticated, 
     showPatternLock, 
-    patternSuccess 
+    patternVerified 
   });
 
   return (
@@ -337,7 +329,7 @@ const Index = () => {
         </div>
       )}
       
-      {showPatternLock && (
+      {showPatternLock && !isAuthenticated && (
         <div className="fixed inset-0 bg-white z-10">
           <PatternLock onPatternComplete={handlePatternComplete} />
         </div>
@@ -349,12 +341,6 @@ const Index = () => {
           onSelectTheme={handleSelectTheme}
           onClose={() => setShowThemeSelector(false)}
         />
-      )}
-      
-      {false && (
-        <div className="fixed bottom-2 left-2 p-2 bg-gray-800 text-white text-xs rounded-md opacity-70">
-          Auth: {isAuthenticated ? 'Sí' : 'No'} | Pattern: {showPatternLock ? 'Visible' : 'Oculto'}
-        </div>
       )}
     </div>
   );

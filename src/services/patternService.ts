@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PatternData {
@@ -88,7 +89,7 @@ export const patternService = {
   
   // Obtener el patrón de un usuario
   getPattern: async (userId: string): Promise<{data: number[] | null, error: any}> => {
-    console.log(`getPattern called for userId: ${userId}`);
+    console.log(`🔑 getPattern called for userId: ${userId}`);
     
     if (!userId) {
       console.error("getPattern: UserId es requerido");
@@ -108,13 +109,13 @@ export const patternService = {
       }
       
       if (!data) {
-        console.log("No se encontró patrón para el usuario");
+        console.log("🔑 No se encontró patrón para el usuario, usando patrón por defecto");
         return { data: null, error: new Error('No pattern found') };
       }
       
       // Convertir el string a array de números
       const patternArray = data.pattern.split(',').map(Number);
-      console.log(`Patrón recuperado: ${patternArray.join(',')}`);
+      console.log(`🔑 Patrón recuperado: ${patternArray.join(',')}`);
       return { data: patternArray, error: null };
     } catch (error) {
       console.error("Error inesperado al obtener patrón:", error);
@@ -124,7 +125,7 @@ export const patternService = {
   
   // Verificar si un patrón coincide con el almacenado
   verifyPattern: async (userId: string, inputPattern: number[]): Promise<boolean> => {
-    console.log(`verifyPattern called for userId: ${userId}, inputPattern: ${inputPattern.join(',')}`);
+    console.log(`🔑 verifyPattern called for userId: ${userId}, inputPattern: ${inputPattern.join(',')}`);
     
     if (!userId || !inputPattern || inputPattern.length < 4) {
       console.error("verifyPattern: Parámetros inválidos");
@@ -136,41 +137,41 @@ export const patternService = {
       
       if (error || !storedPattern) {
         console.error('Error verificando patrón:', error);
-        console.log("Fallback to default pattern verification");
+        console.log("🔑 Fallback to default pattern verification");
         const isDefaultMatch = patternService.verifyDefaultPattern(inputPattern);
-        console.log("Default pattern verification result:", isDefaultMatch);
+        console.log("🔑 Default pattern verification result:", isDefaultMatch);
         return isDefaultMatch;
       }
       
       // Comparar los patrones
       if (storedPattern.length !== inputPattern.length) {
-        console.log(`Longitud de patrones diferente. Stored: ${storedPattern.length}, Input: ${inputPattern.length}`);
+        console.log(`🔑 Longitud de patrones diferente. Stored: ${storedPattern.length}, Input: ${inputPattern.length}`);
         return false;
       }
       
       const matches = storedPattern.every((val, idx) => val === inputPattern[idx]);
-      console.log(`Patrones coinciden: ${matches}. Stored: [${storedPattern}], Input: [${inputPattern}]`);
+      console.log(`🔑 Patrones coinciden: ${matches}. Stored: [${storedPattern}], Input: [${inputPattern}]`);
       return matches;
     } catch (error) {
       console.error("Error inesperado al verificar patrón:", error);
       const isDefaultMatch = patternService.verifyDefaultPattern(inputPattern);
-      console.log("Fallback to default pattern after error:", isDefaultMatch);
+      console.log("🔑 Fallback to default pattern after error:", isDefaultMatch);
       return isDefaultMatch;
     }
   },
 
   // Para usuarios sin autenticación, verificamos contra el patrón hardcoded
   verifyDefaultPattern: (inputPattern: number[]): boolean => {
-    console.log("verifyDefaultPattern called with:", inputPattern);
+    console.log("🔑 verifyDefaultPattern called with:", inputPattern);
     const DEFAULT_PATTERN = [1, 5, 9, 6];
     
     if (DEFAULT_PATTERN.length !== inputPattern.length) {
-      console.log(`Longitud de patrones diferente. Default: ${DEFAULT_PATTERN.length}, Input: ${inputPattern.length}`);
+      console.log(`🔑 Longitud de patrones diferente. Default: ${DEFAULT_PATTERN.length}, Input: ${inputPattern.length}`);
       return false;
     }
     
     const matches = DEFAULT_PATTERN.every((val, idx) => val === inputPattern[idx]);
-    console.log(`Patrones coinciden con default: ${matches}`);
+    console.log(`🔑 Patrones coinciden con default: ${matches}`);
     return matches;
   },
 

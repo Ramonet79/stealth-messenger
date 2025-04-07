@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -173,30 +174,33 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   };
   
   const handleEnd = async () => {
-    if (isLocked || processingPattern) return;
+    if (isLocked || processingPattern) {
+      console.log("🔒 Pattern processing skipped - locked or already processing");
+      return;
+    }
 
     if (selectedPattern.length >= 4) {
       let isCorrect = false;
 
       try {
-        console.log("Processing pattern completion:", selectedPattern);
+        console.log("🔑 Processing pattern submission:", selectedPattern);
         setProcessingPattern(true);
         
         if (isCreationMode) {
-          console.log("Creation mode - calling onPatternComplete");
+          console.log("🔑 Creation mode - calling onPatternComplete");
           isCorrect = await Promise.resolve(onPatternComplete(selectedPattern));
-          console.log("Pattern creation result:", isCorrect);
+          console.log("🔑 Pattern creation result:", isCorrect);
         } else {
           if (user) {
-            console.log("Verifying pattern for user:", user.id);
+            console.log("🔑 Verifying pattern for user:", user.id);
             isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
-            console.log("Pattern verification result:", isCorrect);
+            console.log("🔑 Pattern verification result:", isCorrect);
             
             if (isCorrect) {
-              console.log("Pattern correct, calling onPatternComplete for transition");
+              console.log("🔑 Pattern correct, calling onPatternComplete for transition");
               try {
                 const transitionResult = await Promise.resolve(onPatternComplete(selectedPattern));
-                console.log("Transition result from onPatternComplete:", transitionResult);
+                console.log("🔑 Transition result from onPatternComplete:", transitionResult);
                 
                 if (!transitionResult) {
                   console.error("Pattern was correct but transition failed");
@@ -211,9 +215,9 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
               }
             }
           } else {
-            console.log("No user found, calling onPatternComplete directly");
+            console.log("🔑 No user found, calling onPatternComplete directly");
             isCorrect = await Promise.resolve(onPatternComplete(selectedPattern));
-            console.log("Pattern completion result:", isCorrect);
+            console.log("🔑 Pattern completion result:", isCorrect);
           }
         }
 
@@ -239,6 +243,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
             description: "Por favor, inténtalo de nuevo",
           });
         } else {
+          console.log("🔑 Pattern correct, resetting attempts");
           setFailedAttempts(0);
         }
       } catch (error) {
@@ -249,7 +254,11 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
           description: "Ha ocurrido un error al verificar el patrón",
         });
       } finally {
-        setProcessingPattern(false);
+        // Important: Set processingPattern back to false after processing
+        console.log("🔑 Pattern processing complete");
+        setTimeout(() => {
+          setProcessingPattern(false);
+        }, 500);
       }
     } else {
       if (selectedPattern.length > 0) {
