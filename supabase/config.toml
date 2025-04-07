@@ -6,4 +6,3 @@ verify_jwt = false
 
 [functions.recovery]
 verify_jwt = false
-

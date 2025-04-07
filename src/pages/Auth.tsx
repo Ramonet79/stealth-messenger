@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -31,7 +30,6 @@ const Auth = () => {
   
   const { user, loading } = useSupabaseAuth();
 
-  // Manejo de token de confirmación
   useEffect(() => {
     const handleConfirmation = async () => {
       if (confirmSuccess && token && type && type === 'signup' && !user) {
@@ -39,10 +37,10 @@ const Auth = () => {
         setConfirmationError(null);
         
         try {
-          // Intentar confirmar el token manualmente
           const { error } = await supabase.auth.verifyOtp({
             token,
-            type: 'signup'
+            type: 'signup',
+            email: ""
           });
           
           if (error) {
@@ -61,7 +59,6 @@ const Auth = () => {
     handleConfirmation();
   }, [confirmSuccess, token, type, user]);
 
-  // Si detectamos que hay confirmación exitosa y usuario, preparamos para crear patrón
   useEffect(() => {
     if (confirmSuccess && user) {
       startPatternCreation();
@@ -100,10 +97,8 @@ const Auth = () => {
     setEmailSent(true);
   };
 
-  // Limpieza de parámetros de URL después de procesar
   useEffect(() => {
     if (confirmSuccess && (user || confirmationError)) {
-      // Eliminar parámetros de URL después de procesarlos
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
     }

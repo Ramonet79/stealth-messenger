@@ -35,16 +35,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Modificar la URL de confirmación para usar la URL actual del dispositivo
     // en lugar de localhost:3000
     let modifiedUrl = confirmation_url;
-    if (confirmation_url.includes('localhost:3000')) {
-      // Extraer el token y otros parámetros de la URL
-      const url = new URL(confirmation_url);
-      const token = url.searchParams.get('token');
-      const type = url.searchParams.get('type');
-      
-      // Construir una nueva URL con el dominio de la aplicación
-      const appUrl = Deno.env.get("APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
-      modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
-    }
+    
+    // Extraer el token y otros parámetros de la URL original
+    const url = new URL(confirmation_url);
+    const token = url.searchParams.get('token');
+    const type = url.searchParams.get('type');
+    
+    // Construir una nueva URL con el dominio de la aplicación
+    // Usamos el APP_URL de las variables de entorno, o el dominio del proyecto si está disponible
+    const appUrl = Deno.env.get("APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+    modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
     
     console.log("URL de confirmación modificada:", modifiedUrl);
 

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -41,8 +40,8 @@ export const signUpUser = async (
       password,
       options: {
         data: {
-          username
-          // No incluimos recovery_email hasta que la columna exista
+          username,
+          recovery_email: recoveryEmail
         },
         emailRedirectTo: redirectUrl
       }
@@ -54,11 +53,12 @@ export const signUpUser = async (
 
     if (data.user) {
       // Actualizamos el perfil del usuario con el nombre de usuario
-      // No incluimos recovery_email hasta solucionar el problema con la columna
+      // Incluimos recovery_email ahora que la columna existe
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          username
+          username,
+          recovery_email: recoveryEmail
         })
         .eq('id', data.user.id);
 
