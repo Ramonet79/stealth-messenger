@@ -10,6 +10,11 @@ export interface AuthState {
   loading: boolean;
 }
 
+// Definir una interfaz para los errores para evitar la recursión infinita
+export interface AuthError {
+  message: string;
+}
+
 export const useSupabaseAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     session: null,
@@ -55,7 +60,7 @@ export const useSupabaseAuth = () => {
           title: "Error de registro",
           description: error.message,
         });
-        return { data: null, error };
+        return { data: null, error: { message: error.message } as AuthError };
       }
 
       // Si el registro fue exitoso y tenemos un usuario
@@ -86,7 +91,7 @@ export const useSupabaseAuth = () => {
         title: "Error de registro",
         description: error.message,
       });
-      return { data: null, error };
+      return { data: null, error: { message: error.message } as AuthError };
     }
   };
 
@@ -103,7 +108,7 @@ export const useSupabaseAuth = () => {
           title: "Error de inicio de sesión",
           description: error.message,
         });
-        return { data: null, error };
+        return { data: null, error: { message: error.message } as AuthError };
       }
 
       return { data, error: null };
@@ -113,7 +118,7 @@ export const useSupabaseAuth = () => {
         title: "Error de inicio de sesión",
         description: error.message,
       });
-      return { data: null, error };
+      return { data: null, error: { message: error.message } as AuthError };
     }
   };
 
@@ -126,15 +131,16 @@ export const useSupabaseAuth = () => {
           title: "Error al cerrar sesión",
           description: error.message,
         });
+        return { error: { message: error.message } as AuthError };
       }
-      return { error };
+      return { error: null };
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error al cerrar sesión",
         description: error.message,
       });
-      return { error };
+      return { error: { message: error.message } as AuthError };
     }
   };
 
@@ -148,7 +154,7 @@ export const useSupabaseAuth = () => {
           title: "Error",
           description: error.message,
         });
-        return { error };
+        return { error: { message: error.message } as AuthError };
       }
 
       toast({
@@ -163,7 +169,7 @@ export const useSupabaseAuth = () => {
         title: "Error",
         description: error.message,
       });
-      return { error };
+      return { error: { message: error.message } as AuthError };
     }
   };
 
@@ -182,7 +188,12 @@ export const useSupabaseAuth = () => {
           title: "Error de recuperación",
           description: "No se encontró ninguna cuenta asociada a este correo de recuperación",
         });
-        return { error: profileError || new Error("No se encontró la cuenta") };
+        return { 
+          error: profileError 
+            ? { message: profileError.message } as AuthError 
+            : { message: "No se encontró la cuenta" } as AuthError,
+          profile: null
+        };
       }
 
       // Si encontramos el perfil, recuperamos la cuenta del usuario asociado
@@ -194,7 +205,7 @@ export const useSupabaseAuth = () => {
           title: "Error de recuperación",
           description: error.message,
         });
-        return { error };
+        return { error: { message: error.message } as AuthError, profile: null };
       }
 
       toast({
@@ -209,7 +220,7 @@ export const useSupabaseAuth = () => {
         title: "Error de recuperación",
         description: error.message,
       });
-      return { error };
+      return { error: { message: error.message } as AuthError, profile: null };
     }
   };
 
