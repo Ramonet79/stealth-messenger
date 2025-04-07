@@ -24,6 +24,7 @@ export interface RecoveryResponse {
   profile: {
     id?: string;
     username?: string;
+    recovery_email?: string;
     [key: string]: any;
   } | null;
 }

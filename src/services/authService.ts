@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -93,13 +92,13 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
     // Verificar si existe un perfil con este correo de recuperación
-    const { data: profileData, error: profileError } = await supabase
+    const { data, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('recovery_email', email)
       .maybeSingle();
 
-    if (profileError || !profileData) {
+    if (profileError || !data) {
       return { 
         error: profileError 
           ? { message: profileError.message } 
@@ -115,7 +114,7 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       return { error: { message: error.message }, profile: null };
     }
     
-    return { error: null, profile: profileData };
+    return { error: null, profile: data };
   } catch (error: any) {
     return { error: { message: error.message }, profile: null };
   }
