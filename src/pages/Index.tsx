@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -34,6 +35,7 @@ const Index = () => {
   const [isCreatingFirstPattern, setIsCreatingFirstPattern] = useState(false);
   const [newPattern, setNewPattern] = useState<number[]>([]);
   const [patternStep, setPatternStep] = useState(1);
+  const [patternSuccess, setPatternSuccess] = useState(false); // Nuevo estado para controlar la transición
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -93,6 +95,23 @@ const Index = () => {
     };
   }, [isAuthenticated]);
   
+  // Nuevo efecto para controlar la transición después de un patrón correcto
+  useEffect(() => {
+    if (patternSuccess) {
+      console.log("Patrón correcto detectado, cambiando a modo autenticado");
+      // Aseguramos que primero se establezca la autenticación
+      setIsAuthenticated(true);
+      // Luego ocultamos el patrón después de un breve retraso para permitir la transición
+      const transitionTimer = setTimeout(() => {
+        setShowPatternLock(false);
+        setPatternSuccess(false); // Reiniciamos el estado para futuras validaciones
+        setHasUnreadMessages(false);
+      }, 200);
+      
+      return () => clearTimeout(transitionTimer);
+    }
+  }, [patternSuccess]);
+  
   useEffect(() => {
     if (user) {
       const isFirstLogin = sessionStorage.getItem('firstLogin') === 'true';
@@ -143,17 +162,14 @@ const Index = () => {
       }
       
       if (isCorrect) {
-        console.log("Pattern correct, transitioning to authenticated state");
-        setIsAuthenticated(true);
-        setTimeout(() => {
-          setShowPatternLock(false);
-          setHasUnreadMessages(false);
-          
-          toast({
-            title: "Acceso correcto",
-            description: "Bienvenido al chat dScrt",
-          });
-        }, 100);
+        console.log("Pattern correct, setting patternSuccess to trigger transition");
+        // En lugar de cambiar directamente el estado, utilizamos el nuevo estado de éxito
+        setPatternSuccess(true);
+        
+        toast({
+          title: "Acceso correcto",
+          description: "Bienvenido al chat dScrt",
+        });
         
         return true;
       } else {
@@ -168,12 +184,13 @@ const Index = () => {
       console.log("Fallback pattern verification result:", isCorrect);
       
       if (isCorrect) {
-        console.log("Fallback pattern correct, transitioning to authenticated state");
-        setIsAuthenticated(true);
-        setTimeout(() => {
-          setShowPatternLock(false);
-          setHasUnreadMessages(false);
-        }, 100);
+        console.log("Fallback pattern correct, setting patternSuccess to trigger transition");
+        setPatternSuccess(true);
+        
+        toast({
+          title: "Acceso correcto",
+          description: "Bienvenido al chat dScrt",
+        });
         
         return true;
       }
@@ -246,6 +263,12 @@ const Index = () => {
     }
   };
 
+  console.log("Estado actual:", { 
+    isAuthenticated, 
+    showPatternLock, 
+    patternSuccess 
+  });
+
   return (
     <div className="min-h-screen flex flex-col">
       {isAuthenticated ? (
@@ -283,7 +306,7 @@ const Index = () => {
                 <AlertDescription className="flex justify-between items-center">
                   <span>El logo de la aplicación ha cambiado a modo camuflaje.</span>
                   <button 
-                    onClick={() => setShowLogoChangeAlert(false)}
+                    onClick={dismissLogoAlert}
                     className="ml-2 text-sm font-medium underline"
                   >
                     Entendido
@@ -302,7 +325,7 @@ const Index = () => {
                     usa tu patrón de desbloqueo.
                   </span>
                   <button 
-                    onClick={() => setShowPatternInstructions(false)}
+                    onClick={dismissPatternInstructions}
                     className="ml-2 text-sm font-medium underline"
                   >
                     Entendido

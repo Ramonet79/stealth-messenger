@@ -29,6 +29,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   const [showLockoutDialog, setShowLockoutDialog] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [remainingTime, setRemainingTime] = useState('');
+  const [processingPattern, setProcessingPattern] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
@@ -81,7 +82,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   }, [isLocked, lockEndTime]);
   
   const handlePointStart = (id: number) => {
-    if (selectedPattern.includes(id) || isLocked) return;
+    if (selectedPattern.includes(id) || isLocked || processingPattern) return;
     
     setIsDrawing(true);
     setCurrentPoint(id);
@@ -103,7 +104,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   };
   
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isDrawing || !containerRef.current || isLocked) return;
+    if (!isDrawing || !containerRef.current || isLocked || processingPattern) return;
     
     const containerRect = containerRef.current.getBoundingClientRect();
     const touch = e.touches[0];
@@ -115,7 +116,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !containerRef.current || isLocked) return;
+    if (!isDrawing || !containerRef.current || isLocked || processingPattern) return;
     
     const containerRect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - containerRect.left;
@@ -172,13 +173,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   };
   
   const handleEnd = async () => {
-    if (isLocked) return;
+    if (isLocked || processingPattern) return;
 
     if (selectedPattern.length >= 4) {
       let isCorrect = false;
 
       try {
         console.log("Processing pattern completion:", selectedPattern);
+        setProcessingPattern(true);
         
         if (isCreationMode) {
           console.log("Creation mode - calling onPatternComplete");
@@ -192,16 +194,20 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
             
             if (isCorrect) {
               console.log("Pattern correct, calling onPatternComplete for transition");
-              const transitionResult = await Promise.resolve(onPatternComplete(selectedPattern));
-              console.log("Transition result from onPatternComplete:", transitionResult);
-              
-              if (!transitionResult) {
-                console.error("Pattern was correct but transition failed");
-                toast({
-                  variant: "destructive",
-                  title: "Error de transición",
-                  description: "El patrón es correcto pero hubo un error al acceder al chat",
-                });
+              try {
+                const transitionResult = await Promise.resolve(onPatternComplete(selectedPattern));
+                console.log("Transition result from onPatternComplete:", transitionResult);
+                
+                if (!transitionResult) {
+                  console.error("Pattern was correct but transition failed");
+                  toast({
+                    variant: "destructive",
+                    title: "Error de transición",
+                    description: "El patrón es correcto pero hubo un error al acceder al chat",
+                  });
+                }
+              } catch (transitionError) {
+                console.error("Error during transition:", transitionError);
               }
             }
           } else {
@@ -242,6 +248,8 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
           title: "Error de verificación",
           description: "Ha ocurrido un error al verificar el patrón",
         });
+      } finally {
+        setProcessingPattern(false);
       }
     } else {
       if (selectedPattern.length > 0) {
@@ -352,7 +360,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
       
       <div 
         ref={containerRef} 
-        className={`relative w-[280px] h-[280px] touch-none cursor-pointer ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
+        className={`relative w-[280px] h-[280px] touch-none cursor-pointer ${isLocked || processingPattern ? 'opacity-50 pointer-events-none' : ''}`}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseMove={handleMouseMove}
