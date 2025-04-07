@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,9 +16,10 @@ interface Point {
 
 interface PatternLockProps {
   onPatternComplete: (pattern: number[]) => Promise<boolean> | boolean;
+  isCreationMode?: boolean;
 }
 
-const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
+const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreationMode = false }) => {
   const [points, setPoints] = useState<Point[]>([]);
   const [selectedPattern, setSelectedPattern] = useState<number[]>([]);
   const [currentPoint, setCurrentPoint] = useState<number | null>(null);
@@ -176,7 +178,16 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
     if (selectedPattern.length >= 4) {
       let isCorrect = false;
 
-      if (user) {
+      if (isCreationMode) {
+        // En modo creación, siempre consideramos válido el patrón
+        try {
+          const result = await Promise.resolve(onPatternComplete(selectedPattern));
+          isCorrect = result;
+        } catch (error) {
+          console.error("Error en onPatternComplete:", error);
+          isCorrect = false;
+        }
+      } else if (user) {
         try {
           isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
         } catch (error) {
@@ -197,7 +208,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         const newFailedAttempts = failedAttempts + 1;
         setFailedAttempts(newFailedAttempts);
         
-        if (newFailedAttempts >= 3) {
+        if (newFailedAttempts >= 3 && !isCreationMode) {
           if (newFailedAttempts >= 6) {
             setShowRecoveryDialog(true);
           } else {
@@ -216,6 +227,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
         });
       } else {
         setFailedAttempts(0);
+      }
+    } else {
+      if (selectedPattern.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Patrón demasiado corto",
+          description: "Por favor, conecta al menos 4 puntos",
+        });
       }
     }
     
@@ -296,9 +315,9 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
   
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gray-100">
-      <h2 className="text-2xl font-bold mb-8">Desbloquear App</h2>
+      <h2 className="text-2xl font-bold mb-8">{isCreationMode ? "Crear patrón" : "Desbloquear App"}</h2>
       
-      {isLocked && (
+      {!isCreationMode && isLocked && (
         <Alert className="mb-4 max-w-md">
           <AlertDescription>
             La entrada está bloqueada por demasiados intentos fallidos. 
@@ -306,6 +325,14 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
           </AlertDescription>
         </Alert>
       )}
+      
+      <Alert className="mb-4 max-w-md">
+        <AlertDescription>
+          {isCreationMode 
+            ? "Conecta al menos 4 puntos para crear tu patrón de desbloqueo. Recuérdalo bien, lo necesitarás para acceder a la aplicación."
+            : "Dibuja tu patrón de desbloqueo conectando al menos 4 puntos."}
+        </AlertDescription>
+      </Alert>
       
       <div 
         ref={containerRef} 
@@ -333,7 +360,11 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete }) => {
           />
         ))}
       </div>
-      <p className="mt-8 text-gray-500">Dibuja tu patrón para acceder</p>
+      <p className="mt-8 text-gray-500">
+        {isCreationMode 
+          ? "Dibuja un patrón conectando al menos 4 puntos" 
+          : "Dibuja tu patrón para acceder"}
+      </p>
 
       <Dialog open={showLockoutDialog} onOpenChange={setShowLockoutDialog}>
         <DialogContent>

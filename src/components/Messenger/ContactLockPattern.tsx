@@ -62,6 +62,15 @@ const ContactLockPattern: React.FC<ContactLockPatternProps> = ({
   };
 
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
+    if (pattern.length < 4) {
+      toast({
+        variant: "destructive",
+        title: t('contactLock.tooShort') || "Patrón demasiado corto",
+        description: t('contactLock.needMinPoints') || "El patrón debe tener al menos 4 puntos",
+      });
+      return false;
+    }
+    
     if (step === 1) {
       setNewPattern(pattern);
       setStep(2);
@@ -128,7 +137,7 @@ const ContactLockPattern: React.FC<ContactLockPatternProps> = ({
               ? t('contactLock.create') || 'Crear patrón de desbloqueo'
               : t('contactLock.confirm') || 'Confirmar patrón'}
           </h2>
-          <PatternLock onPatternComplete={handlePatternComplete} />
+          <PatternLock onPatternComplete={handlePatternComplete} isCreationMode={true} />
           
           <p className="mt-8 text-sm text-gray-500 text-center max-w-xs">
             {t('contactLock.description') || 'Este patrón será requerido para acceder a las conversaciones con este contacto'}

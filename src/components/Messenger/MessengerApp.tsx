@@ -132,7 +132,7 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
             <h2 className="text-xl font-medium mb-8">
               Introduce el patrón para desbloquear el chat con {selectedContact?.name}
             </h2>
-            <PatternLock onPatternComplete={handlePatternComplete} />
+            <PatternLock onPatternComplete={handlePatternComplete} isCreationMode={false} />
           </div>
         </div>
       )}

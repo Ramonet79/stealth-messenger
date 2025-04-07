@@ -27,7 +27,18 @@ export const PatternCreation = ({
 
   // Manejar creación de patrón
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
+    // Verificamos que el patrón tenga al menos 4 puntos
+    if (pattern.length < 4) {
+      toast({
+        variant: "destructive",
+        title: "Patrón demasiado corto",
+        description: "El patrón debe conectar al menos 4 puntos",
+      });
+      return false;
+    }
+    
     if (step === 1) {
+      console.log("Patrón registrado en paso 1:", pattern);
       setNewPattern(pattern);
       setStep(2);
       toast({
@@ -39,14 +50,29 @@ export const PatternCreation = ({
       const patternsMatch = pattern.length === newPattern.length && 
         pattern.every((val, idx) => val === newPattern[idx]);
       
+      console.log("Confirmando patrón:", pattern);
+      console.log("Comparando con patrón guardado:", newPattern);
+      console.log("¿Coinciden?", patternsMatch);
+      
       if (patternsMatch) {
-        await patternService.savePattern(userId, pattern);
-        toast({
-          title: "Patrón establecido",
-          description: "Tu patrón de desbloqueo ha sido guardado",
-        });
-        onComplete();
-        return true;
+        try {
+          console.log("Guardando patrón para el usuario:", userId);
+          await patternService.savePattern(userId, pattern);
+          toast({
+            title: "Patrón establecido",
+            description: "Tu patrón de desbloqueo ha sido guardado",
+          });
+          onComplete();
+          return true;
+        } catch (error) {
+          console.error("Error al guardar el patrón:", error);
+          toast({
+            variant: "destructive",
+            title: "Error al guardar",
+            description: "No se pudo guardar el patrón. Por favor, inténtalo de nuevo.",
+          });
+          return false;
+        }
       } else {
         toast({
           variant: "destructive",
@@ -78,13 +104,23 @@ export const PatternCreation = ({
         </AlertDescription>
       </Alert>
       
+      <Alert className="mb-4 max-w-md">
+        <AlertDescription>
+          <strong>Importante:</strong> Tu patrón debe conectar al menos 4 puntos.
+          Dibuja un patrón sencillo que puedas recordar fácilmente.
+        </AlertDescription>
+      </Alert>
+      
       <p className="text-sm text-gray-600 mb-8 text-center max-w-md">
         {step === 1 
           ? "Dibuja un patrón que usarás para desbloquear la aplicación. Recuérdalo bien." 
           : "Dibuja nuevamente el mismo patrón para confirmarlo."}
       </p>
       
-      <PatternLock onPatternComplete={handlePatternComplete} />
+      <PatternLock 
+        onPatternComplete={handlePatternComplete} 
+        isCreationMode={true}
+      />
       
       {step === 2 && (
         <div className="mt-8 text-center max-w-md">

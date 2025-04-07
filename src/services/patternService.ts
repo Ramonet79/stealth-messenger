@@ -18,68 +18,139 @@ export interface ContactPatternData {
 export const patternService = {
   // Guardar o actualizar un patrón de desbloqueo
   savePattern: async (userId: string, pattern: number[]): Promise<{data: any, error: any}> => {
+    if (!userId) {
+      console.error("savePattern: UserId es requerido");
+      return { data: null, error: new Error("UserId es requerido") };
+    }
+    
+    if (!pattern || pattern.length < 4) {
+      console.error("savePattern: Patrón inválido, debe tener al menos 4 puntos");
+      return { data: null, error: new Error("Patrón inválido") };
+    }
+    
     // Convertir el array de números a string
     const patternStr = pattern.join(',');
+    console.log(`Guardando patrón para usuario ${userId}: ${patternStr}`);
     
-    // Verificar si ya existe un patrón para este usuario
-    const { data: existingPattern } = await supabase
-      .from('unlock_patterns')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (existingPattern) {
-      // Actualizar el patrón existente
-      const { data, error } = await supabase
+    try {
+      // Verificar si ya existe un patrón para este usuario
+      const { data: existingPattern, error: checkError } = await supabase
         .from('unlock_patterns')
-        .update({ pattern: patternStr, updated_at: new Date().toISOString() })
-        .eq('user_id', userId);
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
       
-      return { data, error };
-    } else {
-      // Crear un nuevo patrón
-      const { data, error } = await supabase
-        .from('unlock_patterns')
-        .insert([
-          { user_id: userId, pattern: patternStr },
-        ]);
+      if (checkError) {
+        console.error("Error al verificar patrón existente:", checkError);
+        return { data: null, error: checkError };
+      }
       
-      return { data, error };
+      if (existingPattern) {
+        console.log("Actualizando patrón existente");
+        // Actualizar el patrón existente
+        const { data, error } = await supabase
+          .from('unlock_patterns')
+          .update({ pattern: patternStr, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .select();
+        
+        if (error) {
+          console.error("Error al actualizar patrón:", error);
+        } else {
+          console.log("Patrón actualizado correctamente:", data);
+        }
+        
+        return { data, error };
+      } else {
+        console.log("Creando nuevo patrón");
+        // Crear un nuevo patrón
+        const { data, error } = await supabase
+          .from('unlock_patterns')
+          .insert([
+            { user_id: userId, pattern: patternStr },
+          ])
+          .select();
+        
+        if (error) {
+          console.error("Error al insertar nuevo patrón:", error);
+        } else {
+          console.log("Nuevo patrón creado correctamente:", data);
+        }
+        
+        return { data, error };
+      }
+    } catch (error) {
+      console.error("Error inesperado al guardar patrón:", error);
+      return { data: null, error };
     }
   },
   
   // Obtener el patrón de un usuario
   getPattern: async (userId: string): Promise<{data: number[] | null, error: any}> => {
-    const { data, error } = await supabase
-      .from('unlock_patterns')
-      .select('pattern')
-      .eq('user_id', userId)
-      .single();
-    
-    if (error || !data) {
-      return { data: null, error: error || new Error('No pattern found') };
+    if (!userId) {
+      console.error("getPattern: UserId es requerido");
+      return { data: null, error: new Error("UserId es requerido") };
     }
     
-    // Convertir el string a array de números
-    const patternArray = data.pattern.split(',').map(Number);
-    return { data: patternArray, error: null };
+    console.log(`Obteniendo patrón para usuario ${userId}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('unlock_patterns')
+        .select('pattern')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error al obtener patrón:", error);
+        return { data: null, error };
+      }
+      
+      if (!data) {
+        console.log("No se encontró patrón para el usuario");
+        return { data: null, error: new Error('No pattern found') };
+      }
+      
+      // Convertir el string a array de números
+      const patternArray = data.pattern.split(',').map(Number);
+      console.log(`Patrón recuperado: ${patternArray.join(',')}`);
+      return { data: patternArray, error: null };
+    } catch (error) {
+      console.error("Error inesperado al obtener patrón:", error);
+      return { data: null, error };
+    }
   },
   
   // Verificar si un patrón coincide con el almacenado
   verifyPattern: async (userId: string, inputPattern: number[]): Promise<boolean> => {
-    const { data: storedPattern, error } = await patternService.getPattern(userId);
-    
-    if (error || !storedPattern) {
-      console.error('Error verificando patrón:', error);
+    if (!userId || !inputPattern || inputPattern.length < 4) {
+      console.error("verifyPattern: Parámetros inválidos");
       return false;
     }
     
-    // Comparar los patrones
-    if (storedPattern.length !== inputPattern.length) {
+    console.log(`Verificando patrón para usuario ${userId}`);
+    
+    try {
+      const { data: storedPattern, error } = await patternService.getPattern(userId);
+      
+      if (error || !storedPattern) {
+        console.error('Error verificando patrón:', error);
+        return patternService.verifyDefaultPattern(inputPattern);
+      }
+      
+      // Comparar los patrones
+      if (storedPattern.length !== inputPattern.length) {
+        console.log("Longitud de patrones diferente");
+        return false;
+      }
+      
+      const matches = storedPattern.every((val, idx) => val === inputPattern[idx]);
+      console.log(`Patrones coinciden: ${matches}`);
+      return matches;
+    } catch (error) {
+      console.error("Error inesperado al verificar patrón:", error);
       return false;
     }
-    
-    return storedPattern.every((val, idx) => val === inputPattern[idx]);
   },
 
   // Para usuarios sin autenticación, verificamos contra el patrón hardcoded
