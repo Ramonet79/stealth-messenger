@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,16 +31,29 @@ export const useSupabaseAuth = () => {
       (event, session) => {
         console.log("Auth event:", event);
         
+        // Si el evento es SIGNED_OUT, asegurarse de limpiar estado
+        if (event === 'SIGNED_OUT') {
+          console.log("Usuario ha cerrado sesión");
+          setAuthState({
+            session: null,
+            user: null,
+            loading: false,
+          });
         // Si el evento es SIGNED_IN después de confirmar email, redirigir a la creación de patrón
-        if (event === 'SIGNED_IN' && window.location.href.includes('confirmSuccess=true')) {
+        } else if (event === 'SIGNED_IN' && window.location.href.includes('confirmSuccess=true')) {
           console.log("Usuario confirmado y autenticado correctamente");
+          setAuthState({
+            session,
+            user: session?.user ?? null,
+            loading: false,
+          });
+        } else {
+          setAuthState({
+            session,
+            user: session?.user ?? null,
+            loading: false,
+          });
         }
-        
-        setAuthState({
-          session,
-          user: session?.user ?? null,
-          loading: false,
-        });
       }
     );
 

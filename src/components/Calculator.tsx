@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 // Define los tipos de props
 interface CalculatorProps {
@@ -22,6 +24,7 @@ const Calculator: React.FC<CalculatorProps> = ({
   // Contador para detectar un patrón específico de taps para cerrar sesión
   const [logoutTapCount, setLogoutTapCount] = useState<number>(0);
   const [lastTapTime, setLastTapTime] = useState<number>(0);
+  const navigate = useNavigate();
 
   // Efecto para resetear el contador de taps después de un tiempo
   useEffect(() => {
@@ -52,8 +55,8 @@ const Calculator: React.FC<CalculatorProps> = ({
           description: "Has cerrado sesión correctamente",
         });
         
-        // Recargamos la página para volver a la pantalla de inicio
-        window.location.reload();
+        // Redirigir explícitamente a la página de autenticación
+        navigate('/auth');
       }
     } catch (err) {
       console.error('Error inesperado al cerrar sesión:', err);

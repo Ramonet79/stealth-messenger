@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -98,15 +97,15 @@ const Index = () => {
       window.removeEventListener('unreadRequestsUpdate', handleUnreadRequests as EventListener);
     };
   }, [isAuthenticated]);
-
-  // Redirigir a autenticación si el usuario no está autenticado
+  
+  // Verificar si el usuario está autenticado
   useEffect(() => {
     if (user) {
       setIsAuthenticated(false); // Inicialmente no autenticado hasta validar patrón
     } else if (!showPatternLock) {
-      // Solo redirigir si no estamos en la pantalla de patrón
-      // Esto permite que el patrón por defecto funcione sin autenticación
-      //navigate('/auth');
+      // Si no hay usuario autenticado y no estamos en la pantalla de patrón,
+      // simplemente seguimos mostrando la aplicación de camuflaje
+      console.log("No hay usuario autenticado, mostrando aplicación de camuflaje");
     }
   }, [user, showPatternLock]);
   
