@@ -11,6 +11,15 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { patternService } from '@/services/patternService';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PatternCreation } from '@/components/auth/PatternCreation';
+import WeatherApp from '@/components/ThemeApps/WeatherApp';
+import RadarApp from '@/components/ThemeApps/RadarApp';
+import BrowserApp from '@/components/ThemeApps/BrowserApp';
+import NotesApp from '@/components/ThemeApps/NotesApp';
+import FitnessApp from '@/components/ThemeApps/FitnessApp';
+import ScannerApp from '@/components/ThemeApps/ScannerApp';
+import ConverterApp from '@/components/ThemeApps/ConverterApp';
+import FlashlightApp from '@/components/ThemeApps/FlashlightApp';
+import CalendarApp from '@/components/ThemeApps/CalendarApp';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
