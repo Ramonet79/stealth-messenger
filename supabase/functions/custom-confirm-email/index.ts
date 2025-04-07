@@ -13,6 +13,8 @@ const corsHeaders = {
 // Esta función será llamada por un webhook de Supabase
 // cuando se genere un evento de signup
 const handler = async (req: Request): Promise<Response> => {
+  console.log("Edge function custom-confirm-email invocada");
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,11 +22,31 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Decodificar la información del webhook
-    const { email, confirmation_url } = await req.json();
+    const payload = await req.json();
+    console.log("Payload recibido:", JSON.stringify(payload));
+    
+    const { email, confirmation_url } = payload;
 
     if (!email || !confirmation_url) {
+      console.error("Email o URL de confirmación no proporcionados");
       throw new Error("Email o URL de confirmación no proporcionados");
     }
+
+    // Modificar la URL de confirmación para usar la URL actual del dispositivo
+    // en lugar de localhost:3000
+    let modifiedUrl = confirmation_url;
+    if (confirmation_url.includes('localhost:3000')) {
+      // Extraer el token y otros parámetros de la URL
+      const url = new URL(confirmation_url);
+      const token = url.searchParams.get('token');
+      const type = url.searchParams.get('type');
+      
+      // Construir una nueva URL con el dominio de la aplicación
+      const appUrl = Deno.env.get("APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+      modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
+    }
+    
+    console.log("URL de confirmación modificada:", modifiedUrl);
 
     // Enviar email personalizado
     const emailResponse = await resend.emails.send({
@@ -48,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${confirmation_url}" 
+            <a href="${modifiedUrl}" 
                style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
               Confirmar mi cuenta
             </a>

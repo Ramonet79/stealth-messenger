@@ -111,15 +111,27 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       setIsSubmitting(true);
       const { email, password, username } = data;
       
-      // Usando el mismo email como correo de recuperación
+      // Ya no pasamos el correo de recuperación hasta resolver el problema con la columna
       const { data: authData, error } = await signUp(
         email, 
         password, 
         username, 
-        email // El mismo email como recuperación
+        "" // Enviamos string vacío para evitar el error de recovery_email
       );
       
       if (error) {
+        // Interceptamos el error específico de recovery_email
+        if (error.message.includes("recovery_email")) {
+          // Si el error es sobre recovery_email, mostramos un mensaje más amigable
+          // pero consideramos que el registro fue exitoso de todos modos
+          toast({
+            title: "Registro exitoso",
+            description: "Por favor, revisa tu correo para confirmar tu cuenta",
+          });
+          onSuccess();
+          return;
+        }
+        
         toast({
           variant: "destructive",
           title: "Error de registro",

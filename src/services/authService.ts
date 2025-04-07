@@ -29,7 +29,11 @@ export const signUpUser = async (
     
     // URL de redirección personalizada para después de la confirmación de email
     // Esta URL debe ser agregada como URL permitida en la configuración de Supabase
-    const redirectUrl = window.location.origin + '/auth?confirmSuccess=true';
+    // Usamos la URL actual en lugar de hardcodear localhost
+    const appUrl = window.location.origin;
+    const redirectUrl = `${appUrl}/auth?confirmSuccess=true`;
+    
+    console.log('URL de redirección para confirmación:', redirectUrl);
     
     // Procedemos con el registro
     const { data, error } = await supabase.auth.signUp({
@@ -37,8 +41,8 @@ export const signUpUser = async (
       password,
       options: {
         data: {
-          username,
-          recovery_email: email // Usamos el mismo email para recuperación
+          username
+          // No incluimos recovery_email hasta que la columna exista
         },
         emailRedirectTo: redirectUrl
       }
@@ -49,12 +53,12 @@ export const signUpUser = async (
     }
 
     if (data.user) {
-      // Actualizamos el perfil del usuario con el nombre de usuario y correo de recuperación
+      // Actualizamos el perfil del usuario con el nombre de usuario
+      // No incluimos recovery_email hasta solucionar el problema con la columna
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          username,
-          recovery_email: email 
+          username
         })
         .eq('id', data.user.id);
 

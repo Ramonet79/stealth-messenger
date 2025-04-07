@@ -7,9 +7,10 @@ import { SignupForm } from '@/components/auth/SignupForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { RecoveryForm } from '@/components/auth/RecoveryForm';
 import { PatternCreation } from '@/components/auth/PatternCreation';
-import { Loader2, CheckCircle, Mail } from 'lucide-react';
+import { Loader2, CheckCircle, Mail, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,14 +20,49 @@ const Auth = () => {
   const [newPattern, setNewPattern] = useState<number[]>([]);
   const [step, setStep] = useState(1);
   const [emailSent, setEmailSent] = useState(false);
+  const [confirmationError, setConfirmationError] = useState<string | null>(null);
+  const [processingConfirmation, setProcessingConfirmation] = useState(false);
   
   const location = useLocation();
-  const confirmSuccess = new URLSearchParams(location.search).get('confirmSuccess') === 'true';
+  const searchParams = new URLSearchParams(location.search);
+  const confirmSuccess = searchParams.get('confirmSuccess') === 'true';
+  const token = searchParams.get('token');
+  const type = searchParams.get('type');
   
   const { user, loading } = useSupabaseAuth();
 
+  // Manejo de token de confirmación
   useEffect(() => {
-    // Si detectamos que hay confirmación exitosa, preparamos para crear patrón
+    const handleConfirmation = async () => {
+      if (confirmSuccess && token && type && type === 'signup' && !user) {
+        setProcessingConfirmation(true);
+        setConfirmationError(null);
+        
+        try {
+          // Intentar confirmar el token manualmente
+          const { error } = await supabase.auth.verifyOtp({
+            token,
+            type: 'signup'
+          });
+          
+          if (error) {
+            console.error('Error al confirmar token:', error);
+            setConfirmationError(error.message);
+          }
+        } catch (error: any) {
+          console.error('Error al procesar confirmación:', error);
+          setConfirmationError(error.message);
+        } finally {
+          setProcessingConfirmation(false);
+        }
+      }
+    };
+    
+    handleConfirmation();
+  }, [confirmSuccess, token, type, user]);
+
+  // Si detectamos que hay confirmación exitosa y usuario, preparamos para crear patrón
+  useEffect(() => {
     if (confirmSuccess && user) {
       startPatternCreation();
     }
@@ -64,11 +100,20 @@ const Auth = () => {
     setEmailSent(true);
   };
 
+  // Limpieza de parámetros de URL después de procesar
+  useEffect(() => {
+    if (confirmSuccess && (user || confirmationError)) {
+      // Eliminar parámetros de URL después de procesarlos
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, [confirmSuccess, user, confirmationError]);
+
   if (user && !isCreatePattern && !confirmSuccess) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
-  if (loading) {
+  if (loading || processingConfirmation) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
@@ -126,6 +171,44 @@ const Auth = () => {
               onClick={() => setEmailSent(false)}
             >
               Volver
+            </Button>
+          </>
+        ) : confirmationError ? (
+          <>
+            <div className="flex justify-center mb-6">
+              <img src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
+                alt="dScrt Logo" 
+                className="h-20 w-20 rounded-lg" />
+            </div>
+            
+            <div className="flex justify-center mb-6">
+              <AlertTriangle className="h-16 w-16 text-red-500" />
+            </div>
+            
+            <h1 className="text-2xl font-bold mb-4 text-center">
+              Error de confirmación
+            </h1>
+            
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>
+                {confirmationError}
+              </AlertDescription>
+            </Alert>
+            
+            <p className="text-center mb-6">
+              Ha ocurrido un error al confirmar tu cuenta. Por favor, intenta registrarte nuevamente 
+              o contacta con soporte si el problema persiste.
+            </p>
+            
+            <Button 
+              type="button" 
+              className="w-full"
+              onClick={() => {
+                setConfirmationError(null);
+                setIsLogin(false);
+              }}
+            >
+              Intentar de nuevo
             </Button>
           </>
         ) : confirmSuccess && !user ? (
