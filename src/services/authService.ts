@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -43,6 +44,7 @@ export const signUpUser = async (
     }
 
     if (data.user) {
+      // Actualizamos el perfil del usuario con el nombre de usuario y correo de recuperación
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -113,28 +115,17 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
   }
 };
 
-// Función de recuperación simplificada para evitar el error de TypeScript
+// Función de recuperación simplificada para evitar errores de TypeScript
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
-    // Verificar si la tabla profiles tiene la columna recovery_email
-    const { error: schemaError } = await supabase
-      .from('profiles')
-      .select('id')
-      .limit(1);
+    console.log("Buscando usuario con correo de recuperación:", email);
     
-    if (schemaError && schemaError.message.includes('recovery_email')) {
-      console.error('Error de esquema:', schemaError.message);
-      return { 
-        error: { message: "Error con la tabla de perfiles. La columna de correo de recuperación podría no existir." },
-        profile: null
-      };
-    }
-    
-    // Buscar el perfil con el correo de recuperación mediante una consulta separada
+    // Buscar el perfil con el correo de recuperación
     const { data, error } = await supabase
       .from('profiles')
       .select('id, username, recovery_email')
-      .eq('recovery_email', email);
+      .eq('recovery_email', email)
+      .limit(1);
     
     if (error) {
       console.error('Error al buscar perfil:', error);
@@ -154,30 +145,29 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     // Usar el primer perfil encontrado
     const matchingProfile = data[0];
     
-    // Enviar correo de restablecimiento - usamos el correo principal, no el de recuperación
-    const userResult = await supabase
-      .from('auth')
-      .select('email')
-      .eq('id', matchingProfile.id)
-      .single();
-    
-    let userEmail = email;
-    if (!userResult.error && userResult.data && userResult.data.email) {
-      userEmail = userResult.data.email;
-    }
-    
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(userEmail);
+    // Enviar correo de restablecimiento para este usuario
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
     
     if (resetError) {
-      return { error: { message: resetError.message }, profile: null };
+      return { 
+        error: { message: resetError.message }, 
+        profile: null 
+      };
     }
     
     return { 
       error: null, 
-      profile: matchingProfile
+      profile: {
+        id: matchingProfile.id,
+        username: matchingProfile.username,
+        recovery_email: matchingProfile.recovery_email
+      }
     };
   } catch (error: any) {
     console.error('Error en recuperación de cuenta:', error);
-    return { error: { message: error.message || 'Error desconocido' }, profile: null };
+    return { 
+      error: { message: error.message || 'Error desconocido' }, 
+      profile: null 
+    };
   }
 };
