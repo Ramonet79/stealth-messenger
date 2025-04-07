@@ -94,6 +94,13 @@ export const useSupabaseAuth = () => {
       
       // Set flag for first login to trigger pattern creation
       sessionStorage.setItem('firstLogin', 'true');
+      
+      // Log in the user immediately after successful registration
+      // Note: This was added to ensure the user doesn't need to verify email
+      if (response.data?.user) {
+        console.log("Auto-iniciando sesión después del registro");
+        await signIn(email, password);
+      }
     }
     
     return response;
@@ -111,6 +118,11 @@ export const useSupabaseAuth = () => {
       });
     } else {
       console.log("Inicio de sesión exitoso:", response.data?.user?.id);
+      
+      // Check if it's the first login after registration
+      if (sessionStorage.getItem('firstLogin') === 'true') {
+        console.log("Primera sesión detectada - se iniciará creación de patrón");
+      }
     }
     
     return response;

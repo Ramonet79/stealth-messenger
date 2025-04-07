@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -26,7 +27,7 @@ export const signUpUser = async (
       };
     }
     
-    // Registrar usuario sin verificación de correo
+    // Registrar usuario con cuenta auto-confirmada
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,8 +35,8 @@ export const signUpUser = async (
         data: {
           username
         },
-        // Desactivar redirección para evitar verificación por correo
-        emailRedirectTo: undefined
+        // Importante: Establecer emailRedirectTo como undefined y desactivar emailConfirm
+        emailRedirectTo: undefined,
       }
     });
 
@@ -45,6 +46,16 @@ export const signUpUser = async (
     }
 
     if (data.user) {
+      // Auto-confirmar el email del usuario manualmente
+      const { error: confirmError } = await supabase.auth.admin.updateUserById(
+        data.user.id,
+        { email_confirm: true }
+      );
+
+      if (confirmError) {
+        console.error('Error al confirmar email automáticamente:', confirmError);
+      }
+
       // Actualizamos el perfil del usuario con el nombre de usuario
       const { error: profileError } = await supabase
         .from('profiles')
