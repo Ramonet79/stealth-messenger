@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
@@ -10,6 +11,7 @@ import { Loader2, CheckCircle, Mail, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,59 +23,40 @@ const Auth = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [confirmationError, setConfirmationError] = useState<string | null>(null);
   const [processingConfirmation, setProcessingConfirmation] = useState(false);
+  const [confirmationSuccess, setConfirmationSuccess] = useState(false);
   
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const confirmSuccess = searchParams.get('confirmSuccess') === 'true';
-  const token = searchParams.get('token');
-  const type = searchParams.get('type');
-  const email = searchParams.get('email');
-  
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { user, loading } = useSupabaseAuth();
+  
+  // Extraer parámetros de la URL directamente en cada render
+  const searchParams = new URLSearchParams(location.search);
+  const hasConfirmSuccess = searchParams.get('confirmSuccess') === 'true';
 
   useEffect(() => {
-    const handleConfirmation = async () => {
-      if (confirmSuccess && token && type === 'signup' && email && !user) {
-        setProcessingConfirmation(true);
-        setConfirmationError(null);
-        
-        try {
-          console.log("Verificando token de confirmación:", token, "para email:", email);
-          const { error } = await supabase.auth.verifyOtp({
-            token,
-            type: 'signup',
-            email: email
-          });
-          
-          if (error) {
-            console.error('Error al confirmar token:', error);
-            setConfirmationError(error.message);
-          } else {
-            console.log('Token verificado correctamente');
-            console.log('Verificación exitosa, redirigiendo a la creación del patrón');
-            startPatternCreation();
-            sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
-          }
-        } catch (error: any) {
-          console.error('Error al procesar confirmación:', error);
-          setConfirmationError(error.message);
-        } finally {
-          setProcessingConfirmation(false);
-        }
-      }
-    };
-    
-    handleConfirmation();
-  }, [confirmSuccess, token, type, email, user]);
-
-  useEffect(() => {
-    if (confirmSuccess && user) {
-      console.log("Usuario confirmado y autenticado, iniciando creación de patrón");
-      startPatternCreation();
-      
-      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+    // Si el usuario llega a la página de auth con una URL que incluye #access_token
+    // esto es un callback de la confirmación de Supabase, lo procesamos
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      console.log("Detectada URL de callback de Supabase Auth");
+      // Permitimos que Supabase procese este hash automáticamente
+      // No necesitamos hacer nada, el evento onAuthStateChange lo manejará
     }
-  }, [confirmSuccess, user]);
+    
+    // Si hay un parámetro confirmSuccess=true en la URL, pero no hay usuario
+    if (hasConfirmSuccess && !user) {
+      console.log("Cuenta verificada, redirigiendo a login");
+      setConfirmationSuccess(true);
+      // Limpiamos la URL para evitar intentos repetidos
+      window.history.replaceState({}, '', '/auth');
+    }
+    
+    // Si hay un user confirmado y acabamos de verificar (firstLoginAfterConfirmation)
+    if (user && sessionStorage.getItem('firstLoginAfterConfirmation') === 'true') {
+      console.log("Usuario confirmado y logueado, iniciando creación de patrón");
+      startPatternCreation();
+    }
+  }, [user, hasConfirmSuccess, location]);
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
@@ -106,13 +89,21 @@ const Auth = () => {
   const handleSignupSuccess = () => {
     setEmailSent(true);
   };
-
-  useEffect(() => {
-    if ((confirmSuccess && user) || confirmationError) {
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
+  
+  const handleLoginAfterConfirmation = () => {
+    setConfirmationSuccess(false);
+    setIsLogin(true);
+    
+    // Auto-llenamos el email si está disponible
+    const email = searchParams.get('email');
+    if (email) {
+      sessionStorage.setItem('autoFillEmail', email);
+      toast({
+        title: "Email recordado",
+        description: "Hemos rellenado automáticamente tu email para facilitar el inicio de sesión",
+      });
     }
-  }, [confirmSuccess, user, confirmationError]);
+  };
 
   if (loading || processingConfirmation) {
     return (
@@ -122,7 +113,7 @@ const Auth = () => {
     );
   }
 
-  if (user && !isCreatePattern && !confirmSuccess) {
+  if (user && !isCreatePattern) {
     return <Navigate to="/" replace />;
   }
 
@@ -216,7 +207,7 @@ const Auth = () => {
               Intentar de nuevo
             </Button>
           </>
-        ) : confirmSuccess && !user ? (
+        ) : confirmationSuccess ? (
           <>
             <div className="flex justify-center mb-6">
               <img src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
@@ -239,13 +230,7 @@ const Auth = () => {
             <Button 
               type="button" 
               className="w-full"
-              onClick={() => {
-                if (email) {
-                  sessionStorage.setItem('autoFillEmail', email);
-                }
-                setIsLogin(true);
-                window.history.replaceState({}, '', '/auth');
-              }}
+              onClick={handleLoginAfterConfirmation}
             >
               Iniciar sesión
             </Button>

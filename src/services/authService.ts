@@ -30,8 +30,7 @@ export const signUpUser = async (
     // Obtenemos la URL actual para construir la redirección
     const appUrl = window.location.origin;
     
-    // IMPORTANTE: Deshabilitamos el correo de confirmación automático de Supabase
-    // configurando emailRedirectTo como undefined y usando maybeSingle
+    // Configuramos la redirección después de verificar el correo
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -39,12 +38,13 @@ export const signUpUser = async (
         data: {
           username
         },
-        emailRedirectTo: undefined
-        // Removed emailVerificationMode which was causing TS error
+        // Esto es importante: redirecciona al usuario a nuestra app después de verificar
+        emailRedirectTo: `${appUrl}/auth?confirmSuccess=true`
       }
     });
 
     if (error) {
+      console.error('Error en registro:', error);
       return { data: null, error: { message: error.message } };
     }
 
@@ -67,7 +67,6 @@ export const signUpUser = async (
       
       // Llamamos a nuestra función edge para enviar el email personalizado
       try {
-        // Fix: Use correct URL construction that doesn't access protected property
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://edacjnnrjmnftlhdcjab.supabase.co';
         const functionUrl = `${supabaseUrl}/functions/v1/custom-confirm-email`;
         console.log('Enviando solicitud a:', functionUrl);
@@ -103,17 +102,21 @@ export const signInUser = async (
   password: string
 ): Promise<AuthResponse> => {
   try {
+    console.log("Iniciando sesión para:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error("Error de autenticación:", error);
       return { data: null, error: { message: error.message } };
     }
 
+    console.log("Inicio de sesión exitoso");
     return { data, error: null };
   } catch (error: any) {
+    console.error("Error inesperado en inicio de sesión:", error);
     return { data: null, error: { message: error.message } };
   }
 };

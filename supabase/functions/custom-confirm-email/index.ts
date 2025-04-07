@@ -7,7 +7,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Inicializamos el cliente de Supabase con la URL y la clave de servicio
-// Nota: necesitamos usar la clave de servicio para poder generar tokens de acceso
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -46,6 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'signup',
       email,
       options: {
+        // Asegurarse que redirectTo sea una URL absoluta correcta
         redirectTo: `${Deno.env.get("PUBLIC_APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com"}/auth?confirmSuccess=true`
       }
     });
@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Error al generar token: ${verificationError.message}`);
     }
 
-    console.log("Token generado exitosamente");
+    console.log("Token generado exitosamente:", verificationData);
     
     // Extraer la URL generada para el enlace de confirmación
     const confirmationUrl = verificationData.properties.action_link;
@@ -66,17 +66,12 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("URL de confirmación generada:", confirmationUrl);
     
-    // Modificar la URL para redirigir a nuestra aplicación
-    const appUrl = Deno.env.get("PUBLIC_APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
-    const url = new URL(confirmationUrl);
-    const token = url.searchParams.get('token');
+    // La URL generada por Supabase ya es válida, usarla directamente sin modificaciones adicionales
+    // Esto asegura que todas las partes del token y los parámetros se conserven correctamente
     
-    // Asegurarnos de que el email esté incluido en la URL para la verificación
-    const modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=signup&email=${encodeURIComponent(email)}`;
-    
-    console.log("URL de confirmación modificada:", modifiedUrl);
+    console.log("Enviando email de confirmación a:", email);
 
-    // Enviar email personalizado con la URL de confirmación modificada
+    // Enviar email personalizado con la URL de confirmación oficial de Supabase
     const emailResponse = await resend.emails.send({
       from: "dScrt Messenger <onboarding@resend.dev>",
       to: [email],
@@ -98,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${modifiedUrl}" 
+            <a href="${confirmationUrl}" 
                style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
               Confirmar mi cuenta
             </a>

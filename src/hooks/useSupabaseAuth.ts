@@ -26,6 +26,8 @@ export const useSupabaseAuth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("Inicializando estado de autenticación...");
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -56,6 +58,7 @@ export const useSupabaseAuth = () => {
             window.location.href = '/';
           }
         } else {
+          console.log("Actualización del estado de autenticación:", event);
           setAuthState({
             session,
             user: session?.user ?? null,
@@ -118,6 +121,8 @@ export const useSupabaseAuth = () => {
         title: "Error de inicio de sesión",
         description: response.error.message,
       });
+    } else {
+      console.log("Inicio de sesión exitoso:", response.data?.user?.id);
     }
     
     return response;
@@ -133,6 +138,8 @@ export const useSupabaseAuth = () => {
         title: "Error al cerrar sesión",
         description: response.error.message,
       });
+    } else {
+      console.log("Sesión cerrada correctamente");
     }
     
     return response;
