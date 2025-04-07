@@ -1,171 +1,192 @@
-import React, { useState } from 'react';
-import { Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from "@/components/ui/button";
+import { toast } from '@/components/ui/use-toast';
 
+// Define los tipos de props
 interface CalculatorProps {
   onSettingsClick: () => void;
-  hasUnreadMessages?: boolean;
+  hasUnreadMessages: boolean;
   logoAura?: 'none' | 'green' | 'red';
 }
 
-const Calculator: React.FC<CalculatorProps> = ({ onSettingsClick, hasUnreadMessages = false, logoAura = 'none' }) => {
-  const [display, setDisplay] = useState('0');
-  const [waitingForOperand, setWaitingForOperand] = useState(true);
-  const [pendingOperator, setPendingOperator] = useState<string | null>(null);
-  const [storedValue, setStoredValue] = useState<number | null>(null);
+const Calculator: React.FC<CalculatorProps> = ({ 
+  onSettingsClick, 
+  hasUnreadMessages,
+  logoAura = 'none'
+}) => {
+  const [displayValue, setDisplayValue] = useState<string>('0');
+  const [firstOperand, setFirstOperand] = useState<number | null>(null);
+  const [operator, setOperator] = useState<string | null>(null);
+  const [waitingForSecondOperand, setWaitingForSecondOperand] = useState<boolean>(false);
+  // Contador para detectar un patrón específico de taps para cerrar sesión
+  const [logoutTapCount, setLogoutTapCount] = useState<number>(0);
+  const [lastTapTime, setLastTapTime] = useState<number>(0);
 
-  const calculateResult = () => {
-    if (pendingOperator === null || storedValue === null) return;
+  // Efecto para resetear el contador de taps después de un tiempo
+  useEffect(() => {
+    if (logoutTapCount > 0) {
+      const timeout = setTimeout(() => {
+        setLogoutTapCount(0);
+      }, 3000); // Resetea después de 3 segundos sin taps
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [logoutTapCount]);
+
+  // Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error al cerrar sesión:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo cerrar la sesión",
+        });
+      } else {
+        toast({
+          title: "Sesión cerrada",
+          description: "Has cerrado sesión correctamente",
+        });
+        
+        // Recargamos la página para volver a la pantalla de inicio
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error inesperado al cerrar sesión:', err);
+    }
+  };
+
+  // Manejo del tap en el logo para cerrar sesión
+  const handleLogoTap = () => {
+    const now = Date.now();
     
-    const currentValue = parseFloat(display);
-    let newResult = 0;
-    
-    switch (pendingOperator) {
-      case '+':
-        newResult = storedValue + currentValue;
-        break;
-      case '-':
-        newResult = storedValue - currentValue;
-        break;
-      case '×':
-        newResult = storedValue * currentValue;
-        break;
-      case '÷':
-        newResult = storedValue / currentValue;
-        break;
-      default:
-        return;
+    // Si pasaron más de 1.5 segundos desde el último tap, reinicia el contador
+    if (now - lastTapTime > 1500) {
+      setLogoutTapCount(1);
+    } else {
+      setLogoutTapCount(prevCount => prevCount + 1);
     }
     
-    setDisplay(newResult.toString());
-    setStoredValue(null);
-    setPendingOperator(null);
-    setWaitingForOperand(true);
+    setLastTapTime(now);
+    
+    // Si alcanzamos 5 taps rápidos, cerramos sesión
+    if (logoutTapCount === 4) {
+      handleLogout();
+      setLogoutTapCount(0);
+    }
   };
 
   const inputDigit = (digit: string) => {
-    if (waitingForOperand) {
-      setDisplay(digit);
-      setWaitingForOperand(false);
+    if (waitingForSecondOperand === true) {
+      setDisplayValue(digit);
+      setWaitingForSecondOperand(false);
     } else {
-      setDisplay(display === '0' ? digit : display + digit);
+      setDisplayValue(displayValue === '0' ? digit : displayValue + digit);
     }
   };
 
-  const inputDot = () => {
-    if (waitingForOperand) {
-      setDisplay('0.');
-      setWaitingForOperand(false);
-    } else if (display.indexOf('.') === -1) {
-      setDisplay(display + '.');
+  const inputDecimal = (dot: string) => {
+    if (!displayValue.includes(dot)) {
+      setDisplayValue(displayValue + dot);
     }
   };
 
-  const performOperation = (operator: string) => {
-    const inputValue = parseFloat(display);
-    
-    if (storedValue === null) {
-      setStoredValue(inputValue);
-    } else if (pendingOperator) {
-      const currentValue = storedValue;
-      let newResult = 0;
-      
-      switch (pendingOperator) {
-        case '+':
-          newResult = currentValue + inputValue;
-          break;
-        case '-':
-          newResult = currentValue - inputValue;
-          break;
-        case '×':
-          newResult = currentValue * inputValue;
-          break;
-        case '÷':
-          newResult = currentValue / inputValue;
-          break;
-        default:
-          return;
-      }
-      
-      setStoredValue(newResult);
-      setDisplay(newResult.toString());
+  const handleOperator = (nextOperator: string) => {
+    const inputValue = parseFloat(displayValue);
+
+    if (firstOperand === null) {
+      setFirstOperand(inputValue);
+    } else if (operator) {
+      const result = performCalculation[operator](firstOperand, inputValue);
+
+      setDisplayValue(String(result));
+      setFirstOperand(result);
     }
-    
-    setPendingOperator(operator);
-    setWaitingForOperand(true);
+
+    setWaitingForSecondOperand(true);
+    setOperator(nextOperator);
   };
 
-  const clear = () => {
-    setDisplay('0');
-    setWaitingForOperand(true);
-    setPendingOperator(null);
-    setStoredValue(null);
+  const performCalculation = {
+    '/': (firstOperand: number, secondOperand: number) => firstOperand / secondOperand,
+    '*': (firstOperand: number, secondOperand: number) => firstOperand * secondOperand,
+    '+': (firstOperand: number, secondOperand: number) => firstOperand + secondOperand,
+    '-': (firstOperand: number, secondOperand: number) => firstOperand - secondOperand,
+    '=': (firstOperand: number, secondOperand: number) => secondOperand
   };
 
-  const clearEntry = () => {
-    setDisplay('0');
-    setWaitingForOperand(true);
+  const clearDisplay = () => {
+    setDisplayValue('0');
+    setFirstOperand(null);
+    setOperator(null);
+    setWaitingForSecondOperand(false);
   };
 
-  const changeSign = () => {
-    setDisplay(display.charAt(0) === '-' ? display.substring(1) : '-' + display);
-  };
+  const calculate = () => {
+    const inputValue = parseFloat(displayValue);
 
-  const percentage = () => {
-    const currentValue = parseFloat(display);
-    setDisplay((currentValue / 100).toString());
+    if (operator) {
+      const result = performCalculation[operator](firstOperand || 0, inputValue);
+
+      setDisplayValue(String(result));
+      setFirstOperand(result);
+      setWaitingForSecondOperand(false);
+      setOperator(null);
+    }
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-100">
-      {/* Display */}
-      <div className="flex justify-between items-center bg-calculator-display p-4 text-white">
-        <div className="text-right flex-1 overflow-hidden">
-          <div className="text-3xl font-medium truncate">{display}</div>
-        </div>
-        <button 
-          onClick={onSettingsClick} 
-          className="ml-4 p-2 rounded-full hover:bg-white/10 transition-colors relative"
+    <div className="flex flex-col h-screen bg-gray-100 p-4 pt-12">
+      <div className="flex justify-center mb-4">
+        <div 
+          className={`relative cursor-pointer ${hasUnreadMessages ? 'animate-pulse' : ''}`}
+          onClick={handleLogoTap}
         >
-          <Settings size={24} />
-          {hasUnreadMessages && (
-            <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
-          )}
+          <img 
+            src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
+            alt="App Logo" 
+            className="h-12 w-12 rounded-lg"
+          />
           {logoAura !== 'none' && (
-            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${logoAura === 'green' ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-pulse`}></span>
+            <div 
+              className={`absolute -inset-1 rounded-xl opacity-70 ${
+                logoAura === 'green' ? 'bg-green-500' : 'bg-red-500'
+              }`}
+              style={{ zIndex: -1 }}
+            ></div>
           )}
-        </button>
+          {logoutTapCount > 0 && (
+            <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs">
+              {logoutTapCount}
+            </div>
+          )}
+        </div>
       </div>
       
-      {/* Keyboard */}
-      <div className="grid grid-cols-4 gap-1 p-2 bg-gray-200 flex-1">
-        {/* Row 1 */}
-        <button onClick={() => clear()} className="calculator-button bg-calculator-special text-white">AC</button>
-        <button onClick={() => changeSign()} className="calculator-button bg-calculator-special text-white">+/-</button>
-        <button onClick={() => percentage()} className="calculator-button bg-calculator-special text-white">%</button>
-        <button onClick={() => performOperation('÷')} className="calculator-button bg-calculator-operator text-white">÷</button>
-        
-        {/* Row 2 */}
-        <button onClick={() => inputDigit('7')} className="calculator-button bg-calculator-button">7</button>
-        <button onClick={() => inputDigit('8')} className="calculator-button bg-calculator-button">8</button>
-        <button onClick={() => inputDigit('9')} className="calculator-button bg-calculator-button">9</button>
-        <button onClick={() => performOperation('×')} className="calculator-button bg-calculator-operator text-white">×</button>
-        
-        {/* Row 3 */}
-        <button onClick={() => inputDigit('4')} className="calculator-button bg-calculator-button">4</button>
-        <button onClick={() => inputDigit('5')} className="calculator-button bg-calculator-button">5</button>
-        <button onClick={() => inputDigit('6')} className="calculator-button bg-calculator-button">6</button>
-        <button onClick={() => performOperation('-')} className="calculator-button bg-calculator-operator text-white">-</button>
-        
-        {/* Row 4 */}
-        <button onClick={() => inputDigit('1')} className="calculator-button bg-calculator-button">1</button>
-        <button onClick={() => inputDigit('2')} className="calculator-button bg-calculator-button">2</button>
-        <button onClick={() => inputDigit('3')} className="calculator-button bg-calculator-button">3</button>
-        <button onClick={() => performOperation('+')} className="calculator-button bg-calculator-operator text-white">+</button>
-        
-        {/* Row 5 */}
-        <button onClick={() => inputDigit('0')} className="calculator-button bg-calculator-button col-span-2">0</button>
-        <button onClick={() => inputDot()} className="calculator-button bg-calculator-button">.</button>
-        <button onClick={() => calculateResult()} className="calculator-button bg-calculator-equals text-white">=</button>
+      <div className="text-right text-3xl text-gray-800 mb-4">{displayValue}</div>
+      <div className="grid grid-cols-4 gap-2">
+        <Button onClick={clearDisplay} className="col-span-3 bg-gray-300 text-gray-700 h-12">AC</Button>
+        <Button onClick={onSettingsClick} className="bg-gray-300 text-gray-700 h-12">⚙️</Button>
+        <Button onClick={() => inputDigit('7')} className="bg-white text-gray-700 h-12">7</Button>
+        <Button onClick={() => inputDigit('8')} className="bg-white text-gray-700 h-12">8</Button>
+        <Button onClick={() => inputDigit('9')} className="bg-white text-gray-700 h-12">9</Button>
+        <Button onClick={() => handleOperator('/')} className="bg-orange-400 text-white h-12">÷</Button>
+        <Button onClick={() => inputDigit('4')} className="bg-white text-gray-700 h-12">4</Button>
+        <Button onClick={() => inputDigit('5')} className="bg-white text-gray-700 h-12">5</Button>
+        <Button onClick={() => inputDigit('6')} className="bg-white text-gray-700 h-12">6</Button>
+        <Button onClick={() => handleOperator('*')} className="bg-orange-400 text-white h-12">x</Button>
+        <Button onClick={() => inputDigit('1')} className="bg-white text-gray-700 h-12">1</Button>
+        <Button onClick={() => inputDigit('2')} className="bg-white text-gray-700 h-12">2</Button>
+        <Button onClick={() => inputDigit('3')} className="bg-white text-gray-700 h-12">3</Button>
+        <Button onClick={() => handleOperator('-')} className="bg-orange-400 text-white h-12">-</Button>
+        <Button onClick={() => inputDigit('0')} className="col-span-2 bg-white text-gray-700 h-12">0</Button>
+        <Button onClick={() => inputDecimal('.')} className="bg-white text-gray-700 h-12">.</Button>
+        <Button onClick={() => handleOperator('+')} className="bg-orange-400 text-white h-12">+</Button>
+        <Button onClick={calculate} className="col-span-4 bg-orange-500 text-white h-12">=</Button>
       </div>
     </div>
   );
