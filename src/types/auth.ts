@@ -22,11 +22,9 @@ export interface ProfileData {
   id?: string;
   username?: string;
   recovery_email?: string;
-  [key: string]: any;
 }
 
 // Interface for account recovery responses
-// Completely independent to avoid recursion
 export interface RecoveryResponse {
   error: AuthError | null;
   profile: ProfileData | null;

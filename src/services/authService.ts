@@ -94,14 +94,14 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
   try {
     // Check if migration for recovery_email has been applied
     // First try to check if the column exists by querying profiles
-    const { error: checkError } = await supabase
+    const checkResult = await supabase
       .from('profiles')
       .select('id')
       .limit(1);
     
     // If there's an error mentioning recovery_email, the column likely doesn't exist
-    if (checkError && checkError.message.includes('recovery_email')) {
-      console.error('Error de esquema:', checkError.message);
+    if (checkResult.error && checkResult.error.message.includes('recovery_email')) {
+      console.error('Error de esquema:', checkResult.error.message);
       return { 
         error: { message: "Error con la tabla de perfiles. La columna de correo de recuperación podría no existir." },
         profile: null
@@ -109,15 +109,16 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     }
     
     // Now try to find a profile using the recovery_email
-    // Using explicit type annotation to avoid deep type instantiation
-    const profileQuery = await supabase
+    // This approach avoids the deep type instantiation problem
+    const rawResponse = await supabase
       .from('profiles')
       .select('id, username')
       .eq('recovery_email', email)
       .maybeSingle();
     
-    const data = profileQuery.data;
-    const profileError = profileQuery.error;
+    // Extract the data and error manually to avoid deep type instantiation
+    const data = rawResponse.data;
+    const profileError = rawResponse.error;
     
     if (profileError) {
       console.error('Error al buscar perfil:', profileError);
@@ -135,10 +136,10 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     }
     
     // If we found the profile, send a reset password email
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const resetResult = await supabase.auth.resetPasswordForEmail(email);
     
-    if (error) {
-      return { error: { message: error.message }, profile: null };
+    if (resetResult.error) {
+      return { error: { message: resetResult.error.message }, profile: null };
     }
     
     // Return the profile data safely
@@ -147,7 +148,7 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       profile: {
         id: data.id,
         username: data.username,
-        recovery_email: email // Use the email that was passed in
+        recovery_email: email
       }
     };
   } catch (error: any) {
