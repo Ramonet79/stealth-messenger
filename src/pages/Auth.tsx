@@ -50,22 +50,9 @@ const Auth = () => {
             setConfirmationError(error.message);
           } else {
             console.log('Token verificado correctamente');
-            const { error: signInError } = await supabase.auth.signInWithOtp({
-              email: email,
-              options: {
-                shouldCreateUser: false,
-                token: token
-              }
-            });
-            
-            if (signInError) {
-              console.error('Error al iniciar sesión automática:', signInError);
-              setConfirmationError(null);
-            } else {
-              console.log('Inicio de sesión automático exitoso');
-              startPatternCreation();
-              sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
-            }
+            console.log('Verificación exitosa, redirigiendo a la creación del patrón');
+            startPatternCreation();
+            sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
           }
         } catch (error: any) {
           console.error('Error al procesar confirmación:', error);

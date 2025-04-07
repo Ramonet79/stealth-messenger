@@ -39,8 +39,8 @@ export const useSupabaseAuth = () => {
             user: null,
             loading: false,
           });
-        // Si el evento es SIGNED_IN después de confirmar email, redirigir a la creación de patrón
-        } else if (event === 'SIGNED_IN' && window.location.href.includes('confirmSuccess=true')) {
+        // Si hay un evento USER_UPDATED o SIGNED_IN después de verificar email
+        } else if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && window.location.href.includes('confirmSuccess=true')) {
           console.log("Usuario confirmado y autenticado correctamente");
           setAuthState({
             session,
@@ -52,7 +52,9 @@ export const useSupabaseAuth = () => {
           sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
           
           // Redirigir a la página principal para la creación del patrón
-          window.location.href = '/';
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
         } else {
           setAuthState({
             session,
