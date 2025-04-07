@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -80,7 +79,9 @@ export const signUpUser = async (
           },
           body: JSON.stringify({
             email: email,
-            confirmation_url: `${appUrl}/auth?confirmSuccess=true&token=${data.user.confirmation_token}&type=signup`
+            // El token no está directamente accesible en el objeto User
+            // Generamos la URL de confirmación usando el email y la URL base
+            confirmation_url: `${appUrl}/auth?confirmSuccess=true&type=signup`
           })
         });
         

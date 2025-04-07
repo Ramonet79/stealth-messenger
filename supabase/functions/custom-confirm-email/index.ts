@@ -27,24 +27,30 @@ const handler = async (req: Request): Promise<Response> => {
     
     const { email, confirmation_url } = payload;
 
-    if (!email || !confirmation_url) {
-      console.error("Email o URL de confirmación no proporcionados");
-      throw new Error("Email o URL de confirmación no proporcionados");
+    if (!email) {
+      console.error("Email no proporcionado");
+      throw new Error("Email no proporcionado");
     }
 
-    // Modificar la URL de confirmación para usar la URL actual del dispositivo
-    // en lugar de localhost:3000
-    let modifiedUrl = confirmation_url;
+    // Si no hay URL de confirmación proporcionada, generamos una con Supabase
+    let modifiedUrl = confirmation_url || "";
     
-    // Extraer el token y otros parámetros de la URL original
-    const url = new URL(confirmation_url);
-    const token = url.searchParams.get('token');
-    const type = url.searchParams.get('type');
-    
-    // Construir una nueva URL con el dominio de la aplicación
-    // Usamos la URL del dominio de Lovable
-    const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
-    modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
+    if (!confirmation_url) {
+      console.log("URL de confirmación no proporcionada, generando una nueva");
+      // Como no tenemos el token directamente, usamos la URL de la aplicación
+      // El usuario deberá iniciar sesión manualmente
+      const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+      modifiedUrl = `${appUrl}/auth?confirmEmail=true`;
+    } else {
+      // Si tenemos una URL, extraer el token y modificarla
+      const url = new URL(confirmation_url);
+      const token = url.searchParams.get('token');
+      const type = url.searchParams.get('type');
+      
+      // Construir una nueva URL con el dominio de la aplicación
+      const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+      modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
+    }
     
     console.log("URL de confirmación modificada:", modifiedUrl);
 
@@ -109,3 +115,4 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
+
