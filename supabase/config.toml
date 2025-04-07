@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.recovery]
 verify_jwt = false
+
+[functions.auto-signup]
+verify_jwt = false

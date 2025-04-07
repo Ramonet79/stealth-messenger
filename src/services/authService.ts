@@ -33,10 +33,10 @@ export const signUpUser = async (
       password,
       options: {
         data: {
-          username
+          username,
+          email_confirmed: true, // Marcar email como confirmado
         },
-        // Importante: Establecer emailRedirectTo como undefined y desactivar emailConfirm
-        emailRedirectTo: undefined,
+        emailRedirectTo: undefined, // No redirigir a ninguna URL
       }
     });
 
@@ -46,21 +46,30 @@ export const signUpUser = async (
     }
 
     if (data.user) {
-      // Auto-confirmar el email del usuario manualmente
-      const { error: confirmError } = await supabase.auth.admin.updateUserById(
+      // Asegurarnos de que el email esté confirmado (esto es crítico)
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
         data.user.id,
         { email_confirm: true }
       );
 
-      if (confirmError) {
-        console.error('Error al confirmar email automáticamente:', confirmError);
+      if (updateError) {
+        console.error('Error al confirmar email automáticamente:', updateError);
+      }
+
+      // Marcar el email como verificado directamente
+      const { error: confirmEmailError } = await supabase
+        .rpc('confirm_user_email', { _user_id: data.user.id });
+
+      if (confirmEmailError) {
+        console.error('Error al confirmar email con RPC:', confirmEmailError);
       }
 
       // Actualizamos el perfil del usuario con el nombre de usuario
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          username
+          username,
+          email_confirmed: true
         })
         .eq('id', data.user.id);
 
@@ -86,6 +95,8 @@ export const signInUser = async (
 ): Promise<AuthResponse> => {
   try {
     console.log("Iniciando sesión para:", email);
+    
+    // Intentamos iniciar sesión normal
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -93,6 +104,38 @@ export const signInUser = async (
 
     if (error) {
       console.error("Error de autenticación:", error);
+      
+      // Si el error es de email no confirmado, intentamos confirmar manualmente
+      if (error.message.includes("Email not confirmed") || error.message.includes("Email no confirmado")) {
+        console.log("Intentando confirmar email automáticamente...");
+        
+        // Obtener el usuario por email
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single();
+          
+        if (!userError && userData?.id) {
+          // Confirmar email
+          await supabase.auth.admin.updateUserById(
+            userData.id,
+            { email_confirm: true }
+          );
+          
+          // Intentar iniciar sesión nuevamente
+          const retrySignIn = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (!retrySignIn.error) {
+            console.log("Sesión iniciada después de confirmar email");
+            return { data: retrySignIn.data, error: null };
+          }
+        }
+      }
+      
       return { data: null, error: { message: error.message } };
     }
 

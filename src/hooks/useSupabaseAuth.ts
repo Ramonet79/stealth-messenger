@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,8 +49,6 @@ export const useSupabaseAuth = () => {
             user: session?.user ?? null,
             loading: false,
           });
-          
-          // No need to handle redirects here, the app component will handle this
         } else {
           console.log("Actualización del estado de autenticación:", event);
           setAuthState({
@@ -96,7 +95,6 @@ export const useSupabaseAuth = () => {
       sessionStorage.setItem('firstLogin', 'true');
       
       // Log in the user immediately after successful registration
-      // Note: This was added to ensure the user doesn't need to verify email
       if (response.data?.user) {
         console.log("Auto-iniciando sesión después del registro");
         await signIn(email, password);
@@ -111,6 +109,41 @@ export const useSupabaseAuth = () => {
     
     if (response.error) {
       console.error("Error de inicio de sesión:", response.error);
+      
+      // Si el error es de email no confirmado, intentamos confirmar y volver a iniciar sesión
+      if (response.error.message.includes("Email not confirmed") || 
+          response.error.message.includes("Email no confirmado")) {
+        
+        console.log("Intentando solucionar error de email no confirmado");
+        
+        // Confirmar correo electrónico automáticamente
+        try {
+          // Primero, intentamos obtener el usuario por correo electrónico
+          const { data: userData } = await supabase
+            .from('auth.users')
+            .select('id')
+            .eq('email', email)
+            .single();
+            
+          if (userData?.id) {
+            // Confirmar email automáticamente
+            await supabase.auth.admin.updateUserById(
+              userData.id,
+              { email_confirm: true }
+            );
+            
+            // Volver a intentar iniciar sesión
+            const retryResponse = await signInUser(email, password);
+            if (!retryResponse.error) {
+              console.log("Inicio de sesión exitoso después de confirmar email");
+              return retryResponse;
+            }
+          }
+        } catch (e) {
+          console.error("Error al intentar confirmar email:", e);
+        }
+      }
+      
       toast({
         variant: "destructive",
         title: "Error de inicio de sesión",
