@@ -121,6 +121,10 @@ export const useAuthState = () => {
     handlePatternStep,
     handleSignupSuccess,
     handleLoginAfterConfirmation,
-    setStep
+    setStep,
+    // Add missing functions
+    setEmailSent,
+    setConfirmationError,
+    setIsLogin
   };
 };

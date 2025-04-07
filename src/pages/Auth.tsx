@@ -38,7 +38,11 @@ const Auth = () => {
     handlePatternStep,
     handleSignupSuccess,
     handleLoginAfterConfirmation,
-    setStep
+    setStep,
+    // Include the new exported functions
+    setEmailSent,
+    setConfirmationError,
+    setIsLogin
   } = useAuthState();
 
   if (loading || processingConfirmation) {
