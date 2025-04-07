@@ -6,7 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   AuthState, 
   AuthError, 
-  AuthResponse 
+  AuthResponse,
+  RecoveryResponse
 } from '@/types/auth';
 import { 
   signUpUser, 
@@ -109,7 +110,7 @@ export const useSupabaseAuth = () => {
     return response;
   };
 
-  const recoverAccount = async (email: string): Promise<AuthResponse> => {
+  const recoverAccount = async (email: string): Promise<RecoveryResponse> => {
     const response = await recoverAccountWithEmail(email);
     
     if (response.error) {

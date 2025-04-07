@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { AuthResponse } from '@/types/auth';
+import { AuthResponse, RecoveryResponse } from '@/types/auth';
 
 export const signUpUser = async (
   email: string, 
@@ -90,7 +90,7 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
   }
 };
 
-export const recoverAccountWithEmail = async (email: string): Promise<AuthResponse> => {
+export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
   try {
     // Verificar si existe un perfil con este correo de recuperación
     const { data: profile, error: profileError } = await supabase

@@ -16,3 +16,9 @@ export interface AuthResponse {
   error: AuthError | null;
   profile?: any;
 }
+
+// Adding a specific response type for account recovery to avoid deep type recursion
+export interface RecoveryResponse {
+  error: AuthError | null;
+  profile: any | null;
+}
