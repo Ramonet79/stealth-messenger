@@ -115,59 +115,13 @@ export const sendPasswordReset = async (email: string): Promise<AuthResponse> =>
   }
 };
 
-// Función de recuperación simplificada para evitar errores de TypeScript
+// Función de recuperación deshabilitada (solo devuelve un error amigable)
 export const recoverAccountWithEmail = async (email: string): Promise<RecoveryResponse> => {
-  try {
-    console.log("Buscando usuario con correo de recuperación:", email);
-    
-    // Buscar el perfil con el correo de recuperación
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, recovery_email')
-      .eq('recovery_email', email)
-      .limit(1);
-    
-    if (error) {
-      console.error('Error al buscar perfil:', error);
-      return { 
-        error: { message: `Error al buscar perfil: ${error.message}` },
-        profile: null
-      };
-    }
-    
-    if (!data || data.length === 0) {
-      return { 
-        error: { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
-        profile: null
-      };
-    }
-    
-    // Usar el primer perfil encontrado
-    const matchingProfile = data[0];
-    
-    // Enviar correo de restablecimiento para este usuario
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
-    
-    if (resetError) {
-      return { 
-        error: { message: resetError.message }, 
-        profile: null 
-      };
-    }
-    
-    return { 
-      error: null, 
-      profile: {
-        id: matchingProfile.id,
-        username: matchingProfile.username,
-        recovery_email: matchingProfile.recovery_email
-      }
-    };
-  } catch (error: any) {
-    console.error('Error en recuperación de cuenta:', error);
-    return { 
-      error: { message: error.message || 'Error desconocido' }, 
-      profile: null 
-    };
-  }
+  // Esta funcionalidad ha sido deshabilitada temporalmente
+  console.log("Funcionalidad de recuperación por correo deshabilitada");
+  
+  return { 
+    error: { message: "La recuperación de cuenta mediante correo de recuperación está temporalmente deshabilitada." }, 
+    profile: null 
+  };
 };

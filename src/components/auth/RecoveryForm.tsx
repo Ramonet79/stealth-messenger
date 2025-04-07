@@ -1,9 +1,9 @@
 
-import React from 'react';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import React, { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { 
   Form,
   FormControl,
@@ -12,13 +12,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Esquema para la recuperación de acceso por email de recuperación
+// Schema de validación para el formulario de recuperación
 const recoverySchema = z.object({
-  email: z.string().email("Email inválido"),
+  recoveryEmail: z.string().email("Correo electrónico inválido"),
 });
 
 type RecoveryFormProps = {
@@ -26,36 +27,59 @@ type RecoveryFormProps = {
 };
 
 export const RecoveryForm = ({ onCancel }: RecoveryFormProps) => {
-  const { recoverAccount } = useSupabaseAuth();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Formulario para recuperación por email secundario
+  // Configuración del formulario
   const form = useForm<z.infer<typeof recoverySchema>>({
     resolver: zodResolver(recoverySchema),
     defaultValues: {
-      email: "",
+      recoveryEmail: "",
     },
   });
 
-  // Manejar recuperación por email secundario
-  const handleRecovery = async (data: z.infer<typeof recoverySchema>) => {
-    const { email } = data;
-    await recoverAccount(email);
-    onCancel();
+  // Handler para el envío del formulario (deshabilitado)
+  const handleSubmit = async (data: z.infer<typeof recoverySchema>) => {
+    setIsSubmitting(true);
+    
+    // Mostrar toast informativo
+    toast({
+      title: "Función temporalmente deshabilitada",
+      description: "La recuperación de cuenta mediante correo de recuperación está temporalmente deshabilitada.",
+      variant: "destructive"
+    });
+    
+    setIsSubmitting(false);
   };
 
   return (
     <>
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        Recuperar acceso por correo de recuperación
+      <div className="flex justify-center mb-6">
+        <img src="/lovable-uploads/3f963389-b035-45c6-890b-824df3549300.png" 
+          alt="dScrt Logo" 
+          className="h-20 w-20 rounded-lg" />
+      </div>
+      
+      <h1 className="text-2xl font-bold mb-4 text-center">
+        Recuperar acceso a tu cuenta
       </h1>
-      <p className="text-sm text-gray-600 mb-4 text-center">
-        Si olvidaste tu patrón de desbloqueo, puedes recuperar el acceso usando tu correo de recuperación.
+      
+      <Alert variant="destructive" className="mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          La recuperación de cuenta mediante correo de recuperación está temporalmente deshabilitada.
+        </AlertDescription>
+      </Alert>
+      
+      <p className="text-sm text-gray-500 mb-4 text-center">
+        Por favor, intenta iniciar sesión con tu correo y contraseña directamente.
       </p>
+      
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleRecovery)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <FormField
             control={form.control}
-            name="email"
+            name="recoveryEmail"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Correo de recuperación</FormLabel>
@@ -63,7 +87,8 @@ export const RecoveryForm = ({ onCancel }: RecoveryFormProps) => {
                   <Input 
                     {...field} 
                     type="email" 
-                    placeholder="recuperacion@email.com" 
+                    placeholder="tu-correo-recuperacion@email.com" 
+                    disabled={true}
                   />
                 </FormControl>
                 <FormMessage />
@@ -74,24 +99,24 @@ export const RecoveryForm = ({ onCancel }: RecoveryFormProps) => {
           <Button 
             type="submit" 
             className="w-full"
-            disabled={form.formState.isSubmitting}
+            disabled={true}
           >
-            {form.formState.isSubmitting ? (
+            {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : null}
-            Recuperar acceso
+            Recuperar cuenta
+          </Button>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full mt-2"
+            onClick={onCancel}
+          >
+            Volver al inicio de sesión
           </Button>
         </form>
       </Form>
-      
-      <div className="mt-4 text-center">
-        <button
-          onClick={onCancel}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Volver al inicio de sesión
-        </button>
-      </div>
     </>
   );
 };
