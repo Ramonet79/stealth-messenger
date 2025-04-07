@@ -42,8 +42,8 @@ const handler = async (req: Request): Promise<Response> => {
     const type = url.searchParams.get('type');
     
     // Construir una nueva URL con el dominio de la aplicación
-    // Usamos el APP_URL de las variables de entorno, o el dominio del proyecto si está disponible
-    const appUrl = Deno.env.get("APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+    // Usamos la URL del dominio de Lovable
+    const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
     modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
     
     console.log("URL de confirmación modificada:", modifiedUrl);

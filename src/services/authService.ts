@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -26,15 +27,14 @@ export const signUpUser = async (
       };
     }
     
-    // URL de redirección personalizada para después de la confirmación de email
-    // Esta URL debe ser agregada como URL permitida en la configuración de Supabase
-    // Usamos la URL actual en lugar de hardcodear localhost
+    // Obtenemos la URL actual para construir la redirección
     const appUrl = window.location.origin;
     const redirectUrl = `${appUrl}/auth?confirmSuccess=true`;
     
     console.log('URL de redirección para confirmación:', redirectUrl);
     
-    // Procedemos con el registro sin el campo de recovery_email
+    // Desactivamos la confirmación por email automática de Supabase
+    // para poder manejarla con nuestra función edge
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -42,6 +42,8 @@ export const signUpUser = async (
         data: {
           username
         },
+        // Desactivamos el email de confirmación de Supabase
+        // Ya que será manejado por nuestra función edge
         emailRedirectTo: redirectUrl
       }
     });
@@ -65,6 +67,27 @@ export const signUpUser = async (
           data, 
           error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
         };
+      }
+      
+      // Llamamos manualmente a nuestra función edge para enviar el email personalizado
+      try {
+        const functionUrl = "https://edacjnnrjmnftlhdcjab.supabase.co/functions/v1/custom-confirm-email";
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token || '')}`,
+          },
+          body: JSON.stringify({
+            email: email,
+            confirmation_url: `${appUrl}/auth?confirmSuccess=true&token=${data.user.confirmation_token}&type=signup`
+          })
+        });
+        
+        const result = await response.json();
+        console.log("Resultado de envío de email personalizado:", result);
+      } catch (emailError: any) {
+        console.error("Error al enviar email personalizado:", emailError);
       }
     }
 
