@@ -28,12 +28,9 @@ export const signUpUser = async (
     
     // Obtenemos la URL actual para construir la redirección
     const appUrl = window.location.origin;
-    const redirectUrl = `${appUrl}/auth?confirmSuccess=true`;
     
-    console.log('URL de redirección para confirmación:', redirectUrl);
-    
-    // Desactivamos la confirmación por email automática de Supabase
-    // para poder manejarla con nuestra función edge
+    // IMPORTANTE: Deshabilitamos el correo de confirmación automático de Supabase
+    // configurando emailRedirectTo como undefined y disableEmail como true
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -41,9 +38,8 @@ export const signUpUser = async (
         data: {
           username
         },
-        // Desactivamos el email de confirmación de Supabase
-        // Ya que será manejado por nuestra función edge
-        emailRedirectTo: redirectUrl
+        emailRedirectTo: undefined,
+        emailVerificationMode: 'none'  // Desactiva el envío automático del correo de verificación
       }
     });
 
@@ -68,9 +64,11 @@ export const signUpUser = async (
         };
       }
       
-      // Llamamos manualmente a nuestra función edge para enviar el email personalizado
+      // Llamamos a nuestra función edge para enviar el email personalizado
       try {
-        const functionUrl = "https://edacjnnrjmnftlhdcjab.supabase.co/functions/v1/custom-confirm-email";
+        const functionUrl = `${supabase.supabaseUrl}/functions/v1/custom-confirm-email`;
+        console.log('Enviando solicitud a:', functionUrl);
+        
         const response = await fetch(functionUrl, {
           method: "POST",
           headers: {
@@ -79,9 +77,7 @@ export const signUpUser = async (
           },
           body: JSON.stringify({
             email: email,
-            // El token no está directamente accesible en el objeto User
-            // Generamos la URL de confirmación usando el email y la URL base
-            confirmation_url: `${appUrl}/auth?confirmSuccess=true&type=signup`
+            user_id: data.user.id
           })
         });
         

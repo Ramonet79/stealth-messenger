@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -33,20 +32,24 @@ const Auth = () => {
 
   useEffect(() => {
     const handleConfirmation = async () => {
-      if (confirmSuccess && token && type && type === 'signup' && !user) {
+      if (confirmSuccess && token && type === 'signup' && !user) {
         setProcessingConfirmation(true);
         setConfirmationError(null);
         
         try {
+          console.log("Verificando token de confirmación:", token);
           const { error } = await supabase.auth.verifyOtp({
             token,
             type: 'signup',
-            email: ""
           });
           
           if (error) {
             console.error('Error al confirmar token:', error);
             setConfirmationError(error.message);
+          } else {
+            console.log('Token verificado correctamente');
+            startPatternCreation();
+            sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
           }
         } catch (error: any) {
           console.error('Error al procesar confirmación:', error);
@@ -62,7 +65,10 @@ const Auth = () => {
 
   useEffect(() => {
     if (confirmSuccess && user) {
+      console.log("Usuario confirmado y autenticado, iniciando creación de patrón");
       startPatternCreation();
+      
+      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
     }
   }, [confirmSuccess, user]);
 
@@ -99,15 +105,11 @@ const Auth = () => {
   };
 
   useEffect(() => {
-    if (confirmSuccess && (user || confirmationError)) {
+    if ((confirmSuccess && user) || confirmationError) {
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
     }
   }, [confirmSuccess, user, confirmationError]);
-
-  if (user && !isCreatePattern && !confirmSuccess) {
-    return <Navigate to="/" replace />;
-  }
 
   if (loading || processingConfirmation) {
     return (
@@ -115,6 +117,10 @@ const Auth = () => {
         <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
+  }
+
+  if (user && !isCreatePattern && !confirmSuccess) {
+    return <Navigate to="/" replace />;
   }
 
   if (isCreatePattern && user) {

@@ -1,8 +1,16 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
+// Inicializamos Resend con la API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+// Inicializamos el cliente de Supabase con la URL y la clave de servicio
+// Nota: necesitamos usar la clave de servicio para poder generar tokens de acceso
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +18,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Esta función será llamada por un webhook de Supabase
-// cuando se genere un evento de signup
 const handler = async (req: Request): Promise<Response> => {
   console.log("Edge function custom-confirm-email invocada");
   
@@ -25,36 +31,52 @@ const handler = async (req: Request): Promise<Response> => {
     const payload = await req.json();
     console.log("Payload recibido:", JSON.stringify(payload));
     
-    const { email, confirmation_url } = payload;
+    const { email, user_id } = payload;
 
-    if (!email) {
-      console.error("Email no proporcionado");
-      throw new Error("Email no proporcionado");
+    if (!email || !user_id) {
+      console.error("Email o ID de usuario no proporcionado");
+      throw new Error("Email o ID de usuario no proporcionado");
     }
 
-    // Si no hay URL de confirmación proporcionada, generamos una con Supabase
-    let modifiedUrl = confirmation_url || "";
+    // Generar un token de confirmación único usando la API de Supabase Auth Admin
+    console.log("Generando token de verificación para el usuario:", user_id);
     
-    if (!confirmation_url) {
-      console.log("URL de confirmación no proporcionada, generando una nueva");
-      // Como no tenemos el token directamente, usamos la URL de la aplicación
-      // El usuario deberá iniciar sesión manualmente
-      const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
-      modifiedUrl = `${appUrl}/auth?confirmEmail=true`;
-    } else {
-      // Si tenemos una URL, extraer el token y modificarla
-      const url = new URL(confirmation_url);
-      const token = url.searchParams.get('token');
-      const type = url.searchParams.get('type');
-      
-      // Construir una nueva URL con el dominio de la aplicación
-      const appUrl = "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
-      modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=${type}`;
+    // Genera un token OTP de verificación para el usuario
+    const { data: verificationData, error: verificationError } = await supabase.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      options: {
+        redirectTo: `${Deno.env.get("PUBLIC_APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com"}/auth?confirmSuccess=true`
+      }
+    });
+
+    if (verificationError) {
+      console.error("Error al generar el token de verificación:", verificationError);
+      throw new Error(`Error al generar token: ${verificationError.message}`);
     }
+
+    console.log("Token generado exitosamente");
+    
+    // Extraer la URL generada para el enlace de confirmación
+    const confirmationUrl = verificationData.properties.action_link;
+    
+    if (!confirmationUrl) {
+      throw new Error("No se pudo generar la URL de confirmación");
+    }
+    
+    console.log("URL de confirmación generada:", confirmationUrl);
+    
+    // Modificar la URL para redirigir a nuestra aplicación
+    const appUrl = Deno.env.get("PUBLIC_APP_URL") || "https://ca70e353-ea8f-4f74-8cd4-4e57c75305d7.lovableproject.com";
+    const url = new URL(confirmationUrl);
+    const token = url.searchParams.get('token');
+    
+    // Crear URL personalizada que incluye el token necesario
+    const modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=signup`;
     
     console.log("URL de confirmación modificada:", modifiedUrl);
 
-    // Enviar email personalizado
+    // Enviar email personalizado con la URL de confirmación modificada
     const emailResponse = await resend.emails.send({
       from: "dScrt Messenger <onboarding@resend.dev>",
       to: [email],
@@ -115,4 +137,3 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
-
