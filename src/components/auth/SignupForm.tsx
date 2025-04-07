@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Esquema de validación para el registro
+// Esquema de validación para el registro (sin correo de recuperación)
 const signupSchema = z.object({
   username: z.string()
     .min(3, "El nombre de usuario debe tener al menos 3 caracteres")
@@ -30,7 +30,6 @@ const signupSchema = z.object({
     .regex(/[A-Z]/, "Debe incluir al menos una letra mayúscula")
     .regex(/[a-z]/, "Debe incluir al menos una letra minúscula")
     .regex(/[0-9]/, "Debe incluir al menos un número"),
-  recoveryEmail: z.string().email("Email de recuperación inválido").optional(),
 });
 
 type SignupFormProps = {
@@ -52,7 +51,6 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       username: "",
       email: "",
       password: "",
-      recoveryEmail: "",
     },
   });
 
@@ -111,13 +109,14 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const handleSignup = async (data: z.infer<typeof signupSchema>) => {
     try {
       setIsSubmitting(true);
-      const { email, password, username, recoveryEmail } = data;
+      const { email, password, username } = data;
       
+      // Usando el mismo email como correo de recuperación
       const { data: authData, error } = await signUp(
         email, 
         password, 
         username, 
-        recoveryEmail || "" // Pasamos el correo de recuperación o una cadena vacía
+        email // El mismo email como recuperación
       );
       
       if (error) {
@@ -132,10 +131,10 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       if (authData?.user) {
         toast({
           title: "Registro exitoso",
-          description: "Por favor, crea tu patrón de desbloqueo",
+          description: "Por favor, revisa tu correo para confirmar tu cuenta",
         });
         
-        onSuccess();
+        // No llamamos a onSuccess aquí porque ahora requiere confirmación por email
       }
     } catch (error: any) {
       console.error('Error en el proceso de registro:', error);
@@ -205,6 +204,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
                   placeholder="tu@email.com" 
                 />
               </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                Este correo se utilizará para acceder a tu cuenta y para recuperarla si la olvidas
+              </p>
               <FormMessage />
             </FormItem>
           )}
@@ -223,27 +225,6 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
                   placeholder="********" 
                 />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="recoveryEmail"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Correo de recuperación</FormLabel>
-              <FormControl>
-                <Input 
-                  {...field} 
-                  type="email" 
-                  placeholder="recuperacion@email.com" 
-                />
-              </FormControl>
-              <p className="text-xs text-gray-500 mt-1">
-                Este correo se utilizará para recuperar el acceso si olvidas tu patrón de desbloqueo
-              </p>
               <FormMessage />
             </FormItem>
           )}

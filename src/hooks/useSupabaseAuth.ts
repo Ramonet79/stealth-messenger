@@ -29,6 +29,12 @@ export const useSupabaseAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth event:", event);
+        
+        // Si el evento es SIGNED_IN después de confirmar email, redirigir a la creación de patrón
+        if (event === 'SIGNED_IN' && window.location.href.includes('confirmSuccess=true')) {
+          console.log("Usuario confirmado y autenticado correctamente");
+        }
+        
         setAuthState({
           session,
           user: session?.user ?? null,
@@ -62,7 +68,11 @@ export const useSupabaseAuth = () => {
         description: response.error.message,
       });
     } else {
-      console.log("Registro exitoso:", response.data?.user?.id);
+      console.log("Registro iniciado:", response.data?.user?.id);
+      toast({
+        title: "Registro iniciado",
+        description: "Revisa tu correo para verificar tu cuenta",
+      });
     }
     
     return response;

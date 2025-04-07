@@ -27,6 +27,10 @@ export const signUpUser = async (
       };
     }
     
+    // URL de redirección personalizada para después de la confirmación de email
+    // Esta URL debe ser agregada como URL permitida en la configuración de Supabase
+    const redirectUrl = window.location.origin + '/auth?confirmSuccess=true';
+    
     // Procedemos con el registro
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -34,8 +38,9 @@ export const signUpUser = async (
       options: {
         data: {
           username,
-          recovery_email: recoveryEmail
-        }
+          recovery_email: recoveryEmail // Usamos el mismo email para recuperación
+        },
+        emailRedirectTo: redirectUrl
       }
     });
 
