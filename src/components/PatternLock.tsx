@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -182,21 +181,28 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
         console.log("Processing pattern completion:", selectedPattern);
         
         if (isCreationMode) {
-          // En modo creación, consideramos válido el patrón
           console.log("Creation mode - calling onPatternComplete");
           isCorrect = await Promise.resolve(onPatternComplete(selectedPattern));
           console.log("Pattern creation result:", isCorrect);
         } else {
-          // En modo verificación
           if (user) {
             console.log("Verifying pattern for user:", user.id);
             isCorrect = await patternService.verifyPattern(user.id, selectedPattern);
             console.log("Pattern verification result:", isCorrect);
             
             if (isCorrect) {
-              // Si es correcto, también llamamos a onPatternComplete para la transición
               console.log("Pattern correct, calling onPatternComplete for transition");
-              await Promise.resolve(onPatternComplete(selectedPattern));
+              const transitionResult = await Promise.resolve(onPatternComplete(selectedPattern));
+              console.log("Transition result from onPatternComplete:", transitionResult);
+              
+              if (!transitionResult) {
+                console.error("Pattern was correct but transition failed");
+                toast({
+                  variant: "destructive",
+                  title: "Error de transición",
+                  description: "El patrón es correcto pero hubo un error al acceder al chat",
+                });
+              }
             }
           } else {
             console.log("No user found, calling onPatternComplete directly");

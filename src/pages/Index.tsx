@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -124,6 +123,7 @@ const Index = () => {
   }, [user, showPatternLock]);
   
   const handleSettingsClick = () => {
+    console.log("Settings button clicked, showing pattern lock screen");
     setShowPatternLock(true);
   };
   
@@ -131,30 +131,53 @@ const Index = () => {
     console.log("Pattern complete handler called with pattern:", pattern);
     let isCorrect = false;
     
-    if (user) {
-      try {
+    try {
+      if (user) {
         console.log("Verifying pattern for user:", user.id);
         isCorrect = await patternService.verifyPattern(user.id, pattern);
         console.log("Pattern verification result:", isCorrect);
-      } catch (error) {
-        console.error("Error al verificar patrón:", error);
+      } else {
+        console.log("No user, using default pattern verification");
         isCorrect = patternService.verifyDefaultPattern(pattern);
-        console.log("Fallback to default pattern verification:", isCorrect);
+        console.log("Default pattern verification result:", isCorrect);
       }
-    } else {
-      console.log("No user, using default pattern verification");
+      
+      if (isCorrect) {
+        console.log("Pattern correct, transitioning to authenticated state");
+        setIsAuthenticated(true);
+        setTimeout(() => {
+          setShowPatternLock(false);
+          setHasUnreadMessages(false);
+          
+          toast({
+            title: "Acceso correcto",
+            description: "Bienvenido al chat dScrt",
+          });
+        }, 100);
+        
+        return true;
+      } else {
+        console.log("Pattern incorrect");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error al verificar patrón:", error);
+      
+      console.log("Fallback to default pattern verification");
       isCorrect = patternService.verifyDefaultPattern(pattern);
-      console.log("Default pattern verification result:", isCorrect);
-    }
-    
-    if (isCorrect) {
-      console.log("Pattern correct, transitioning to authenticated state");
-      setShowPatternLock(false);
-      setIsAuthenticated(true);
-      setHasUnreadMessages(false);
-      return true;
-    } else {
-      console.log("Pattern incorrect");
+      console.log("Fallback pattern verification result:", isCorrect);
+      
+      if (isCorrect) {
+        console.log("Fallback pattern correct, transitioning to authenticated state");
+        setIsAuthenticated(true);
+        setTimeout(() => {
+          setShowPatternLock(false);
+          setHasUnreadMessages(false);
+        }, 100);
+        
+        return true;
+      }
+      
       return false;
     }
   };
@@ -303,6 +326,12 @@ const Index = () => {
           onSelectTheme={handleSelectTheme}
           onClose={() => setShowThemeSelector(false)}
         />
+      )}
+      
+      {false && (
+        <div className="fixed bottom-2 left-2 p-2 bg-gray-800 text-white text-xs rounded-md opacity-70">
+          Auth: {isAuthenticated ? 'Sí' : 'No'} | Pattern: {showPatternLock ? 'Visible' : 'Oculto'}
+        </div>
       )}
     </div>
   );

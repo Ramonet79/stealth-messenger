@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PatternData {
@@ -137,7 +138,9 @@ export const patternService = {
       if (error || !storedPattern) {
         console.error('Error verificando patrón:', error);
         console.log("Fallback to default pattern verification");
-        return patternService.verifyDefaultPattern(inputPattern);
+        const isDefaultMatch = patternService.verifyDefaultPattern(inputPattern);
+        console.log("Default pattern verification result:", isDefaultMatch);
+        return isDefaultMatch;
       }
       
       // Comparar los patrones
@@ -151,7 +154,9 @@ export const patternService = {
       return matches;
     } catch (error) {
       console.error("Error inesperado al verificar patrón:", error);
-      return false;
+      const isDefaultMatch = patternService.verifyDefaultPattern(inputPattern);
+      console.log("Fallback to default pattern after error:", isDefaultMatch);
+      return isDefaultMatch;
     }
   },
 
