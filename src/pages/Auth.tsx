@@ -52,9 +52,9 @@ const Auth = () => {
             console.log('Token verificado correctamente');
             const { error: signInError } = await supabase.auth.signInWithOtp({
               email: email,
-              token: token,
               options: {
-                shouldCreateUser: false
+                shouldCreateUser: false,
+                token: token
               }
             });
             
