@@ -5,17 +5,22 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.ca70e353ea8f4f748cd44e57c75305d7',
   appName: 'dScrt',
   webDir: 'dist',
-  // Server configuration removed for production build
+  server: {
+    url: 'https://ca70e353ea8f4f748cd44e57c75305d7.lovable.dev',
+    cleartext: true
+  },
   android: {
     allowMixedContent: true
   },
   ios: {
     limitsNavigationsToAppBoundDomains: true
   },
-  // Explicitly disable live reload for production
   plugins: {
     LiveReload: {
-      enabled: false
+      enabled: true
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
     }
   }
 };

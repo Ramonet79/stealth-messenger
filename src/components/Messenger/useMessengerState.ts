@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Contact, Message, Request, AppView } from './types';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { patternService } from '@/services/patternService';
+import { messageService } from '@/services/messageService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) => void) => {
@@ -34,48 +34,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     }
   ]);
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      contactId: '1',
-      text: 'Hola, ¿cómo estás?',
-      sent: false,
-      timestamp: '10:45',
-      status: 'read'
-    },
-    {
-      id: '2',
-      contactId: '1',
-      text: 'Muy bien, ¿y tú?',
-      sent: true,
-      timestamp: '10:46',
-      status: 'read'
-    },
-    {
-      id: '3',
-      contactId: '1',
-      text: 'Todo perfecto, gracias. ¿Tienes un momento para hablar?',
-      sent: false,
-      timestamp: '10:47',
-      status: 'read'
-    },
-    {
-      id: '4',
-      contactId: '2',
-      text: '¿Te llegaron los archivos que envié?',
-      sent: false,
-      timestamp: 'Ayer',
-      status: 'delivered'
-    },
-    {
-      id: '5',
-      contactId: '3',
-      text: 'Ok, nos vemos mañana entonces.',
-      sent: false,
-      timestamp: 'Lun',
-      status: 'delivered'
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   
   const [pendingRequests, setPendingRequests] = useState<Request[]>([
     {
@@ -100,6 +59,42 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
   
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+
+  // Suscribirse a nuevos mensajes
+  useEffect(() => {
+    if (!user) return;
+    
+    console.log("Configurando suscripción a mensajes entrantes para usuario:", user.id);
+    
+    const { unsubscribe } = messageService.subscribeToNewMessages(user.id, (newMessage) => {
+      console.log("Mensaje nuevo recibido:", newMessage);
+      
+      // Agregar mensaje a la conversación
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+      
+      // Actualizar el lastMessage y unread del contacto
+      setContacts(prevContacts => 
+        prevContacts.map(contact => 
+          contact.id === newMessage.contactId ? 
+          {
+            ...contact,
+            lastMessage: newMessage.type === 'text' ? newMessage.text : newMessage.type === 'image' ? '📷 Imagen' : '🎤 Audio',
+            timestamp: newMessage.timestamp,
+            unread: true
+          } : contact
+        )
+      );
+      
+      // Si es la conversación actual, marcar como leído
+      if (selectedContactId === newMessage.contactId && view === 'conversation') {
+        messageService.updateMessageStatus(newMessage.id, 'read');
+      }
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [user, selectedContactId, view]);
 
   // Check contacts with active pattern locks
   useEffect(() => {
@@ -130,6 +125,43 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     checkContactsWithLock();
   }, [user]);
   
+  // Cargar mensajes cuando se selecciona un contacto
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!user || !selectedContactId || view !== 'conversation') return;
+      
+      try {
+        const { data, error } = await messageService.getMessages(user.id, selectedContactId);
+        
+        if (error) {
+          console.error("Error al cargar mensajes:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudieron cargar los mensajes",
+          });
+          return;
+        }
+        
+        if (data) {
+          console.log(`Cargados ${data.length} mensajes para la conversación`);
+          setMessages(data);
+          
+          // Marcar mensajes no leídos como leídos
+          data.forEach(msg => {
+            if (!msg.sent && msg.status !== 'read') {
+              messageService.updateMessageStatus(msg.id, 'read');
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error inesperado al cargar mensajes:", error);
+      }
+    };
+    
+    loadMessages();
+  }, [user, selectedContactId, view]);
+  
   // Handle unread messages notification
   useEffect(() => {
     const hasUnread = contacts.some(contact => contact.unread);
@@ -155,12 +187,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
       setContacts(contacts.map(contact => 
         contact.id === contactId ? { ...contact, unread: false } : contact
       ));
-      
-      setMessages(messages.map(message =>
-        message.contactId === contactId && !message.sent 
-          ? { ...message, status: 'read' } 
-          : message
-      ));
     }
   };
 
@@ -178,12 +204,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
           contact.id === selectedContactId ? { ...contact, unread: false } : contact
         ));
         
-        setMessages(messages.map(message =>
-          message.contactId === selectedContactId && !message.sent 
-            ? { ...message, status: 'read' } 
-            : message
-        ));
-        
         return true;
       } else {
         toast({
@@ -199,33 +219,53 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     }
   };
 
-  const handleSendMessage = (text: string, type: 'text' | 'image' | 'audio' = 'text', mediaUrl?: string) => {
-    if (!selectedContactId) return;
+  const handleSendMessage = async (text: string, type: 'text' | 'image' | 'audio' = 'text', mediaUrl?: string) => {
+    if (!selectedContactId || !user) return;
     
-    const now = new Date();
-    const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    
-    const newMessage: Message = {
-      id: uuidv4(),
-      contactId: selectedContactId,
-      text,
-      sent: true,
-      timestamp,
-      status: 'sent',
-      type,
-      mediaUrl
-    };
-    
-    setMessages([...messages, newMessage]);
-    
-    setContacts(contacts.map(contact => 
-      contact.id === selectedContactId ? 
-        { 
-          ...contact, 
-          lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio',
-          timestamp 
-        } : contact
-    ));
+    try {
+      const { data, error } = await messageService.sendMessage(
+        user.id,
+        selectedContactId,
+        text,
+        type,
+        mediaUrl
+      );
+      
+      if (error) {
+        console.error("Error al enviar mensaje:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo enviar el mensaje",
+        });
+        return;
+      }
+      
+      if (data) {
+        console.log("Mensaje enviado correctamente:", data);
+        setMessages(prevMessages => [...prevMessages, data]);
+        
+        // Actualizar lastMessage del contacto
+        const now = new Date();
+        const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        setContacts(contacts.map(contact => 
+          contact.id === selectedContactId ? 
+            { 
+              ...contact, 
+              lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio',
+              timestamp 
+            } : contact
+        ));
+      }
+    } catch (error) {
+      console.error("Error inesperado al enviar mensaje:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo enviar el mensaje",
+      });
+    }
   };
 
   const handleCreateChat = (phone: string, name: string) => {
