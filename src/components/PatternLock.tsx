@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -315,7 +314,7 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
   
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gray-100">
-      <h2 className="text-2xl font-bold mb-8">{isCreationMode ? "Crear patrón" : "Desbloquear App"}</h2>
+      <h2 className="text-xl font-medium mb-4">{isCreationMode ? "Crear patrón" : "Desbloquear App"}</h2>
       
       {!isCreationMode && isLocked && (
         <Alert className="mb-4 max-w-md">
@@ -326,24 +325,25 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
         </Alert>
       )}
       
-      <Alert className="mb-4 max-w-md">
-        <AlertDescription>
-          {isCreationMode 
-            ? "Conecta al menos 4 puntos para crear tu patrón de desbloqueo. Recuérdalo bien, lo necesitarás para acceder a la aplicación."
-            : "Dibuja tu patrón de desbloqueo conectando al menos 4 puntos."}
-        </AlertDescription>
-      </Alert>
+      {isCreationMode && (
+        <Alert className="mb-4 max-w-md">
+          <AlertDescription>
+            Dibuja un patrón conectando al menos 4 puntos en la pantalla. 
+            Asegúrate de que sea un patrón que puedas recordar fácilmente.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div 
         ref={containerRef} 
-        className={`relative w-[320px] h-[320px] touch-none cursor-pointer ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
+        className={`relative w-[280px] h-[280px] touch-none cursor-pointer ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <div ref={linesRef} className="absolute inset-0"></div>
+        <div ref={linesRef} className="absolute inset-0 pointer-events-none"></div>
         
         {points.map((point) => (
           <div
@@ -360,9 +360,10 @@ const PatternLock: React.FC<PatternLockProps> = ({ onPatternComplete, isCreation
           />
         ))}
       </div>
-      <p className="mt-8 text-gray-500">
+      
+      <p className="mt-4 text-gray-500 text-sm">
         {isCreationMode 
-          ? "Dibuja un patrón conectando al menos 4 puntos" 
+          ? "Dibuja tu patrón conectando al menos 4 puntos" 
           : "Dibuja tu patrón para acceder"}
       </p>
 

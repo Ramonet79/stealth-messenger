@@ -49,6 +49,10 @@ export const useAuthState = () => {
       setIsCreatePattern(false);
       // Clear the first login flag
       sessionStorage.removeItem('firstLogin');
+      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+      if (user) {
+        navigate('/');
+      }
       return true;
     }
     return false;

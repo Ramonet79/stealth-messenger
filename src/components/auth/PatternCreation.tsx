@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import PatternLock from '@/components/PatternLock';
 import { patternService } from '@/services/patternService';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 type PatternCreationProps = {
   userId: string;
@@ -24,7 +25,8 @@ export const PatternCreation = ({
   onComplete 
 }: PatternCreationProps) => {
   const { toast } = useToast();
-
+  const [showPatternModal, setShowPatternModal] = useState(false);
+  
   // Manejar creación de patrón
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
     // Verificamos que el patrón tenga al menos 4 puntos
@@ -62,6 +64,7 @@ export const PatternCreation = ({
             title: "Patrón establecido",
             description: "Tu patrón de desbloqueo ha sido guardado",
           });
+          setShowPatternModal(false);
           onComplete();
           return true;
         } catch (error) {
@@ -94,7 +97,7 @@ export const PatternCreation = ({
       </div>
       
       <h1 className="text-2xl font-bold mb-4 text-center">
-        {step === 1 ? "Crear patrón de desbloqueo" : "Confirmar patrón"}
+        Configuración de dScrt
       </h1>
       
       <Alert className="mb-6 max-w-md">
@@ -104,32 +107,62 @@ export const PatternCreation = ({
         </AlertDescription>
       </Alert>
       
-      <Alert className="mb-4 max-w-md">
+      <Alert className="mb-6 max-w-md">
         <AlertDescription>
           <strong>Importante:</strong> Tu patrón debe conectar al menos 4 puntos.
           Dibuja un patrón sencillo que puedas recordar fácilmente.
         </AlertDescription>
       </Alert>
       
-      <p className="text-sm text-gray-600 mb-8 text-center max-w-md">
-        {step === 1 
-          ? "Dibuja un patrón que usarás para desbloquear la aplicación. Recuérdalo bien." 
-          : "Dibuja nuevamente el mismo patrón para confirmarlo."}
-      </p>
+      <div className="flex flex-col items-center">
+        <Button 
+          onClick={() => {
+            setStep(1);
+            setShowPatternModal(true);
+          }}
+          size="lg"
+          className="mb-4"
+        >
+          Crear Patrón de Acceso al Chat dScrt
+        </Button>
+        
+        <p className="text-sm text-gray-600 mt-4 text-center max-w-md">
+          Después de crear tu patrón, podrás acceder al chat dScrt 
+          pulsando el icono de configuración en la app camuflada.
+        </p>
+      </div>
       
-      <PatternLock 
-        onPatternComplete={handlePatternComplete} 
-        isCreationMode={true}
-      />
-      
-      {step === 2 && (
-        <div className="mt-8 text-center max-w-md">
-          <p className="text-sm text-gray-600 mb-4">
-            Después de crear tu patrón, podrás acceder al chat dScrt 
-            pulsando el icono de configuración en la app camuflada.
-          </p>
-        </div>
-      )}
+      <Dialog 
+        open={showPatternModal} 
+        onOpenChange={(open) => {
+          if (!open) {
+            // Solo permitir cerrar el modal si no estamos en medio de la confirmación
+            if (step !== 2) {
+              setShowPatternModal(false);
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {step === 1 ? "Crear patrón de desbloqueo" : "Confirmar patrón"}
+            </DialogTitle>
+            <DialogDescription>
+              {step === 1 
+                ? "Dibuja un patrón que usarás para desbloquear la aplicación. Recuérdalo bien."
+                : "Dibuja nuevamente el mismo patrón para confirmarlo."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <PatternLock 
+              onPatternComplete={handlePatternComplete} 
+              isCreationMode={true}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
