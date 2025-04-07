@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -35,14 +34,13 @@ export const signUpUser = async (
     
     console.log('URL de redirección para confirmación:', redirectUrl);
     
-    // Procedemos con el registro
+    // Procedemos con el registro sin el campo de recovery_email
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          username,
-          recovery_email: recoveryEmail
+          username
         },
         emailRedirectTo: redirectUrl
       }
@@ -57,8 +55,7 @@ export const signUpUser = async (
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          username,
-          recovery_email: recoveryEmail
+          username
         })
         .eq('id', data.user.id);
 
