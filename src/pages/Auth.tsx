@@ -27,21 +27,22 @@ const Auth = () => {
   const confirmSuccess = searchParams.get('confirmSuccess') === 'true';
   const token = searchParams.get('token');
   const type = searchParams.get('type');
+  const email = searchParams.get('email');
   
   const { user, loading } = useSupabaseAuth();
 
   useEffect(() => {
     const handleConfirmation = async () => {
-      if (confirmSuccess && token && type === 'signup' && !user) {
+      if (confirmSuccess && token && type === 'signup' && email && !user) {
         setProcessingConfirmation(true);
         setConfirmationError(null);
         
         try {
-          console.log("Verificando token de confirmación:", token);
+          console.log("Verificando token de confirmación:", token, "para email:", email);
           const { error } = await supabase.auth.verifyOtp({
             token,
             type: 'signup',
-            email: ''
+            email: email
           });
           
           if (error) {
@@ -49,8 +50,22 @@ const Auth = () => {
             setConfirmationError(error.message);
           } else {
             console.log('Token verificado correctamente');
-            startPatternCreation();
-            sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+            const { error: signInError } = await supabase.auth.signInWithOtp({
+              email: email,
+              token: token,
+              options: {
+                shouldCreateUser: false
+              }
+            });
+            
+            if (signInError) {
+              console.error('Error al iniciar sesión automática:', signInError);
+              setConfirmationError(null);
+            } else {
+              console.log('Inicio de sesión automático exitoso');
+              startPatternCreation();
+              sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+            }
           }
         } catch (error: any) {
           console.error('Error al procesar confirmación:', error);
@@ -62,7 +77,7 @@ const Auth = () => {
     };
     
     handleConfirmation();
-  }, [confirmSuccess, token, type, user]);
+  }, [confirmSuccess, token, type, email, user]);
 
   useEffect(() => {
     if (confirmSuccess && user) {
@@ -238,6 +253,9 @@ const Auth = () => {
               type="button" 
               className="w-full"
               onClick={() => {
+                if (email) {
+                  sessionStorage.setItem('autoFillEmail', email);
+                }
                 setIsLogin(true);
                 window.history.replaceState({}, '', '/auth');
               }}

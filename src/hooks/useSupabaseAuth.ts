@@ -47,6 +47,12 @@ export const useSupabaseAuth = () => {
             user: session?.user ?? null,
             loading: false,
           });
+          
+          // Marcar como primera sesión después de confirmación para mostrar la creación del patrón
+          sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+          
+          // Redirigir a la página principal para la creación del patrón
+          window.location.href = '/';
         } else {
           setAuthState({
             session,
@@ -56,6 +62,14 @@ export const useSupabaseAuth = () => {
         }
       }
     );
+
+    // Auto-completar email del form de login si viene de confirmación
+    const autoFillEmail = sessionStorage.getItem('autoFillEmail');
+    if (autoFillEmail) {
+      // El componente LoginForm debería leer esto
+      console.log("Email para auto-completar disponible:", autoFillEmail);
+      // No eliminar aquí para permitir que el componente lo use
+    }
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {

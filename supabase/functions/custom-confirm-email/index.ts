@@ -71,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
     const url = new URL(confirmationUrl);
     const token = url.searchParams.get('token');
     
-    // Crear URL personalizada que incluye el token necesario
+    // Asegurarnos de que el email esté incluido en la URL para la verificación
     const modifiedUrl = `${appUrl}/auth?confirmSuccess=true&token=${token}&type=signup&email=${encodeURIComponent(email)}`;
     
     console.log("URL de confirmación modificada:", modifiedUrl);
