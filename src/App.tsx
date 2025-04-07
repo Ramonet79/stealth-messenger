@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,10 +18,10 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useSupabaseAuth();
 
-  // Identificar si es la primera vez que el usuario accede después de confirmar cuenta
+  // Check for first login flag
   useEffect(() => {
-    if (user && window.location.href.includes('confirmSuccess=true')) {
-      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
+    if (user && sessionStorage.getItem('firstLogin') === 'true') {
+      console.log("First login detected, pattern creation will be triggered");
     }
   }, [user]);
 

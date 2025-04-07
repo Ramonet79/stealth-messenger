@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Esquema de validación para el registro (sin recoveryEmail)
+// Esquema de validación para el registro
 const signupSchema = z.object({
   username: z.string()
     .min(3, "El nombre de usuario debe tener al menos 3 caracteres")
@@ -111,7 +111,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       setIsSubmitting(true);
       const { email, password, username } = data;
       
-      // Pasamos una cadena vacía como recoveryEmail ya que eliminamos ese campo
+      // Sign up user directly without email verification
       const { data: authData, error } = await signUp(
         email, 
         password, 
@@ -131,8 +131,11 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       if (authData?.user) {
         toast({
           title: "Registro exitoso",
-          description: "Por favor, revisa tu correo para confirmar tu cuenta",
+          description: "Tu cuenta ha sido creada correctamente",
         });
+        
+        // Mark as first login for pattern creation after login
+        sessionStorage.setItem('firstLogin', 'true');
         
         onSuccess();
       }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,22 +40,16 @@ export const useSupabaseAuth = () => {
             user: null,
             loading: false,
           });
-        // Si hay un evento USER_UPDATED o SIGNED_IN después de verificar email
-        } else if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && window.location.href.includes('confirmSuccess=true')) {
-          console.log("Usuario confirmado y autenticado correctamente");
+        // First login after signup (SIGNED_IN event)
+        } else if (event === 'SIGNED_IN' && sessionStorage.getItem('firstLogin') === 'true') {
+          console.log("Primera sesión después del registro");
           setAuthState({
             session,
             user: session?.user ?? null,
             loading: false,
           });
           
-          // Marcar como primera sesión después de confirmación para mostrar la creación del patrón
-          sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
-          
-          // Redirigir a la página principal para la creación del patrón
-          if (window.location.pathname !== '/') {
-            window.location.href = '/';
-          }
+          // No need to handle redirects here, the app component will handle this
         } else {
           console.log("Actualización del estado de autenticación:", event);
           setAuthState({
@@ -67,14 +60,6 @@ export const useSupabaseAuth = () => {
         }
       }
     );
-
-    // Auto-completar email del form de login si viene de confirmación
-    const autoFillEmail = sessionStorage.getItem('autoFillEmail');
-    if (autoFillEmail) {
-      // El componente LoginForm debería leer esto
-      console.log("Email para auto-completar disponible:", autoFillEmail);
-      // No eliminar aquí para permitir que el componente lo use
-    }
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -101,11 +86,14 @@ export const useSupabaseAuth = () => {
         description: response.error.message,
       });
     } else {
-      console.log("Registro iniciado:", response.data?.user?.id);
+      console.log("Registro exitoso:", response.data?.user?.id);
       toast({
-        title: "Registro iniciado",
-        description: "Revisa tu correo para verificar tu cuenta",
+        title: "Registro exitoso",
+        description: "Tu cuenta ha sido creada correctamente",
       });
+      
+      // Set flag for first login to trigger pattern creation
+      sessionStorage.setItem('firstLogin', 'true');
     }
     
     return response;

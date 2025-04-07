@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -27,10 +26,7 @@ export const signUpUser = async (
       };
     }
     
-    // Obtenemos la URL actual para construir la redirección
-    const appUrl = window.location.origin;
-    
-    // Configuramos la redirección después de verificar el correo
+    // Registrar usuario sin verificación de correo
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -38,8 +34,8 @@ export const signUpUser = async (
         data: {
           username
         },
-        // Esto es importante: redirecciona al usuario a nuestra app después de verificar
-        emailRedirectTo: `${appUrl}/auth?confirmSuccess=true`
+        // Desactivar redirección para evitar verificación por correo
+        emailRedirectTo: undefined
       }
     });
 
@@ -63,30 +59,6 @@ export const signUpUser = async (
           data, 
           error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
         };
-      }
-      
-      // Llamamos a nuestra función edge para enviar el email personalizado
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://edacjnnrjmnftlhdcjab.supabase.co';
-        const functionUrl = `${supabaseUrl}/functions/v1/custom-confirm-email`;
-        console.log('Enviando solicitud a:', functionUrl);
-        
-        const response = await fetch(functionUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token || '')}`,
-          },
-          body: JSON.stringify({
-            email: email,
-            user_id: data.user.id
-          })
-        });
-        
-        const result = await response.json();
-        console.log("Resultado de envío de email personalizado:", result);
-      } catch (emailError: any) {
-        console.error("Error al enviar email personalizado:", emailError);
       }
     }
 

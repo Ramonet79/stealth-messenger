@@ -10,9 +10,6 @@ import { Loader2 } from 'lucide-react';
 import { AuthContainer } from '@/components/auth/AuthContainer';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { AuthFormToggle } from '@/components/auth/AuthFormToggle';
-import { VerificationEmailSent } from '@/components/auth/VerificationEmailSent';
-import { VerificationError } from '@/components/auth/VerificationError';
-import { VerificationSuccess } from '@/components/auth/VerificationSuccess';
 import { useAuthState } from '@/hooks/useAuthState';
 
 const Auth = () => {
@@ -23,10 +20,6 @@ const Auth = () => {
     isCreatePattern,
     newPattern,
     step,
-    emailSent,
-    confirmationError,
-    processingConfirmation,
-    confirmationSuccess,
     user,
     loading,
     toggleMode,
@@ -37,15 +30,10 @@ const Auth = () => {
     startPatternCreation,
     handlePatternStep,
     handleSignupSuccess,
-    handleLoginAfterConfirmation,
-    setStep,
-    // Include the new exported functions
-    setEmailSent,
-    setConfirmationError,
-    setIsLogin
+    setStep
   } = useAuthState();
 
-  if (loading || processingConfirmation) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
@@ -72,19 +60,7 @@ const Auth = () => {
 
   return (
     <AuthContainer>
-      {emailSent ? (
-        <VerificationEmailSent onBack={() => setEmailSent(false)} />
-      ) : confirmationError ? (
-        <VerificationError 
-          error={confirmationError} 
-          onRetry={() => {
-            setConfirmationError(null);
-            setIsLogin(false);
-          }} 
-        />
-      ) : confirmationSuccess ? (
-        <VerificationSuccess onLogin={handleLoginAfterConfirmation} />
-      ) : !isResetPassword && !isRecoveryMode ? (
+      {!isResetPassword && !isRecoveryMode ? (
         <>
           <AuthHeader 
             title={isLogin ? "Iniciar sesión en dScrt" : "Crear cuenta en dScrt"} 
