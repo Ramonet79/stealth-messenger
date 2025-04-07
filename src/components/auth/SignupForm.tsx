@@ -140,6 +140,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         
         // Mark as first login for pattern creation after login
         sessionStorage.setItem('firstLogin', 'true');
+        console.log("Estableciendo firstLogin=true en sessionStorage");
         
         onSuccess();
       }

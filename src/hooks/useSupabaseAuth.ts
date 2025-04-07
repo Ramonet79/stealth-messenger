@@ -43,12 +43,14 @@ export const useSupabaseAuth = () => {
           });
         // First login after signup (SIGNED_IN event)
         } else if (event === 'SIGNED_IN' && sessionStorage.getItem('firstLogin') === 'true') {
-          console.log("Primera sesión después del registro");
+          console.log("Primera sesión después del registro - activando modo de creación de patrón");
           setAuthState({
             session,
             user: session?.user ?? null,
             loading: false,
           });
+          // Establecer bandera para que Index.tsx muestre instrucciones de creación de patrón
+          sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
         } else {
           console.log("Actualización del estado de autenticación:", event);
           setAuthState({

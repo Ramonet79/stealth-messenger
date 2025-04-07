@@ -71,6 +71,10 @@ export const signUpUser = async (
           error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
         };
       }
+      
+      // Establecer la bandera para el primer inicio de sesión
+      sessionStorage.setItem('firstLogin', 'true');
+      console.log("Bandera de primer inicio de sesión establecida");
     }
 
     return { data, error: null };

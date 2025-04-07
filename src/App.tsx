@@ -22,7 +22,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Check for first login flag
   useEffect(() => {
     if (user && sessionStorage.getItem('firstLogin') === 'true') {
-      console.log("First login detected, pattern creation will be triggered");
+      console.log("First login detected in ProtectedRoute, pattern creation will be triggered");
     }
   }, [user]);
 

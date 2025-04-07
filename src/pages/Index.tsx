@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calculator from '@/components/Calculator';
@@ -11,17 +10,7 @@ import type { AppTheme } from '@/components/ThemeSelector';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { patternService } from '@/services/patternService';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-// Componentes para cada tema
-import WeatherApp from '@/components/ThemeApps/WeatherApp';
-import RadarApp from '@/components/ThemeApps/RadarApp';
-import BrowserApp from '@/components/ThemeApps/BrowserApp';
-import NotesApp from '@/components/ThemeApps/NotesApp';
-import FitnessApp from '@/components/ThemeApps/FitnessApp';
-import ScannerApp from '@/components/ThemeApps/ScannerApp';
-import ConverterApp from '@/components/ThemeApps/ConverterApp';
-import FlashlightApp from '@/components/ThemeApps/FlashlightApp';
-import CalendarApp from '@/components/ThemeApps/CalendarApp';
+import { PatternCreation } from '@/components/auth/PatternCreation';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,18 +19,17 @@ const Index = () => {
   const [appTheme, setAppTheme] = useState<AppTheme>('calculator');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [language, setLanguage] = useState<string>('es-ES'); // Default language
-  // Estado para la aureola y notificaciones
   const [logoAura, setLogoAura] = useState<'none' | 'green' | 'red'>('none');
-  // Estado para mostrar notificación de cambio de logo
   const [showLogoChangeAlert, setShowLogoChangeAlert] = useState(false);
-  // Estado para mostrar instrucciones de patrón
   const [showPatternInstructions, setShowPatternInstructions] = useState(false);
+  const [isCreatingFirstPattern, setIsCreatingFirstPattern] = useState(false);
+  const [newPattern, setNewPattern] = useState<number[]>([]);
+  const [patternStep, setPatternStep] = useState(1);
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const navigate = useNavigate();
   
-  // Detect system language on first load
   useEffect(() => {
     const systemLanguage = navigator.language;
     const supportedLanguages = [
@@ -52,44 +40,36 @@ const Index = () => {
     if (supportedLanguages.includes(systemLanguage)) {
       setLanguage(systemLanguage);
     } else {
-      // If not supported, default to English (US)
       setLanguage('en-US');
     }
   }, []);
   
-  // Actualizar la aureola según el estado de mensajes no leídos
   useEffect(() => {
     if (isAuthenticated) {
-      // Si está autenticado, la aureola no es necesaria
       setLogoAura('none');
     } else {
-      // Si no está autenticado, mostrar la aureola según haya mensajes
       setLogoAura(hasUnreadMessages ? 'red' : 'green');
     }
   }, [isAuthenticated, hasUnreadMessages]);
   
-  // Escuchar eventos de actualización de mensajes no leídos
   useEffect(() => {
     const handleUnreadMessages = (event: CustomEvent) => {
       setHasUnreadMessages(event.detail.hasUnreadMessages);
     };
     
     const handleUnreadRequests = (event: CustomEvent) => {
-      // También actualizamos basándonos en solicitudes pendientes
       if (event.detail.hasUnreadRequests) {
         setHasUnreadMessages(true);
       }
     };
     
-    // Añadir escuchas de eventos
     window.addEventListener('unreadMessagesUpdate', handleUnreadMessages as EventListener);
     window.addEventListener('unreadRequestsUpdate', handleUnreadRequests as EventListener);
     
-    // For demo purpose, simulate a new message after some time
     if (!isAuthenticated) {
       const timer = setTimeout(() => {
         setHasUnreadMessages(true);
-      }, 30000); // 30 seconds
+      }, 30000);
       
       return () => {
         clearTimeout(timer);
@@ -104,12 +84,18 @@ const Index = () => {
     };
   }, [isAuthenticated]);
   
-  // Verificar si el usuario está autenticado
   useEffect(() => {
     if (user) {
-      setIsAuthenticated(false); // Inicialmente no autenticado hasta validar patrón
+      const isFirstLogin = sessionStorage.getItem('firstLogin') === 'true';
       
-      // Mostrar alerta de cambio de logo si es la primera sesión después de confirmación
+      if (isFirstLogin) {
+        console.log("Primera sesión detectada en Index, iniciando creación de patrón");
+        setIsCreatingFirstPattern(true);
+        setIsAuthenticated(false);
+      } else {
+        setIsAuthenticated(false);
+      }
+      
       const isFirstTimeAfterConfirmation = sessionStorage.getItem('firstLoginAfterConfirmation') === 'true';
       
       if (isFirstTimeAfterConfirmation) {
@@ -123,8 +109,6 @@ const Index = () => {
         });
       }
     } else if (!showPatternLock) {
-      // Si no hay usuario autenticado y no estamos en la pantalla de patrón,
-      // simplemente seguimos mostrando la aplicación de camuflaje
       console.log("No hay usuario autenticado, mostrando aplicación de camuflaje");
     }
   }, [user, showPatternLock]);
@@ -134,21 +118,16 @@ const Index = () => {
   };
   
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
-    // Verificar patrón con Supabase o usar el patrón predeterminado
     let isCorrect = false;
     
     if (user) {
-      // Usuario autenticado, verificar patrón guardado en Supabase
       try {
         isCorrect = await patternService.verifyPattern(user.id, pattern);
       } catch (error) {
         console.error("Error al verificar patrón:", error);
-        
-        // Si hay error, intentar con el patrón predeterminado
         isCorrect = patternService.verifyDefaultPattern(pattern);
       }
     } else {
-      // Usuario no autenticado, verificar con patrón predeterminado
       isCorrect = patternService.verifyDefaultPattern(pattern);
     }
     
@@ -156,9 +135,9 @@ const Index = () => {
       setShowPatternLock(false);
       setIsAuthenticated(true);
       setHasUnreadMessages(false);
-      return true; // Patrón correcto
+      return true;
     } else {
-      return false; // Patrón incorrecto
+      return false;
     }
   };
   
@@ -170,7 +149,6 @@ const Index = () => {
     setAppTheme(theme);
     setShowThemeSelector(false);
     
-    // Notificar al usuario del cambio de tema y que el logo ha cambiado
     toast({
       title: "Tema cambiado",
       description: `El tema se ha cambiado a ${theme}. El logo de la app ahora refleja este tema.`,
@@ -184,10 +162,23 @@ const Index = () => {
   const dismissPatternInstructions = () => {
     setShowPatternInstructions(false);
   };
-
-  // Renderizar el componente de camuflaje según el tema seleccionado
+  
+  const handleCompletePatternCreation = async () => {
+    sessionStorage.removeItem('firstLogin');
+    sessionStorage.removeItem('firstLoginAfterConfirmation');
+    
+    setShowPatternInstructions(true);
+    
+    setIsCreatingFirstPattern(false);
+    setIsAuthenticated(false);
+    
+    toast({
+      title: "Patrón creado correctamente",
+      description: "Para acceder al chat dScrt, pulsa el icono de configuración y usa tu patrón",
+    });
+  };
+  
   const renderCamouflageApp = () => {
-    // Añadimos la prop de logoAura a todos los componentes de tema
     switch (appTheme) {
       case 'calculator':
         return <Calculator onSettingsClick={handleSettingsClick} hasUnreadMessages={hasUnreadMessages} logoAura={logoAura} />;
@@ -223,7 +214,6 @@ const Index = () => {
             onUnreadMessagesChange={setHasUnreadMessages}
           />
           
-          {/* Settings button that's always available */}
           <div className="fixed bottom-4 right-4">
             <button 
               onClick={() => setShowThemeSelector(true)}
@@ -233,18 +223,26 @@ const Index = () => {
             </button>
           </div>
         </>
+      ) : isCreatingFirstPattern && user ? (
+        <PatternCreation 
+          userId={user.id}
+          step={patternStep}
+          setStep={setPatternStep}
+          newPattern={newPattern}
+          setNewPattern={setNewPattern}
+          onComplete={handleCompletePatternCreation}
+        />
       ) : (
         <div className="flex-1 relative">
           {renderCamouflageApp()}
           
-          {/* Alerta de cambio de logo */}
           {showLogoChangeAlert && (
             <div className="fixed inset-x-0 top-0 p-4 z-50">
               <Alert className="max-w-md mx-auto shadow-lg">
                 <AlertDescription className="flex justify-between items-center">
                   <span>El logo de la aplicación ha cambiado a modo camuflaje.</span>
                   <button 
-                    onClick={dismissLogoAlert}
+                    onClick={() => setShowLogoChangeAlert(false)}
                     className="ml-2 text-sm font-medium underline"
                   >
                     Entendido
@@ -254,7 +252,6 @@ const Index = () => {
             </div>
           )}
           
-          {/* Instrucciones de patrón */}
           {showPatternInstructions && (
             <div className="fixed inset-x-0 bottom-0 p-4 z-50">
               <Alert className="max-w-md mx-auto shadow-lg">
@@ -264,7 +261,7 @@ const Index = () => {
                     usa tu patrón de desbloqueo.
                   </span>
                   <button 
-                    onClick={dismissPatternInstructions}
+                    onClick={() => setShowPatternInstructions(false)}
                     className="ml-2 text-sm font-medium underline"
                   >
                     Entendido
