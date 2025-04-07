@@ -95,7 +95,7 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     // Verificar si existe un perfil con este correo de recuperación
     const { data, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, username, recovery_email')
       .eq('recovery_email', email)
       .maybeSingle();
     
@@ -122,7 +122,14 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       return { error: { message: error.message }, profile: null };
     }
     
-    return { error: null, profile: data };
+    return { 
+      error: null, 
+      profile: {
+        id: data.id,
+        username: data.username,
+        recovery_email: data.recovery_email
+      }
+    };
   } catch (error: any) {
     return { error: { message: error.message }, profile: null };
   }
