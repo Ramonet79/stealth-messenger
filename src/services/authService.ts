@@ -55,7 +55,7 @@ export const signUpUser = async (
         console.error('Error al llamar función auto-signup:', funcError);
       }
 
-      // Actualizamos el perfil del usuario con el nombre de usuario
+      // Actualizamos el perfil del usuario con el nombre de usuario y email
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 

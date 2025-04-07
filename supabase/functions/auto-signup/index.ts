@@ -46,6 +46,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email confirmado automáticamente para:", email);
 
+    // Asegurar que existe un perfil con email
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ email })
+      .eq('id', user_id);
+
+    if (profileError) {
+      console.error("Error al actualizar perfil con email:", profileError);
+      // No lanzamos error aquí para no bloquear la confirmación del email
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: {

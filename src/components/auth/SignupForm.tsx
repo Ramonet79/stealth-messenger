@@ -111,6 +111,8 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       setIsSubmitting(true);
       const { email, password, username } = data;
       
+      console.log("Iniciando registro con:", { email, username });
+      
       // Sign up user directly without email verification
       const { data: authData, error } = await signUp(
         email, 
@@ -120,6 +122,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       );
       
       if (error) {
+        console.error("Error durante el registro:", error);
         toast({
           variant: "destructive",
           title: "Error de registro",
@@ -129,6 +132,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       }
       
       if (authData?.user) {
+        console.log("Registro exitoso, usuario creado:", authData.user.id);
         toast({
           title: "Registro exitoso",
           description: "Tu cuenta ha sido creada correctamente",
