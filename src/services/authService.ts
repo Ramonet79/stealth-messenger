@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { AuthResponse, RecoveryResponse } from '@/types/auth';
+import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
 export const signUpUser = async (
   email: string, 

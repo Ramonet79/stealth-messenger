@@ -18,8 +18,12 @@ export interface AuthResponse {
 }
 
 // Interfaz específica para respuestas de recuperación de cuenta
-// Esto evita la recursión infinita en tipos
+// Completamente independiente para evitar recursión
 export interface RecoveryResponse {
   error: AuthError | null;
-  profile: any | null;
+  profile: {
+    id?: string;
+    username?: string;
+    [key: string]: any;
+  } | null;
 }
