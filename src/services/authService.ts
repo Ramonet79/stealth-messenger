@@ -38,7 +38,7 @@ export const signUpUser = async (
       options: {
         data: {
           username,
-          recovery_email: recoveryEmail // Usamos el mismo email para recuperación
+          recovery_email: email // Usamos el mismo email para recuperación
         },
         emailRedirectTo: redirectUrl
       }
@@ -54,7 +54,7 @@ export const signUpUser = async (
         .from('profiles')
         .update({ 
           username,
-          recovery_email: recoveryEmail 
+          recovery_email: email 
         })
         .eq('id', data.user.id);
 

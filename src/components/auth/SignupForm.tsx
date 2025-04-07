@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Esquema de validación para el registro (sin correo de recuperación)
+// Esquema de validación para el registro
 const signupSchema = z.object({
   username: z.string()
     .min(3, "El nombre de usuario debe tener al menos 3 caracteres")
@@ -134,7 +134,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
           description: "Por favor, revisa tu correo para confirmar tu cuenta",
         });
         
-        // No llamamos a onSuccess aquí porque ahora requiere confirmación por email
+        onSuccess();
       }
     } catch (error: any) {
       console.error('Error en el proceso de registro:', error);
