@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -30,7 +31,7 @@ export const signUpUser = async (
     const appUrl = window.location.origin;
     
     // IMPORTANTE: Deshabilitamos el correo de confirmación automático de Supabase
-    // configurando emailRedirectTo como undefined y disableEmail como true
+    // configurando emailRedirectTo como undefined y usando maybeSingle
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -38,8 +39,8 @@ export const signUpUser = async (
         data: {
           username
         },
-        emailRedirectTo: undefined,
-        emailVerificationMode: 'none'  // Desactiva el envío automático del correo de verificación
+        emailRedirectTo: undefined
+        // Removed emailVerificationMode which was causing TS error
       }
     });
 
@@ -66,7 +67,9 @@ export const signUpUser = async (
       
       // Llamamos a nuestra función edge para enviar el email personalizado
       try {
-        const functionUrl = `${supabase.supabaseUrl}/functions/v1/custom-confirm-email`;
+        // Fix: Use correct URL construction that doesn't access protected property
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://edacjnnrjmnftlhdcjab.supabase.co';
+        const functionUrl = `${supabaseUrl}/functions/v1/custom-confirm-email`;
         console.log('Enviando solicitud a:', functionUrl);
         
         const response = await fetch(functionUrl, {
