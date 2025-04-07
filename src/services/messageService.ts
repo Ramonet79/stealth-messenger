@@ -86,8 +86,8 @@ export const messageService = {
         text: msg.text || '',
         sent: msg.sender_id === userId,
         timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: msg.status,
-        type: msg.type,
+        status: msg.status as 'sent' | 'delivered' | 'read',
+        type: msg.type as 'text' | 'image' | 'audio',
         mediaUrl: msg.media_url
       }));
       
@@ -146,8 +146,8 @@ export const messageService = {
             text: msg.text || '',
             sent: false,
             timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: msg.status,
-            type: msg.type,
+            status: msg.status as 'sent' | 'delivered' | 'read',
+            type: msg.type as 'text' | 'image' | 'audio',
             mediaUrl: msg.media_url
           };
           
