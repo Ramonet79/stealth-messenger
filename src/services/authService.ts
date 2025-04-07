@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -97,16 +98,23 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
       .select('*')
       .eq('recovery_email', email)
       .maybeSingle();
-
-    if (profileError || !data) {
+    
+    // Manejar el caso de error de consulta
+    if (profileError) {
       return { 
-        error: profileError 
-          ? { message: profileError.message } 
-          : { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
+        error: { message: profileError.message },
         profile: null
       };
     }
-
+    
+    // Manejar el caso de que no se encuentre el perfil
+    if (!data) {
+      return { 
+        error: { message: "No se encontró ninguna cuenta asociada a este correo de recuperación" },
+        profile: null
+      };
+    }
+    
     // Si encontramos el perfil, recuperamos la cuenta del usuario asociado
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     
