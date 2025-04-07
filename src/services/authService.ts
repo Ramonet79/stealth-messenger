@@ -109,11 +109,15 @@ export const recoverAccountWithEmail = async (email: string): Promise<RecoveryRe
     }
     
     // Now try to find a profile using the recovery_email
-    const { data, error: profileError } = await supabase
+    // Using explicit type annotation to avoid deep type instantiation
+    const profileQuery = await supabase
       .from('profiles')
       .select('id, username')
       .eq('recovery_email', email)
       .maybeSingle();
+    
+    const data = profileQuery.data;
+    const profileError = profileQuery.error;
     
     if (profileError) {
       console.error('Error al buscar perfil:', profileError);
