@@ -11,7 +11,12 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: true,
-    webContentsDebuggingEnabled: true
+    webContentsDebuggingEnabled: true,
+    permissions: [
+      "android.permission.CAMERA",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.MODIFY_AUDIO_SETTINGS"
+    ]
   },
   ios: {
     limitsNavigationsToAppBoundDomains: true,
@@ -23,6 +28,10 @@ const config: CapacitorConfig = {
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
+    },
+    Camera: {
+      cameraUsageDescription: "Esta aplicación necesita acceso a la cámara para enviar fotos y videos",
+      microphoneUsageDescription: "Esta aplicación necesita acceso al micrófono para enviar audios y videos con sonido"
     }
   }
 };

@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Mic } from 'lucide-react';
 import { formatTime, stopMediaStream } from '../utils/mediaUtils';
+import { AlertWithClose } from '@/components/ui/alert-with-close';
 
 interface AudioCaptureProps {
   onCaptureAudio: (audioUrl: string, duration: number) => void;
@@ -12,6 +13,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -34,11 +36,13 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
 
   const startRecording = async () => {
     try {
-      setIsRecording(true);
-      setRecordingTime(0);
+      console.log("Intentando acceder al micrófono...");
       
+      // Solicitamos permisos explícitamente
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
+      
+      console.log("Permiso de micrófono concedido, configurando grabación...");
       
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -51,7 +55,15 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
         }
       };
       
+      mediaRecorder.onerror = (event) => {
+        console.error("Error en el MediaRecorder:", event);
+        setError("Error al grabar audio. Por favor, intenta de nuevo.");
+      };
+      
       mediaRecorder.start();
+      console.log("Grabación de audio iniciada");
+      setIsRecording(true);
+      setRecordingTime(0);
       
       const interval = setInterval(() => {
         setRecordingTime(prev => prev + 1);
@@ -59,30 +71,43 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
       
       setRecordingInterval(interval);
     } catch (error) {
-      console.error('Error accessing microphone:', error);
-      onCancel();
+      console.error('Error al acceder al micrófono:', error);
+      setError("No se pudo acceder al micrófono. Por favor, verifica los permisos.");
+      setIsRecording(false);
+      // No llamamos a onCancel aquí para darle al usuario la posibilidad de ver el error
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaStreamRef.current) {
-      mediaRecorderRef.current.stop();
+      console.log("Deteniendo grabación de audio...");
       
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
+      try {
+        mediaRecorderRef.current.stop();
         
-        // Stop the audio stream
-        stopMediaStream(mediaStreamRef.current);
-        
-        // Clean up interval
-        if (recordingInterval) {
-          clearInterval(recordingInterval);
-        }
-        
-        // Send the audio
-        onCaptureAudio(audioUrl, recordingTime);
-      };
+        mediaRecorderRef.current.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          console.log("Audio grabado correctamente, tamaño:", audioBlob.size);
+          
+          // Stop the audio stream
+          stopMediaStream(mediaStreamRef.current);
+          
+          // Clean up interval
+          if (recordingInterval) {
+            clearInterval(recordingInterval);
+          }
+          
+          // Send the audio
+          onCaptureAudio(audioUrl, recordingTime);
+        };
+      } catch (error) {
+        console.error("Error al detener la grabación:", error);
+        setError("Error al finalizar la grabación. Intenta de nuevo.");
+      }
+    } else {
+      console.error("No se pudo detener la grabación - referencias no disponibles");
+      setError("No se pudo completar la grabación. Intenta de nuevo.");
     }
   };
 
@@ -90,7 +115,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       <div className="bg-black p-3 flex justify-between items-center">
         <div className="text-white">
-          {isRecording && (
+          {isRecording && !error && (
             <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2"></div>
               <span>{formatTime(recordingTime)}</span>
@@ -106,16 +131,24 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
       </div>
       
       <div className="flex-1 flex items-center justify-center">
-        <div className="flex flex-col items-center justify-center">
-          <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-            <Mic size={48} className="text-white" />
+        {error ? (
+          <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
+            {error}
+          </AlertWithClose>
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+              <Mic size={48} className={`${isRecording ? 'text-red-500' : 'text-white'}`} />
+            </div>
+            <p className="text-white text-xl">
+              {isRecording ? "Grabando audio..." : "Iniciando grabación..."}
+            </p>
           </div>
-          <p className="text-white text-xl">Recording audio...</p>
-        </div>
+        )}
       </div>
       
       <div className="bg-black p-4 flex justify-center">
-        {isRecording && (
+        {isRecording && !error && (
           <button
             onClick={stopRecording}
             className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"
