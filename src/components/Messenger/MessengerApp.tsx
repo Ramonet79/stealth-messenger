@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
@@ -13,9 +14,14 @@ import { AppView, PrivacyNoticeState } from './types';
 interface MessengerAppProps {
   onLogout: () => void;
   onUnreadMessagesChange?: (hasUnread: boolean) => void;
+  onViewChange?: (view: string) => void; // Nueva prop para comunicar la vista actual
 }
 
-const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesChange }) => {
+const MessengerApp: React.FC<MessengerAppProps> = ({ 
+  onLogout, 
+  onUnreadMessagesChange,
+  onViewChange 
+}) => {
   const [privacyNotice, setPrivacyNotice] = useState<PrivacyNoticeState>({
     hasSeenMediaPrivacyNotice: localStorage.getItem('dscrt-media-privacy-notice-seen') === 'true',
     showMediaPrivacyNotice: false
@@ -43,6 +49,12 @@ const MessengerApp: React.FC<MessengerAppProps> = ({ onLogout, onUnreadMessagesC
     handleSaveContactPattern,
   } = useMessengerState(onUnreadMessagesChange);
 
+  // Efecto para notificar al componente padre sobre cambios en la vista
+  useEffect(() => {
+    if (onViewChange) {
+      onViewChange(view);
+    }
+  }, [view, onViewChange]);
   
   const handleBack = () => {
     if (view === 'conversation' || view === 'new' || view === 'requests' || view === 'directory' || view === 'contactLock') {

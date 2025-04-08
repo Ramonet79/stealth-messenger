@@ -20,6 +20,7 @@ import ScannerApp from '@/components/ThemeApps/ScannerApp';
 import ConverterApp from '@/components/ThemeApps/ConverterApp';
 import FlashlightApp from '@/components/ThemeApps/FlashlightApp';
 import CalendarApp from '@/components/ThemeApps/CalendarApp';
+import { X } from 'lucide-react';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -35,6 +36,7 @@ const Index = () => {
   const [newPattern, setNewPattern] = useState<number[]>([]);
   const [patternStep, setPatternStep] = useState(1);
   const [patternVerified, setPatternVerified] = useState(false);
+  const [currentView, setCurrentView] = useState<string>('list');
   
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -227,6 +229,10 @@ const Index = () => {
       description: "Para acceder al chat dScrt, pulsa el icono de configuración y usa tu patrón",
     });
   };
+
+  const handleViewChange = (view: string) => {
+    setCurrentView(view);
+  };
   
   const renderCamouflageApp = () => {
     switch (appTheme) {
@@ -258,7 +264,8 @@ const Index = () => {
   console.log("🔄 Current App State:", { 
     isAuthenticated, 
     showPatternLock, 
-    patternVerified 
+    patternVerified,
+    currentView
   });
 
   return (
@@ -268,16 +275,19 @@ const Index = () => {
           <MessengerApp 
             onLogout={handleLogout} 
             onUnreadMessagesChange={setHasUnreadMessages}
+            onViewChange={handleViewChange}
           />
           
-          <div className="fixed bottom-4 right-4">
-            <button 
-              onClick={() => setShowThemeSelector(true)}
-              className="p-3 bg-messenger-primary text-white rounded-full shadow-lg hover:bg-messenger-secondary transition-colors"
-            >
-              Tema
-            </button>
-          </div>
+          {currentView === 'list' && (
+            <div className="fixed bottom-4 right-4">
+              <button 
+                onClick={() => setShowThemeSelector(true)}
+                className="p-3 bg-messenger-primary text-white rounded-full shadow-lg hover:bg-messenger-secondary transition-colors"
+              >
+                Tema
+              </button>
+            </div>
+          )}
         </>
       ) : isCreatingFirstPattern && user ? (
         <PatternCreation 
@@ -299,9 +309,9 @@ const Index = () => {
                   <span>El logo de la aplicación ha cambiado a modo camuflaje.</span>
                   <button 
                     onClick={dismissLogoAlert}
-                    className="ml-2 text-sm font-medium underline"
+                    className="ml-2 text-sm font-medium underline flex items-center"
                   >
-                    Entendido
+                    <X size={16} className="mr-1" /> Cerrar
                   </button>
                 </AlertDescription>
               </Alert>
@@ -318,9 +328,9 @@ const Index = () => {
                   </span>
                   <button 
                     onClick={dismissPatternInstructions}
-                    className="ml-2 text-sm font-medium underline"
+                    className="ml-2 text-sm font-medium underline flex items-center"
                   >
-                    Entendido
+                    <X size={16} className="mr-1" /> Cerrar
                   </button>
                 </AlertDescription>
               </Alert>
