@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const messageService = {
   // Enviar un nuevo mensaje
   sendMessage: async (senderId: string, receiverId: string, text: string, type: 'text' | 'image' | 'audio' | 'video' = 'text', mediaUrl?: string): Promise<{ data: Message | null, error: any }> => {
-    console.log(`📨 Enviando mensaje de ${senderId} a ${receiverId}: ${text}`);
+    console.log(`📨 Enviando mensaje de ${senderId} a ${receiverId}: ${text} (tipo: ${type})`);
     
     const timestamp = new Date().toISOString();
     const messageId = uuidv4();
@@ -43,7 +43,7 @@ export const messageService = {
         mediaUrl
       };
       
-      console.log(`📨 Mensaje enviado correctamente: ${messageId}`);
+      console.log(`📨 Mensaje enviado correctamente: ${messageId} (tipo: ${type})`);
       return { data: newMessage, error: null };
     } catch (error) {
       console.error("Error inesperado al enviar mensaje:", error);
