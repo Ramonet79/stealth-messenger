@@ -16,51 +16,68 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
 
   useEffect(() => {
-    // Initialize camera when component mounts
-    const startCamera = async () => {
+    // Verificar permisos al montar el componente
+    const checkPermissions = async () => {
       try {
-        console.log("Verificando permisos de cámara...");
+        console.log("Verificando permisos de cámara iniciales...");
+        const permissionResult = await requestMediaPermissions('camera', (show) => {
+          setShowPermissionsRequest(show);
+        });
         
-        // Solicitamos permisos con nuestro nuevo sistema
-        const permissionResult = await requestMediaPermissions('camera', setShowPermissionsRequest);
-        
-        if (permissionResult && videoRef.current) {
-          console.log("Permisos de cámara concedidos, configurando stream...");
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
-          });
-          
-          videoRef.current.srcObject = stream;
-          mediaStreamRef.current = stream;
-          
-          // Asegurarse de que el video se reproduce
-          try {
-            await videoRef.current.play();
-            console.log("Reproducción de video iniciada con éxito");
-          } catch (playError) {
-            console.error("Error al reproducir el video:", playError);
-            setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
-          }
+        if (permissionResult) {
+          console.log("Permisos iniciales de cámara concedidos");
+          setPermissionsGranted(true);
         }
-      } catch (error) {
-        console.error('Error al acceder a la cámara:', error);
-        setError("No se pudo acceder a la cámara. Por favor, verifica los permisos.");
+      } catch (err) {
+        console.error('Error en verificación inicial de permisos:', err);
       }
     };
-
-    if (!showPermissionsRequest) {
-      startCamera();
-    }
-
-    // Cleanup when component unmounts
+    
+    checkPermissions();
+    
+    // Cleanup cuando el componente se desmonta
     return () => {
       console.log("Limpiando recursos de la cámara");
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
     };
-  }, [showPermissionsRequest]);
+  }, []);
+
+  // Efecto para iniciar la cámara cuando se conceden los permisos
+  useEffect(() => {
+    if (permissionsGranted && !showPermissionsRequest) {
+      startCamera();
+    }
+  }, [permissionsGranted, showPermissionsRequest]);
+
+  const startCamera = async () => {
+    try {
+      console.log("Iniciando cámara con permisos concedidos...");
+      
+      if (videoRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        });
+        
+        videoRef.current.srcObject = stream;
+        mediaStreamRef.current = stream;
+        
+        try {
+          await videoRef.current.play();
+          console.log("Reproducción de video iniciada con éxito");
+        } catch (playError) {
+          console.error("Error al reproducir el video:", playError);
+          setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
+        }
+      }
+    } catch (error) {
+      console.error('Error al acceder a la cámara:', error);
+      setError("No se pudo acceder a la cámara. Por favor, verifica los permisos.");
+    }
+  };
 
   const handleCaptureImage = () => {
     if (videoRef.current && canvasRef.current && mediaStreamRef.current) {
@@ -91,7 +108,11 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
 
   const handlePermissionResponse = (granted: boolean) => {
     setShowPermissionsRequest(false);
-    if (!granted) {
+    console.log("Respuesta de permisos recibida:", granted);
+    
+    if (granted) {
+      setPermissionsGranted(true);
+    } else {
       setError("Para usar la cámara, es necesario conceder los permisos correspondientes.");
     }
   };
@@ -136,7 +157,7 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
             <button
               onClick={handleCaptureImage}
               className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
-              disabled={!!error}
+              disabled={!!error || !permissionsGranted}
             >
               <div className="w-14 h-14 rounded-full border-4 border-black"></div>
             </button>

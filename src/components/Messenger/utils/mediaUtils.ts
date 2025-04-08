@@ -41,9 +41,15 @@ export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'bot
     if (type === 'microphone' || type === 'both') {
       constraints.audio = true;
     }
+
+    // Usar un timeout para evitar que la promesa quede pendiente indefinidamente
+    const permissionPromise = navigator.mediaDevices.getUserMedia(constraints);
+    const timeoutPromise = new Promise<MediaStream>((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout checking permissions')), 5000);
+    });
     
     // Intentamos obtener un stream - si funciona, tenemos permisos
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await Promise.race([permissionPromise, timeoutPromise]);
     console.log(`Permisos de ${type} verificados correctamente`);
     
     // Importante: detener el stream después de verificar

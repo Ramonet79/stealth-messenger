@@ -20,9 +20,7 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [permissionRequested, setPermissionRequested] = useState(false);
 
-  // Verificar permisos al montar el componente y cuando se solicitan
   useEffect(() => {
-    // Si ya se solicitaron permisos, comprobar si se concedieron
     if (permissionRequested) {
       const checkPermissionsStatus = async () => {
         console.log("Verificando estado de permisos después de solicitarlos...");
@@ -47,6 +45,7 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
           onRequestComplete(false);
         } finally {
           setLoading(false);
+          setPermissionRequested(false); // Resetear el estado para evitar bucles
         }
       };
       
@@ -55,12 +54,16 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
   }, [permissionRequested, permissionType, onRequestComplete]);
 
   const requestPermissions = async () => {
+    if (loading || permissionRequested) return; // Evitar solicitudes múltiples
+    
     setLoading(true);
     setError(null);
 
     try {
+      console.log("Solicitando permisos...");
+      
       if (Capacitor.isNativePlatform()) {
-        console.log("Solicitando permisos en plataforma nativa...");
+        console.log("Plataforma nativa detectada");
         
         if (permissionType === 'camera' || permissionType === 'both') {
           console.log("Solicitando permiso de cámara...");
@@ -68,13 +71,11 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
           console.log("Resultado permiso cámara:", cameraPermission);
         }
 
-        // Para permisos de micrófono en plataformas nativas
         if (permissionType === 'microphone' || permissionType === 'both') {
           console.log("Solicitando permiso de micrófono...");
           try {
-            // En Android, el permiso de micrófono puede solicitarse directamente con getUserMedia
+            // En Android, solicitar permisos directamente con getUserMedia
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // Detener el stream después de obtener permisos
             stream.getTracks().forEach(track => track.stop());
             console.log("Permiso de micrófono concedido");
           } catch (err) {
@@ -82,41 +83,36 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
             throw err;
           }
         }
-        
-        // Marcar que ya se solicitaron los permisos para activar el useEffect
-        setPermissionRequested(true);
-        return;
       } else {
         // En web
-        console.log("Solicitando permisos en plataforma web...");
-        try {
-          const constraints: MediaStreamConstraints = {};
-          
-          if (permissionType === 'camera' || permissionType === 'both') {
-            constraints.video = true;
-          }
-          
-          if (permissionType === 'microphone' || permissionType === 'both') {
-            constraints.audio = true;
-          }
-          
-          const stream = await navigator.mediaDevices.getUserMedia(constraints);
-          // Detener el stream después de obtener permisos
-          stream.getTracks().forEach(track => track.stop());
-          onRequestComplete(true);
-        } catch (err) {
-          console.error('Error solicitando permisos:', err);
-          setError('No se pudieron obtener los permisos necesarios');
-          onRequestComplete(false);
+        console.log("Plataforma web detectada");
+        const constraints: MediaStreamConstraints = {};
+        
+        if (permissionType === 'camera' || permissionType === 'both') {
+          constraints.video = true;
         }
+        
+        if (permissionType === 'microphone' || permissionType === 'both') {
+          constraints.audio = true;
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getTracks().forEach(track => track.stop());
+        console.log("Permisos web concedidos correctamente");
+        onRequestComplete(true);
+        setLoading(false);
+        return;
       }
+      
+      // Solo llegamos aquí en plataformas nativas después de solicitar permisos
+      setPermissionRequested(true);
+      
     } catch (err) {
       console.error('Error general solicitando permisos:', err);
       setError('Ocurrió un error al solicitar permisos');
       onRequestComplete(false);
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
