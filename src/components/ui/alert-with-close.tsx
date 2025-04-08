@@ -7,15 +7,17 @@ interface AlertWithCloseProps {
   children: React.ReactNode;
   onClose: () => void;
   className?: string;
+  variant?: "default" | "destructive";
 }
 
 export const AlertWithClose: React.FC<AlertWithCloseProps> = ({ 
   children, 
   onClose,
-  className = ""
+  className = "",
+  variant = "default"
 }) => {
   return (
-    <Alert className={`shadow-lg ${className}`}>
+    <Alert className={`shadow-lg ${className}`} variant={variant}>
       <AlertDescription className="flex justify-between items-center">
         <span>{children}</span>
         <button 

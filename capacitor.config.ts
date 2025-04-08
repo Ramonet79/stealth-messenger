@@ -10,10 +10,12 @@ const config: CapacitorConfig = {
     cleartext: true
   },
   android: {
-    allowMixedContent: true
+    allowMixedContent: true,
+    webContentsDebuggingEnabled: true
   },
   ios: {
-    limitsNavigationsToAppBoundDomains: true
+    limitsNavigationsToAppBoundDomains: true,
+    webContentsDebuggingEnabled: true
   },
   plugins: {
     LiveReload: {
