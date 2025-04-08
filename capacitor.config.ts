@@ -15,7 +15,12 @@ const config: CapacitorConfig = {
     permissions: [
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
-      "android.permission.MODIFY_AUDIO_SETTINGS"
+      "android.permission.MODIFY_AUDIO_SETTINGS",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_AUDIO"
     ]
   },
   ios: {
@@ -36,7 +41,9 @@ const config: CapacitorConfig = {
     Permissions: {
       permissions: [
         "camera",
-        "microphone"
+        "microphone",
+        "photos",
+        "media"
       ]
     }
   }

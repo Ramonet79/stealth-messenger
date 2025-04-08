@@ -21,13 +21,20 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Al montar el componente, intentamos iniciar grabación
   useEffect(() => {
-    // Start recording when component mounts (if permissions granted)
-    if (!showPermissionsRequest) {
-      startRecording();
-    }
+    const initRecording = async () => {
+      try {
+        console.log("Verificando permisos de micrófono...");
+        await requestMediaPermissions('microphone', setShowPermissionsRequest);
+      } catch (err) {
+        console.error('Error en verificación de permisos:', err);
+      }
+    };
     
-    // Cleanup when component unmounts
+    initRecording();
+    
+    // Limpieza
     return () => {
       if (recordingInterval) {
         clearInterval(recordingInterval);
@@ -36,55 +43,54 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
       mediaStreamRef.current = null;
       mediaRecorderRef.current = null;
     };
-  }, [showPermissionsRequest]);
+  }, []);
 
+  // Iniciar grabación cuando tenemos permisos
   const startRecording = async () => {
     try {
-      console.log("Verificando permisos de micrófono...");
+      console.log("Iniciando grabación de audio...");
       
-      // Solicitamos permisos con nuestro nuevo sistema
-      const permissionResult = await requestMediaPermissions('microphone', setShowPermissionsRequest);
+      // Obtenemos el stream de audio
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       
-      if (permissionResult) {
-        console.log("Permiso de micrófono concedido, configurando grabación...");
-        
-        // Solicitamos permisos explícitamente
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaStreamRef.current = stream;
-        
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        
-        audioChunksRef.current = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-        
-        mediaRecorder.onerror = (event) => {
-          console.error("Error en el MediaRecorder:", event);
-          setError("Error al grabar audio. Por favor, intenta de nuevo.");
-        };
-        
-        mediaRecorder.start();
-        console.log("Grabación de audio iniciada");
-        setIsRecording(true);
-        setRecordingTime(0);
-        
-        const interval = setInterval(() => {
-          setRecordingTime(prev => prev + 1);
-        }, 1000);
-        
-        setRecordingInterval(interval);
-      }
+      // Creamos el MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      // Preparamos para recoger datos
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onerror = (event) => {
+        console.error("Error en el MediaRecorder:", event);
+        setError("Error al grabar audio. Por favor, intenta de nuevo.");
+      };
+      
+      // Iniciamos grabación
+      mediaRecorder.start();
+      console.log("Grabación de audio iniciada");
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Contador de tiempo
+      const interval = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+      setRecordingInterval(interval);
     } catch (error) {
       console.error('Error al acceder al micrófono:', error);
       setError("No se pudo acceder al micrófono. Por favor, verifica los permisos.");
     }
   };
 
+  // Detener grabación y procesar audio
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaStreamRef.current) {
       console.log("Deteniendo grabación de audio...");
@@ -95,17 +101,17 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
         mediaRecorderRef.current.onstop = () => {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           const audioUrl = URL.createObjectURL(audioBlob);
-          console.log("Audio grabado correctamente, tamaño:", audioBlob.size);
+          console.log("Audio grabado, tamaño:", audioBlob.size);
           
-          // Stop the audio stream
+          // Detenemos el stream
           stopMediaStream(mediaStreamRef.current);
           
-          // Clean up interval
+          // Limpiamos intervalo
           if (recordingInterval) {
             clearInterval(recordingInterval);
           }
           
-          // Send the audio
+          // Enviamos audio
           onCaptureAudio(audioUrl, recordingTime);
         };
       } catch (error) {
@@ -113,14 +119,19 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
         setError("Error al finalizar la grabación. Intenta de nuevo.");
       }
     } else {
-      console.error("No se pudo detener la grabación - referencias no disponibles");
+      console.error("No se pudo detener la grabación");
       setError("No se pudo completar la grabación. Intenta de nuevo.");
     }
   };
 
+  // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
     setShowPermissionsRequest(false);
-    if (!granted) {
+    
+    if (granted) {
+      console.log("Permisos de micrófono concedidos, iniciando grabación");
+      startRecording();
+    } else {
       setError("Para grabar audio, es necesario conceder los permisos de micrófono.");
     }
   };
@@ -136,7 +147,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
         <>
           <div className="bg-black p-3 flex justify-between items-center">
             <div className="text-white">
-              {isRecording && !error && (
+              {isRecording && (
                 <div className="flex items-center">
                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2"></div>
                   <span>{formatTime(recordingTime)}</span>
@@ -162,7 +173,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
                   <Mic size={48} className={`${isRecording ? 'text-red-500' : 'text-white'}`} />
                 </div>
                 <p className="text-white text-xl">
-                  {isRecording ? "Grabando audio..." : "Iniciando grabación..."}
+                  {isRecording ? "Grabando audio..." : "Preparando grabación..."}
                 </p>
               </div>
             )}

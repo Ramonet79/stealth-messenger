@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import { Camera } from '@capacitor/camera';
+import React, { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
 import { AlertWithClose } from './ui/alert-with-close';
 import { Button } from './ui/button';
 import { Shield, Camera as CameraIcon, Mic, X } from 'lucide-react';
-import { checkMediaPermissions } from './Messenger/utils/mediaUtils';
 
 interface PermissionsRequestProps {
   onRequestComplete: (granted: boolean) => void;
@@ -18,74 +17,38 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [permissionRequested, setPermissionRequested] = useState(false);
 
-  useEffect(() => {
-    if (permissionRequested) {
-      const checkPermissionsStatus = async () => {
-        console.log("Verificando estado de permisos después de solicitarlos...");
-        // Pequeña pausa para dar tiempo a que se procesen los permisos
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        try {
-          const hasPermissions = await checkMediaPermissions(permissionType);
-          console.log(`Resultado de verificación de permisos: ${hasPermissions}`);
-          
-          if (hasPermissions) {
-            console.log("Permisos concedidos, completando solicitud");
-            onRequestComplete(true);
-          } else {
-            console.log("Permisos no concedidos después de solicitarlos");
-            setError('No se pudieron obtener los permisos necesarios. Por favor, actívalos manualmente en la configuración de tu dispositivo.');
-            onRequestComplete(false);
-          }
-        } catch (err) {
-          console.error('Error verificando permisos:', err);
-          setError('Ocurrió un error al verificar el estado de los permisos');
-          onRequestComplete(false);
-        } finally {
-          setLoading(false);
-          setPermissionRequested(false); // Resetear el estado para evitar bucles
-        }
-      };
-      
-      checkPermissionsStatus();
-    }
-  }, [permissionRequested, permissionType, onRequestComplete]);
-
+  // Función simplificada para manejar permisos
   const requestPermissions = async () => {
-    if (loading || permissionRequested) return; // Evitar solicitudes múltiples
-    
     setLoading(true);
     setError(null);
-
+    
     try {
-      console.log("Solicitando permisos...");
+      console.log(`Solicitando permisos de ${permissionType}...`);
       
+      // Si estamos en una plataforma nativa
       if (Capacitor.isNativePlatform()) {
-        console.log("Plataforma nativa detectada");
+        console.log("En plataforma nativa");
         
         if (permissionType === 'camera' || permissionType === 'both') {
-          console.log("Solicitando permiso de cámara...");
-          const cameraPermission = await Camera.requestPermissions();
-          console.log("Resultado permiso cámara:", cameraPermission);
+          const cameraPermissions = await Camera.requestPermissions();
+          console.log("Resultado permiso cámara:", cameraPermissions);
         }
-
+        
         if (permissionType === 'microphone' || permissionType === 'both') {
-          console.log("Solicitando permiso de micrófono...");
           try {
-            // En Android, solicitar permisos directamente con getUserMedia
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             console.log("Permiso de micrófono concedido");
           } catch (err) {
-            console.error('Error solicitando permiso de micrófono:', err);
-            throw err;
+            console.error("Error solicitando permisos de micrófono:", err);
+            throw new Error("No se pudo obtener acceso al micrófono");
           }
         }
-      } else {
-        // En web
-        console.log("Plataforma web detectada");
+      } 
+      // Si estamos en web
+      else {
+        console.log("En plataforma web");
         const constraints: MediaStreamConstraints = {};
         
         if (permissionType === 'camera' || permissionType === 'both') {
@@ -98,21 +61,24 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
         
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         stream.getTracks().forEach(track => track.stop());
-        console.log("Permisos web concedidos correctamente");
-        onRequestComplete(true);
-        setLoading(false);
-        return;
       }
       
-      // Solo llegamos aquí en plataformas nativas después de solicitar permisos
-      setPermissionRequested(true);
+      // Si llegamos aquí, es que los permisos se han concedido
+      console.log("Permisos concedidos correctamente");
+      onRequestComplete(true);
       
     } catch (err) {
-      console.error('Error general solicitando permisos:', err);
-      setError('Ocurrió un error al solicitar permisos');
+      console.error("Error solicitando permisos:", err);
+      setError("No se pudieron obtener los permisos necesarios. Por favor, concede los permisos en la configuración de tu dispositivo.");
       onRequestComplete(false);
+    } finally {
       setLoading(false);
     }
+  };
+
+  // Cancelar solicitud de permisos
+  const cancelRequest = () => {
+    onRequestComplete(false);
   };
 
   return (
@@ -173,16 +139,15 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
         <div className="flex flex-col space-y-2">
           <Button 
             onClick={requestPermissions} 
-            disabled={loading || permissionRequested} 
+            disabled={loading} 
             className="w-full"
           >
-            {loading ? 'Solicitando permisos...' : 
-             permissionRequested ? 'Permisos solicitados...' : 'Conceder permisos'}
+            {loading ? 'Solicitando permisos...' : 'Conceder permisos'}
           </Button>
           
           <Button 
             variant="outline" 
-            onClick={() => onRequestComplete(false)} 
+            onClick={cancelRequest} 
             className="w-full"
           >
             Cancelar

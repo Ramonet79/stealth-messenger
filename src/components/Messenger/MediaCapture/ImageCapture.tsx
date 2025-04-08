@@ -16,46 +16,31 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
 
+  // Al montar el componente, verificamos permisos
   useEffect(() => {
-    // Verificar permisos al montar el componente
     const checkPermissions = async () => {
       try {
-        console.log("Verificando permisos de cámara iniciales...");
-        const permissionResult = await requestMediaPermissions('camera', (show) => {
-          setShowPermissionsRequest(show);
-        });
-        
-        if (permissionResult) {
-          console.log("Permisos iniciales de cámara concedidos");
-          setPermissionsGranted(true);
-        }
+        console.log("Verificando permisos de cámara...");
+        await requestMediaPermissions('camera', setShowPermissionsRequest);
       } catch (err) {
-        console.error('Error en verificación inicial de permisos:', err);
+        console.error('Error en verificación de permisos:', err);
       }
     };
     
     checkPermissions();
     
-    // Cleanup cuando el componente se desmonta
+    // Limpieza al desmontar
     return () => {
-      console.log("Limpiando recursos de la cámara");
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
     };
   }, []);
 
-  // Efecto para iniciar la cámara cuando se conceden los permisos
-  useEffect(() => {
-    if (permissionsGranted && !showPermissionsRequest) {
-      startCamera();
-    }
-  }, [permissionsGranted, showPermissionsRequest]);
-
+  // Cuando los permisos se conceden, iniciamos la cámara
   const startCamera = async () => {
     try {
-      console.log("Iniciando cámara con permisos concedidos...");
+      console.log("Iniciando cámara...");
       
       if (videoRef.current) {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -67,7 +52,7 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
         
         try {
           await videoRef.current.play();
-          console.log("Reproducción de video iniciada con éxito");
+          console.log("Reproducción de video iniciada");
         } catch (playError) {
           console.error("Error al reproducir el video:", playError);
           setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
@@ -93,27 +78,28 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
         const imageUrl = canvasRef.current.toDataURL('image/jpeg');
         console.log("Imagen capturada correctamente");
         
-        // Stop the video stream
+        // Detenemos el stream
         stopMediaStream(mediaStreamRef.current);
         mediaStreamRef.current = null;
         
-        // Send the image
+        // Enviamos la imagen
         onCaptureImage(imageUrl);
       }
     } else {
-      console.error("No se pudo capturar la imagen - referencias no disponibles");
+      console.error("No se pudo capturar la imagen");
       setError("No se pudo capturar la imagen. Intenta de nuevo.");
     }
   };
 
+  // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
     setShowPermissionsRequest(false);
-    console.log("Respuesta de permisos recibida:", granted);
     
     if (granted) {
-      setPermissionsGranted(true);
+      console.log("Permisos concedidos, iniciando cámara");
+      startCamera();
     } else {
-      setError("Para usar la cámara, es necesario conceder los permisos correspondientes.");
+      setError("Para usar la cámara, es necesario conceder los permisos.");
     }
   };
 
@@ -157,7 +143,7 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
             <button
               onClick={handleCaptureImage}
               className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
-              disabled={!!error || !permissionsGranted}
+              disabled={!!error || !mediaStreamRef.current}
             >
               <div className="w-14 h-14 rounded-full border-4 border-black"></div>
             </button>

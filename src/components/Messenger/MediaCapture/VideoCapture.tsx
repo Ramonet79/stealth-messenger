@@ -22,35 +22,35 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
 
+  // Al montar el componente, verificamos permisos
   useEffect(() => {
-    // Initialize camera when component mounts (if permissions granted)
-    if (!showPermissionsRequest) {
-      startCamera();
-    }
-
-    // Cleanup when component unmounts
+    const initCamera = async () => {
+      try {
+        console.log("Verificando permisos de cámara y micrófono...");
+        await requestMediaPermissions('both', setShowPermissionsRequest);
+      } catch (err) {
+        console.error('Error en verificación de permisos:', err);
+      }
+    };
+    
+    initCamera();
+    
+    // Limpieza al desmontar
     return () => {
-      console.log("Limpiando recursos de video");
       if (recordingInterval) {
         clearInterval(recordingInterval);
       }
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
-      mediaRecorderRef.current = null;
     };
-  }, [showPermissionsRequest]);
+  }, []);
 
+  // Iniciar cámara cuando tenemos permisos
   const startCamera = async () => {
     try {
-      console.log("Verificando permisos de cámara y micrófono para video...");
+      console.log("Iniciando cámara para video...");
       
-      // Solicitamos permisos con nuestro nuevo sistema
-      const permissionResult = await requestMediaPermissions('both', setShowPermissionsRequest);
-      
-      if (permissionResult && videoRef.current) {
-        console.log("Permisos concedidos para video, configurando stream...");
-        
-        // Solicitamos permisos explícitamente
+      if (videoRef.current) {
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: 'environment' },
           audio: true
@@ -59,24 +59,24 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         videoRef.current.srcObject = stream;
         mediaStreamRef.current = stream;
         
-        // Asegurarse de que el video se reproduce
         try {
           await videoRef.current.play();
-          console.log("Reproducción de vista previa iniciada con éxito");
+          console.log("Reproducción de video iniciada");
           
-          // Start recording automatically after preview is working
+          // Iniciar grabación automáticamente
           startRecording(stream);
         } catch (playError) {
-          console.error("Error al reproducir la vista previa:", playError);
+          console.error("Error al reproducir video:", playError);
           setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
         }
       }
     } catch (error) {
-      console.error('Error al acceder a la cámara y micrófono:', error);
+      console.error('Error al acceder a la cámara/micrófono:', error);
       setError("No se pudo acceder a la cámara o micrófono. Por favor, verifica los permisos.");
     }
   };
 
+  // Iniciar grabación de video
   const startRecording = (stream: MediaStream) => {
     try {
       console.log("Iniciando grabación de video...");
@@ -110,11 +110,12 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       
       setRecordingInterval(interval);
     } catch (error) {
-      console.error("Error al iniciar la grabación de video:", error);
+      console.error("Error al iniciar grabación de video:", error);
       setError("No se pudo iniciar la grabación de video. Intenta de nuevo.");
     }
   };
 
+  // Detener grabación de video
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaStreamRef.current) {
       console.log("Deteniendo grabación de video...");
@@ -125,32 +126,37 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         mediaRecorderRef.current.onstop = () => {
           const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
           const videoUrl = URL.createObjectURL(videoBlob);
-          console.log("Video grabado correctamente, tamaño:", videoBlob.size);
+          console.log("Video grabado, tamaño:", videoBlob.size);
           
-          // Stop the video stream
+          // Detenemos stream
           stopMediaStream(mediaStreamRef.current);
           
-          // Clean up interval
+          // Limpiamos intervalo
           if (recordingInterval) {
             clearInterval(recordingInterval);
           }
           
-          // Send the video
+          // Enviamos video
           onCaptureVideo(videoUrl, recordingTime);
         };
       } catch (error) {
-        console.error("Error al detener la grabación de video:", error);
+        console.error("Error al detener grabación de video:", error);
         setError("Error al finalizar la grabación de video. Intenta de nuevo.");
       }
     } else {
-      console.error("No se pudo detener la grabación de video - referencias no disponibles");
+      console.error("No se pudo detener la grabación de video");
       setError("No se pudo completar la grabación de video. Intenta de nuevo.");
     }
   };
 
+  // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
     setShowPermissionsRequest(false);
-    if (!granted) {
+    
+    if (granted) {
+      console.log("Permisos concedidos, iniciando cámara para video");
+      startCamera();
+    } else {
       setError("Para grabar video, es necesario conceder los permisos de cámara y micrófono.");
     }
   };
@@ -166,7 +172,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         <>
           <div className="bg-black p-3 flex justify-between items-center">
             <div className="text-white">
-              {isRecording && !error && (
+              {isRecording && (
                 <div className="flex items-center">
                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2"></div>
                   <span>{formatTime(recordingTime)}</span>
