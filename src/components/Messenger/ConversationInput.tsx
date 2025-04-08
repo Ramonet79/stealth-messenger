@@ -16,7 +16,6 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
   const [showEmojiKeyboard, setShowEmojiKeyboard] = useState(false);
   const [captureMode, setCaptureMode] = useState<MediaCaptureMode>(null);
 
-  // Handle sending text message
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
@@ -25,31 +24,26 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     }
   };
 
-  // Handle image capture
   const handleCaptureImage = (imageUrl: string) => {
     onSendMessage("📷 Image", 'image', imageUrl);
     setCaptureMode(null);
   };
 
-  // Handle audio capture
   const handleCaptureAudio = (audioUrl: string, duration: number) => {
     onSendMessage(`Audio message (${formatTime(duration)})`, 'audio', audioUrl);
     setCaptureMode(null);
   };
 
-  // Handle video capture
   const handleCaptureVideo = (videoUrl: string, duration: number) => {
     onSendMessage(`🎥 Video (${formatTime(duration)})`, 'video', videoUrl);
     setCaptureMode(null);
   };
 
-  // Handle emoji selection
   const handleSelectEmoji = (emoji: string) => {
     setNewMessage(prev => prev + emoji);
     setShowEmojiKeyboard(false);
   };
 
-  // Handle cancel capture
   const handleCancelCapture = () => {
     setCaptureMode(null);
   };

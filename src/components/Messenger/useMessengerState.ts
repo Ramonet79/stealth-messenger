@@ -60,7 +60,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
-  // Suscribirse a nuevos mensajes
   useEffect(() => {
     if (!user) return;
     
@@ -69,23 +68,20 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     const { unsubscribe } = messageService.subscribeToNewMessages(user.id, (newMessage) => {
       console.log("Mensaje nuevo recibido:", newMessage);
       
-      // Agregar mensaje a la conversación
       setMessages(prevMessages => [...prevMessages, newMessage]);
       
-      // Actualizar el lastMessage y unread del contacto
       setContacts(prevContacts => 
         prevContacts.map(contact => 
           contact.id === newMessage.contactId ? 
           {
             ...contact,
-            lastMessage: newMessage.type === 'text' ? newMessage.text : newMessage.type === 'image' ? '📷 Imagen' : '🎤 Audio',
+            lastMessage: newMessage.type === 'text' ? newMessage.text : newMessage.type === 'image' ? '📷 Imagen' : newMessage.type === 'video' ? '🎥 Video' : '🎤 Audio',
             timestamp: newMessage.timestamp,
             unread: true
           } : contact
         )
       );
       
-      // Si es la conversación actual, marcar como leído
       if (selectedContactId === newMessage.contactId && view === 'conversation') {
         messageService.updateMessageStatus(newMessage.id, 'read');
       }
@@ -96,7 +92,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     };
   }, [user, selectedContactId, view]);
 
-  // Check contacts with active pattern locks
   useEffect(() => {
     const checkContactsWithLock = async () => {
       if (!user) return;
@@ -125,7 +120,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     checkContactsWithLock();
   }, [user]);
   
-  // Cargar mensajes cuando se selecciona un contacto
   useEffect(() => {
     const loadMessages = async () => {
       if (!user || !selectedContactId || view !== 'conversation') return;
@@ -147,7 +141,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
           console.log(`Cargados ${data.length} mensajes para la conversación`);
           setMessages(data);
           
-          // Marcar mensajes no leídos como leídos
           data.forEach(msg => {
             if (!msg.sent && msg.status !== 'read') {
               messageService.updateMessageStatus(msg.id, 'read');
@@ -162,7 +155,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     loadMessages();
   }, [user, selectedContactId, view]);
   
-  // Handle unread messages notification
   useEffect(() => {
     const hasUnread = contacts.some(contact => contact.unread);
     
@@ -219,7 +211,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     }
   };
 
-  const handleSendMessage = async (text: string, type: 'text' | 'image' | 'audio' = 'text', mediaUrl?: string) => {
+  const handleSendMessage = async (text: string, type: 'text' | 'image' | 'audio' | 'video' = 'text', mediaUrl?: string) => {
     if (!selectedContactId || !user) return;
     
     try {
@@ -245,7 +237,6 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
         console.log("Mensaje enviado correctamente:", data);
         setMessages(prevMessages => [...prevMessages, data]);
         
-        // Actualizar lastMessage del contacto
         const now = new Date();
         const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
         
@@ -253,7 +244,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
           contact.id === selectedContactId ? 
             { 
               ...contact, 
-              lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : '🎤 Audio',
+              lastMessage: type === 'text' ? text : type === 'image' ? '📷 Imagen' : type === 'video' ? '🎥 Video' : '🎤 Audio',
               timestamp 
             } : contact
         ));
