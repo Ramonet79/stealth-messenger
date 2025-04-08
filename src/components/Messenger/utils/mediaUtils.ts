@@ -49,3 +49,30 @@ export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'bot
     return false;
   }
 };
+
+// Función que muestra un diálogo personalizado para solicitar permisos
+export const requestMediaPermissions = async (
+  type: 'camera' | 'microphone' | 'both',
+  onPermissionRequested: (showDialog: boolean) => void
+): Promise<boolean> => {
+  try {
+    // Primero verificamos si ya tenemos permisos
+    const hasPermissions = await checkMediaPermissions(type);
+    
+    if (hasPermissions) {
+      console.log(`Ya se tienen permisos de ${type}, no es necesario solicitarlos`);
+      return true;
+    }
+    
+    // Si no tenemos permisos, mostramos el diálogo personalizado
+    console.log(`Se requieren permisos de ${type}, mostrando diálogo personalizado`);
+    onPermissionRequested(true);
+    
+    // La función retorna undefined porque el resultado real dependerá de la interacción del usuario
+    // con el diálogo personalizado. El componente que maneje el diálogo deberá gestionar el resultado.
+    return false;
+  } catch (error) {
+    console.error(`Error al solicitar permisos de ${type}:`, error);
+    return false;
+  }
+};
