@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { SendHorizontal, Mic, Camera, Video, Smile } from 'lucide-react';
 import EmojiKeyboard from './EmojiKeyboard';
@@ -6,6 +5,7 @@ import { MediaCaptureMode } from './types';
 import ImageCapture from './MediaCapture/ImageCapture';
 import AudioCapture from './MediaCapture/AudioCapture';
 import VideoCapture from './MediaCapture/VideoCapture';
+import { formatTime } from './utils/mediaUtils';
 
 interface ConversationInputProps {
   onSendMessage: (text: string, type?: 'text' | 'image' | 'audio' | 'video', mediaUrl?: string) => void;
@@ -41,13 +41,6 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
   const handleCaptureVideo = (videoUrl: string, duration: number) => {
     onSendMessage(`🎥 Video (${formatTime(duration)})`, 'video', videoUrl);
     setCaptureMode(null);
-  };
-
-  // Format time for display
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Handle emoji selection

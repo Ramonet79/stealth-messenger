@@ -20,7 +20,7 @@ export interface Message {
   status?: 'sent' | 'delivered' | 'read';
   type?: 'text' | 'image' | 'audio' | 'video';
   mediaUrl?: string;
-  duration?: number; // Para mensajes de audio
+  duration?: number; // Para mensajes de audio y video
 }
 
 export interface Request {
