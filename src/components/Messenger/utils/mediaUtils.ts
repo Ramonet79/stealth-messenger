@@ -28,9 +28,10 @@ export const stopMediaStream = (stream: MediaStream | null): void => {
   }
 };
 
-// Función para verificar si los permisos de media están disponibles
+// Función mejorada para verificar si los permisos de media están disponibles
 export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'both'): Promise<boolean> => {
   try {
+    console.log(`Verificando permisos de ${type}...`);
     let constraints: MediaStreamConstraints = {};
     
     if (type === 'camera' || type === 'both') {
@@ -41,7 +42,11 @@ export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'bot
       constraints.audio = true;
     }
     
+    // Intentamos obtener un stream - si funciona, tenemos permisos
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log(`Permisos de ${type} verificados correctamente`);
+    
+    // Importante: detener el stream después de verificar
     stopMediaStream(stream);
     return true;
   } catch (error) {

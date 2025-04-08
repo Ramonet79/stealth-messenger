@@ -33,15 +33,11 @@ const config: CapacitorConfig = {
       cameraUsageDescription: "Esta aplicación necesita acceso a la cámara para enviar fotos y videos",
       microphoneUsageDescription: "Esta aplicación necesita acceso al micrófono para enviar audios y videos con sonido"
     },
-    PermissionsAndroid: {
-      camera: {
-        title: "Permiso de cámara",
-        message: "Esta aplicación necesita acceso a tu cámara para enviar fotos y videos"
-      },
-      microphone: {
-        title: "Permiso de micrófono",
-        message: "Esta aplicación necesita acceso a tu micrófono para enviar mensajes de audio y videos con sonido"
-      }
+    Permissions: {
+      permissions: [
+        "camera",
+        "microphone"
+      ]
     }
   }
 };
