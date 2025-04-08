@@ -68,7 +68,7 @@ export const requestMediaPermissions = async (
     console.log(`Se requieren permisos de ${type}, mostrando diálogo personalizado`);
     onPermissionRequested(true);
     
-    // La función retorna undefined porque el resultado real dependerá de la interacción del usuario
+    // La función retorna false porque el resultado real dependerá de la interacción del usuario
     // con el diálogo personalizado. El componente que maneje el diálogo deberá gestionar el resultado.
     return false;
   } catch (error) {
