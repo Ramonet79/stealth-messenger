@@ -21,18 +21,25 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Al montar el componente, intentamos iniciar grabación
   useEffect(() => {
-    const initRecording = async () => {
+    const initAudio = async () => {
       try {
-        console.log("Verificando permisos de micrófono...");
-        await requestMediaPermissions('microphone', setShowPermissionsRequest);
+        const hasPermission = await requestMediaPermissions('microphone', (show) => {
+          console.log("Setting microphone permissions dialog visible:", show);
+          setShowPermissionsRequest(show);
+        });
+
+        // Si ya tenemos permisos, iniciamos grabación directamente
+        if (hasPermission) {
+          startRecording();
+        }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
+        setError('Error al verificar permisos. Por favor, inténtalo de nuevo.');
       }
     };
     
-    initRecording();
+    initAudio();
     
     // Limpieza
     return () => {
@@ -45,7 +52,6 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     };
   }, []);
 
-  // Iniciar grabación cuando tenemos permisos
   const startRecording = async () => {
     try {
       console.log("Iniciando grabación de audio...");
@@ -90,7 +96,6 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     }
   };
 
-  // Detener grabación y procesar audio
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaStreamRef.current) {
       console.log("Deteniendo grabación de audio...");
@@ -126,6 +131,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
 
   // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
+    console.log("Respuesta de permisos de micrófono:", granted);
     setShowPermissionsRequest(false);
     
     if (granted) {

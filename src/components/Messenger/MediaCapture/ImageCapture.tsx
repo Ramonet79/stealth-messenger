@@ -17,18 +17,25 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
 
-  // Al montar el componente, verificamos permisos
   useEffect(() => {
-    const checkPermissions = async () => {
+    const initCamera = async () => {
       try {
-        console.log("Verificando permisos de cámara...");
-        await requestMediaPermissions('camera', setShowPermissionsRequest);
+        const hasPermission = await requestMediaPermissions('camera', (show) => {
+          console.log("Setting permissions dialog visible:", show);
+          setShowPermissionsRequest(show);
+        });
+
+        // Si ya tenemos permisos, iniciamos la cámara directamente
+        if (hasPermission) {
+          startCamera();
+        }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
+        setError('Error al verificar permisos. Por favor, inténtalo de nuevo.');
       }
     };
     
-    checkPermissions();
+    initCamera();
     
     // Limpieza al desmontar
     return () => {
@@ -37,7 +44,6 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
     };
   }, []);
 
-  // Cuando los permisos se conceden, iniciamos la cámara
   const startCamera = async () => {
     try {
       console.log("Iniciando cámara...");
@@ -91,8 +97,9 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
     }
   };
 
-  // Manejador de respuesta de permisos
+  // Manejador de respuesta de permisos - ahora inicia la cámara cuando se conceden permisos
   const handlePermissionResponse = (granted: boolean) => {
+    console.log("Respuesta de permisos recibida:", granted);
     setShowPermissionsRequest(false);
     
     if (granted) {

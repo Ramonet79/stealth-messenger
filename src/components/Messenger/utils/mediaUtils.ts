@@ -19,10 +19,10 @@ export const stopMediaStream = (stream: MediaStream | null): void => {
   }
 };
 
-// Función simple para comprobar permisos
+// Simplified permission check - tries to get the actual media stream
 export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'both'): Promise<boolean> => {
   try {
-    console.log(`Verificando permisos de ${type}...`);
+    console.log(`Verificando permisos de ${type} con getUserMedia directo...`);
     const constraints: MediaStreamConstraints = {};
     
     if (type === 'camera' || type === 'both') {
@@ -38,21 +38,21 @@ export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'bot
     
     // Detenemos el stream después de verificar
     stopMediaStream(stream);
-    console.log(`Permisos de ${type} verificados: OK`);
+    console.log(`Permisos de ${type} confirmados: OK`);
     return true;
   } catch (error) {
-    console.log(`Permisos de ${type} verificados: NO DISPONIBLES`);
+    console.error(`Permisos de ${type} verificados: NO DISPONIBLES`, error);
     return false;
   }
 };
 
-// Simplificamos esta función para solicitar permisos
+// El diálogo ahora maneja directamente la solicitud de permisos
 export const requestMediaPermissions = async (
   type: 'camera' | 'microphone' | 'both',
   onPermissionRequested: (showDialog: boolean) => void
 ): Promise<boolean> => {
   try {
-    // Verificamos permisos actuales
+    // Verificamos permisos actuales primero para evitar mostrar diálogo innecesariamente
     const hasPermissions = await checkMediaPermissions(type);
     
     if (hasPermissions) {
@@ -61,14 +61,14 @@ export const requestMediaPermissions = async (
     }
     
     // Si no tenemos permisos, mostramos el diálogo
-    console.log(`Se requieren permisos de ${type}, mostrando diálogo`);
+    console.log(`Se requieren permisos de ${type}, mostrando diálogo de solicitud`);
     onPermissionRequested(true);
     
     // La función retorna false porque el resultado real dependerá 
     // de la interacción del usuario con el diálogo
     return false;
   } catch (error) {
-    console.error(`Error al solicitar permisos de ${type}:`, error);
+    console.error(`Error general al solicitar permisos de ${type}:`, error);
     return false;
   }
 };

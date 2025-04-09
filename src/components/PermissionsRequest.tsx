@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { AlertWithClose } from './ui/alert-with-close';
@@ -17,38 +17,62 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Request permissions as soon as the component mounts
+  useEffect(() => {
+    requestPermissions();
+  }, []);
 
-  // Función simplificada para manejar permisos
+  // Función directa para solicitar permisos al sistema
   const requestPermissions = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log(`Solicitando permisos de ${permissionType}...`);
+      console.log(`Solicitando permisos de ${permissionType} directamente...`);
       
-      // Si estamos en una plataforma nativa
       if (Capacitor.isNativePlatform()) {
-        console.log("En plataforma nativa");
+        console.log("Uso de APIs nativas de Capacitor para permisos");
         
+        let cameraResult = true;
+        let microphoneResult = true;
+        
+        // Solicitar permisos según lo que se necesite
         if (permissionType === 'camera' || permissionType === 'both') {
           const cameraPermissions = await Camera.requestPermissions();
-          console.log("Resultado permiso cámara:", cameraPermissions);
+          console.log("Resultado permisos cámara:", cameraPermissions);
+          cameraResult = cameraPermissions.camera === 'granted';
         }
         
         if (permissionType === 'microphone' || permissionType === 'both') {
+          // Para micrófono usamos la API estándar de navegador, aunque estemos en nativo
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            console.log("Permiso de micrófono concedido");
+            if (stream) {
+              stream.getTracks().forEach(track => track.stop());
+              console.log("Permiso de micrófono concedido");
+            }
           } catch (err) {
-            console.error("Error solicitando permisos de micrófono:", err);
-            throw new Error("No se pudo obtener acceso al micrófono");
+            console.error("Error al solicitar permiso de micrófono:", err);
+            microphoneResult = false;
           }
         }
-      } 
-      // Si estamos en web
-      else {
-        console.log("En plataforma web");
+        
+        // Si alguno de los permisos necesarios es denegado
+        if (
+          (permissionType === 'camera' && !cameraResult) ||
+          (permissionType === 'microphone' && !microphoneResult) ||
+          (permissionType === 'both' && (!cameraResult || !microphoneResult))
+        ) {
+          console.log("Algunos permisos fueron denegados");
+          setError("No se pudieron obtener todos los permisos necesarios. Por favor, concede los permisos en la configuración de tu dispositivo.");
+          onRequestComplete(false);
+        } else {
+          console.log("Todos los permisos concedidos correctamente");
+          onRequestComplete(true);
+        }
+      } else {
+        console.log("En plataforma web, solicitando permisos al navegador");
         const constraints: MediaStreamConstraints = {};
         
         if (permissionType === 'camera' || permissionType === 'both') {
@@ -59,17 +83,22 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
           constraints.audio = true;
         }
         
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getTracks().forEach(track => track.stop());
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            console.log("Permisos de navegador concedidos");
+            onRequestComplete(true);
+          }
+        } catch (err) {
+          console.error("Error al solicitar permisos del navegador:", err);
+          setError("No se pudieron obtener los permisos necesarios del navegador. Verifica la configuración.");
+          onRequestComplete(false);
+        }
       }
-      
-      // Si llegamos aquí, es que los permisos se han concedido
-      console.log("Permisos concedidos correctamente");
-      onRequestComplete(true);
-      
     } catch (err) {
-      console.error("Error solicitando permisos:", err);
-      setError("No se pudieron obtener los permisos necesarios. Por favor, concede los permisos en la configuración de tu dispositivo.");
+      console.error("Error general al solicitar permisos:", err);
+      setError(`Error al solicitar permisos: ${err instanceof Error ? err.message : 'Error desconocido'}`);
       onRequestComplete(false);
     } finally {
       setLoading(false);
@@ -137,13 +166,18 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
         )}
         
         <div className="flex flex-col space-y-2">
-          <Button 
-            onClick={requestPermissions} 
-            disabled={loading} 
-            className="w-full"
-          >
-            {loading ? 'Solicitando permisos...' : 'Conceder permisos'}
-          </Button>
+          {loading ? (
+            <Button disabled className="w-full">
+              Solicitando permisos...
+            </Button>
+          ) : (
+            <Button 
+              onClick={requestPermissions} 
+              className="w-full"
+            >
+              Reintentar
+            </Button>
+          )}
           
           <Button 
             variant="outline" 

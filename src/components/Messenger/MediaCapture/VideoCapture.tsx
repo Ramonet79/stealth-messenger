@@ -22,18 +22,25 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
 
-  // Al montar el componente, verificamos permisos
   useEffect(() => {
-    const initCamera = async () => {
+    const initVideo = async () => {
       try {
-        console.log("Verificando permisos de cámara y micrófono...");
-        await requestMediaPermissions('both', setShowPermissionsRequest);
+        const hasPermission = await requestMediaPermissions('both', (show) => {
+          console.log("Setting video permissions dialog visible:", show);
+          setShowPermissionsRequest(show);
+        });
+
+        // Si ya tenemos permisos, iniciamos cámara directamente
+        if (hasPermission) {
+          startCamera();
+        }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
+        setError('Error al verificar permisos. Por favor, inténtalo de nuevo.');
       }
     };
     
-    initCamera();
+    initVideo();
     
     // Limpieza al desmontar
     return () => {
@@ -45,7 +52,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     };
   }, []);
 
-  // Iniciar cámara cuando tenemos permisos
   const startCamera = async () => {
     try {
       console.log("Iniciando cámara para video...");
@@ -76,7 +82,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     }
   };
 
-  // Iniciar grabación de video
   const startRecording = (stream: MediaStream) => {
     try {
       console.log("Iniciando grabación de video...");
@@ -115,7 +120,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     }
   };
 
-  // Detener grabación de video
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaStreamRef.current) {
       console.log("Deteniendo grabación de video...");
@@ -151,6 +155,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
 
   // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
+    console.log("Respuesta de permisos para video:", granted);
     setShowPermissionsRequest(false);
     
     if (granted) {
