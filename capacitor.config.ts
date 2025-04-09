@@ -20,7 +20,8 @@ const config: CapacitorConfig = {
       "android.permission.WRITE_EXTERNAL_STORAGE",
       "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
-      "android.permission.READ_MEDIA_AUDIO"
+      "android.permission.READ_MEDIA_AUDIO",
+      "android.permission.ACCESS_NETWORK_STATE"
     ]
   },
   ios: {
@@ -37,7 +38,7 @@ const config: CapacitorConfig = {
     Camera: {
       cameraUsageDescription: "Esta aplicación necesita acceso a la cámara para enviar fotos y videos",
       microphoneUsageDescription: "Esta aplicación necesita acceso al micrófono para enviar audios y videos con sonido",
-      permissions: ["camera", "photos"]
+      permissions: ["camera", "microphone"]
     },
     Permissions: {
       permissions: [

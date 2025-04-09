@@ -1,5 +1,5 @@
 
-import { requestCameraAndMicPermissions, checkCameraAndMicPermissions } from '@/services/PermissionsHandler';
+import { requestCameraAndMicPermissions, checkCameraAndMicPermissions, requestPermissionsManually } from '@/services/PermissionsHandler';
 
 // Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {
@@ -21,13 +21,13 @@ export const stopMediaStream = (stream: MediaStream | null): void => {
   }
 };
 
-// Verificar permisos usando el servicio dedicado
+// Verificar permisos usando el servicio mejorado
 export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'both'): Promise<boolean> => {
   console.log(`Verificando permisos de ${type}...`);
   return await checkCameraAndMicPermissions();
 };
 
-// Solicitar permisos usando el servicio dedicado
+// Solicitar permisos usando el servicio mejorado con método estándar y de respaldo
 export const requestMediaPermissions = async (
   type: 'camera' | 'microphone' | 'both',
   onPermissionRequested: (showDialog: boolean) => void

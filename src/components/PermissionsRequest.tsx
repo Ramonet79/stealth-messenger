@@ -3,7 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { Shield, Camera as CameraIcon, Mic, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlertWithClose } from './ui/alert-with-close';
-import { requestCameraAndMicPermissions, checkCameraAndMicPermissions } from '@/services/PermissionsHandler';
+import { 
+  checkCameraAndMicPermissions, 
+  requestCameraAndMicPermissions,
+  requestPermissionsManually
+} from '@/services/PermissionsHandler';
 
 interface PermissionsRequestProps {
   onRequestComplete: (granted: boolean) => void;
@@ -16,12 +20,15 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasTriedStandardRequest, setHasTriedStandardRequest] = useState(false);
   
   // Verificar permisos al montar el componente
   useEffect(() => {
     const checkExistingPermissions = async () => {
       try {
         const hasPermissions = await checkCameraAndMicPermissions();
+        console.log('¿Tiene permisos ya concedidos?', hasPermissions);
+        
         if (hasPermissions) {
           console.log('Ya tenemos permisos, completando solicitud...');
           // Esperamos un poco antes de continuar
@@ -47,8 +54,19 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
       // Esperamos un poco para evitar problemas de timing
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Solicitar permisos
-      const granted = await requestCameraAndMicPermissions();
+      let granted = false;
+      
+      // Si ya intentamos el método estándar y falló, usamos el método manual
+      if (hasTriedStandardRequest) {
+        console.log('Intentando solicitud manual de permisos...');
+        granted = await requestPermissionsManually();
+      } else {
+        // Primer intento con el método estándar
+        console.log('Intentando solicitud estándar de permisos...');
+        granted = await requestCameraAndMicPermissions();
+        setHasTriedStandardRequest(true);
+      }
+      
       console.log('Resultado de solicitud de permisos:', granted);
       
       // Esperamos un poco más antes de continuar
@@ -138,7 +156,7 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
               onClick={handleRequestPermissions} 
               className="w-full"
             >
-              Conceder permisos
+              {hasTriedStandardRequest ? "Intentar de nuevo" : "Conceder permisos"}
             </Button>
           )}
           
