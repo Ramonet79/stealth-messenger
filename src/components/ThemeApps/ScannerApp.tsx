@@ -4,6 +4,7 @@ import { Camera } from 'lucide-react';
 import GenericAppTemplate from './GenericAppTemplate';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
+import { requestCameraAndMicPermissions } from '@/utils/permissions';
 
 interface ScannerAppProps {
   onSettingsClick: () => void;
@@ -15,8 +16,18 @@ const ScannerApp: React.FC<ScannerAppProps> = ({ onSettingsClick, hasUnreadMessa
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
-  const handleScanClick = () => {
-    setShowPermissionsRequest(true);
+  const handleScanClick = async () => {
+    // Primero intentamos con el nuevo sistema de permisos
+    const hasPermission = await requestCameraAndMicPermissions();
+    if (hasPermission) {
+      // Simulamos el proceso de escaneo
+      setTimeout(() => {
+        alert("Escaneo completado");
+      }, 500);
+    } else {
+      // Si falla, usamos el flujo antiguo con el componente de permisos
+      setShowPermissionsRequest(true);
+    }
   };
 
   const handlePermissionResponse = (granted: boolean) => {

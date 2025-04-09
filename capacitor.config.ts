@@ -22,7 +22,8 @@ const config: CapacitorConfig = {
       "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
       "android.permission.READ_MEDIA_AUDIO",
-      "android.permission.ACCESS_NETWORK_STATE"
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.POST_NOTIFICATIONS"
     ]
   },
   ios: {

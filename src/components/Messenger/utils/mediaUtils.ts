@@ -1,5 +1,6 @@
 
 import { checkCameraPermissions } from "@/services/PermissionsHandlerNative";
+import { requestCameraAndMicPermissions, checkCameraAndMicPermissions } from "@/utils/permissions";
 
 // Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {
@@ -30,7 +31,14 @@ export const requestMediaPermissions = async (
     console.log(`Verificando permisos de ${type}...`);
     
     // Verificamos si ya tenemos permisos
-    const hasPermissions = await checkCameraPermissions();
+    let hasPermissions = false;
+    
+    if (type === 'camera') {
+      hasPermissions = await checkCameraPermissions();
+    } else {
+      // Para micrófono o ambos, usamos la verificación completa
+      hasPermissions = await checkCameraAndMicPermissions();
+    }
     
     if (hasPermissions) {
       console.log('Ya tenemos permisos necesarios');
