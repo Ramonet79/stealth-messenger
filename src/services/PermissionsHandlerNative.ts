@@ -1,5 +1,5 @@
 
-import { Camera, CameraResultType as CameraResultTypeEnum, CameraSource as CameraSourceEnum } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
 // Define una función para verificar si estamos en una plataforma nativa
@@ -49,8 +49,8 @@ export const captureImage = async () => {
     const image = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
-      resultType: CameraResultTypeEnum.DataUrl,
-      source: CameraSourceEnum.Camera,
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Camera,
       promptLabelHeader: 'Cámara',
       promptLabelCancel: 'Cancelar',
       promptLabelPhoto: 'Biblioteca',
@@ -68,5 +68,19 @@ export const captureImage = async () => {
       success: false,
       error: e
     };
+  }
+};
+
+// Función para tomar una foto (alias de captureImage para mantener compatibilidad con ImageCapture.tsx)
+export const takePicture = async (): Promise<string | null> => {
+  try {
+    const result = await captureImage();
+    if (result.success && result.dataUrl) {
+      return result.dataUrl;
+    }
+    return null;
+  } catch (e) {
+    console.error('Error en takePicture:', e);
+    return null;
   }
 };
