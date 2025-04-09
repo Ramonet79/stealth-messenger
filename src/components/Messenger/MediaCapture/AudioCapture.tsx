@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Mic } from 'lucide-react';
-import { formatTime, stopMediaStream, requestMediaPermissions } from '../utils/mediaUtils';
+import { formatTime, stopMediaStream } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
+import { captureAudio, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
 
 interface AudioCaptureProps {
   onCaptureAudio: (audioUrl: string, duration: number) => void;
@@ -24,14 +25,16 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
   useEffect(() => {
     const initAudio = async () => {
       try {
-        const hasPermission = await requestMediaPermissions('microphone', (show) => {
-          console.log("Setting microphone permissions dialog visible:", show);
-          setShowPermissionsRequest(show);
-        });
+        console.log('Verificando permisos para audio...');
+        const hasPermission = await requestCameraPermissions();
 
         // Si ya tenemos permisos, iniciamos grabación directamente
         if (hasPermission) {
+          console.log('Permisos existentes, iniciando grabación');
           startRecording();
+        } else {
+          console.log('Sin permisos, mostrando diálogo');
+          setShowPermissionsRequest(true);
         }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
@@ -56,30 +59,36 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     try {
       console.log("Iniciando grabación de audio...");
       
-      // Obtenemos el stream de audio
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
+      // Usamos la nueva función captureAudio para obtener el MediaRecorder
+      const recorder = await captureAudio();
+      if (!recorder) {
+        setError("No se pudo iniciar la grabación. Verifica los permisos e intenta de nuevo.");
+        return;
+      }
       
-      // Creamos el MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorderRef.current = recorder;
+      
+      // Guardamos referencia al stream para poder detenerlo después
+      if (recorder.stream) {
+        mediaStreamRef.current = recorder.stream;
+      }
       
       // Preparamos para recoger datos
       audioChunksRef.current = [];
       
-      mediaRecorder.ondataavailable = (event) => {
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
       
-      mediaRecorder.onerror = (event) => {
+      recorder.onerror = (event) => {
         console.error("Error en el MediaRecorder:", event);
         setError("Error al grabar audio. Por favor, intenta de nuevo.");
       };
       
       // Iniciamos grabación
-      mediaRecorder.start();
+      recorder.start();
       console.log("Grabación de audio iniciada");
       setIsRecording(true);
       setRecordingTime(0);

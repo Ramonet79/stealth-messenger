@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { formatTime, stopMediaStream, requestMediaPermissions } from '../utils/mediaUtils';
+import { formatTime, stopMediaStream } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
+import { captureVideo, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
 
 interface VideoCaptureProps {
   onCaptureVideo: (videoUrl: string, duration: number) => void;
@@ -25,14 +26,16 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   useEffect(() => {
     const initVideo = async () => {
       try {
-        const hasPermission = await requestMediaPermissions('both', (show) => {
-          console.log("Setting video permissions dialog visible:", show);
-          setShowPermissionsRequest(show);
-        });
+        console.log('Verificando permisos para video...');
+        const hasPermission = await requestCameraPermissions();
 
         // Si ya tenemos permisos, iniciamos cámara directamente
         if (hasPermission) {
+          console.log('Permisos existentes, iniciando cámara');
           startCamera();
+        } else {
+          console.log('Sin permisos, mostrando diálogo');
+          setShowPermissionsRequest(true);
         }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
@@ -56,21 +59,26 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     try {
       console.log("Iniciando cámara para video...");
       
+      // Usamos la nueva función captureVideo
+      const videoCapture = await captureVideo();
+      if (!videoCapture) {
+        setError("No se pudo iniciar la cámara. Verifica los permisos e intenta de nuevo.");
+        return;
+      }
+      
+      const { stream, recorder } = videoCapture;
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      
       if (videoRef.current) {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' },
-          audio: true
-        });
-        
         videoRef.current.srcObject = stream;
-        mediaStreamRef.current = stream;
         
         try {
           await videoRef.current.play();
           console.log("Reproducción de video iniciada");
           
           // Iniciar grabación automáticamente
-          startRecording(stream);
+          startRecording();
         } catch (playError) {
           console.error("Error al reproducir video:", playError);
           setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
@@ -82,15 +90,16 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     }
   };
 
-  const startRecording = (stream: MediaStream) => {
+  const startRecording = () => {
     try {
       console.log("Iniciando grabación de video...");
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus'
-      });
-      mediaRecorderRef.current = mediaRecorder;
+      if (!mediaRecorderRef.current) {
+        setError("No se pudo iniciar la grabación. Falta el MediaRecorder.");
+        return;
+      }
       
+      const mediaRecorder = mediaRecorderRef.current;
       videoChunksRef.current = [];
       
       mediaRecorder.ondataavailable = (event) => {

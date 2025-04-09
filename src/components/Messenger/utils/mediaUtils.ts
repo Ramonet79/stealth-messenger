@@ -1,6 +1,6 @@
 
-import { checkCameraPermissions } from "@/services/PermissionsHandlerNative";
-import { requestCameraAndMicPermissions, checkCameraAndMicPermissions } from "@/utils/permissions";
+import { checkCameraPermissions, requestCameraPermissions } from "@/services/PermissionsHandlerNative";
+import { checkCameraAndMicPermissions } from "@/utils/permissions";
 
 // Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {

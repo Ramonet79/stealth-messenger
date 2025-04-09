@@ -46,6 +46,7 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
 // Función para capturar una imagen
 export const captureImage = async () => {
   try {
+    console.log('Iniciando captura de imagen con Camera.getPhoto');
     const image = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
@@ -57,6 +58,7 @@ export const captureImage = async () => {
       promptLabelPicture: 'Tomar foto'
     });
     
+    console.log('Imagen capturada correctamente');
     return {
       dataUrl: image.dataUrl,
       success: true
@@ -81,6 +83,69 @@ export const takePicture = async (): Promise<string | null> => {
     return null;
   } catch (e) {
     console.error('Error en takePicture:', e);
+    return null;
+  }
+};
+
+// Función para iniciar captura de audio (interfaz compatible para AudioCapture.tsx)
+export const captureAudio = async (): Promise<MediaRecorder | null> => {
+  try {
+    console.log('Iniciando captura de audio');
+    // Primero verificamos permisos
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) {
+      console.error('No se tienen permisos para micrófono');
+      return null;
+    }
+    
+    // Solicitamos acceso al micrófono
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!stream) {
+      console.error('No se pudo obtener el stream de audio');
+      return null;
+    }
+    
+    // Creamos el grabador
+    const mediaRecorder = new MediaRecorder(stream);
+    console.log('MediaRecorder de audio creado correctamente');
+    return mediaRecorder;
+  } catch (e) {
+    console.error('Error al iniciar captura de audio:', e);
+    return null;
+  }
+};
+
+// Función para iniciar captura de video (interfaz compatible para VideoCapture.tsx)
+export const captureVideo = async (): Promise<{stream: MediaStream, recorder: MediaRecorder} | null> => {
+  try {
+    console.log('Iniciando captura de video');
+    // Primero verificamos permisos
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) {
+      console.error('No se tienen permisos para cámara/micrófono');
+      return null;
+    }
+    
+    // Solicitamos acceso a la cámara y micrófono
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: 'environment' },
+      audio: true 
+    });
+    
+    if (!stream) {
+      console.error('No se pudo obtener el stream de video');
+      return null;
+    }
+    
+    // Creamos el grabador
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp8,opus'
+    });
+    
+    console.log('MediaRecorder de video creado correctamente');
+    return { stream, recorder: mediaRecorder };
+  } catch (e) {
+    console.error('Error al iniciar captura de video:', e);
     return null;
   }
 };
