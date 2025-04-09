@@ -5,10 +5,11 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.ca70e353ea8f4f748cd44e57c75305d7',
   appName: 'dScrt',
   webDir: 'dist',
-  server: {
-    url: 'https://ca70e353ea8f4f748cd44e57c75305d7.lovable.dev',
-    cleartext: true
-  },
+  // Desactivamos la conexión al servidor de desarrollo para usar la versión compilada
+  // server: {
+  //   url: 'https://ca70e353ea8f4f748cd44e57c75305d7.lovable.dev',
+  //   cleartext: true
+  // },
   android: {
     allowMixedContent: true,
     webContentsDebuggingEnabled: true,
@@ -32,7 +33,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     LiveReload: {
-      enabled: true
+      enabled: false  // Desactivamos LiveReload para asegurar que se use la versión compilada
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
