@@ -12,6 +12,7 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
     webContentsDebuggingEnabled: true,
+    // Expanded and organized permissions list
     permissions: [
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",

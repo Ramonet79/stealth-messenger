@@ -1,5 +1,9 @@
 
-import { requestCameraAndMicPermissions, checkCameraAndMicPermissions, requestPermissionsManually } from '@/services/PermissionsHandler';
+import { 
+  requestCameraAndMicPermissions, 
+  checkCameraAndMicPermissions, 
+  requestPermissionsManually 
+} from '@/services/PermissionsHandler';
 
 // Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {
@@ -27,7 +31,7 @@ export const checkMediaPermissions = async (type: 'camera' | 'microphone' | 'bot
   return await checkCameraAndMicPermissions();
 };
 
-// Solicitar permisos usando el servicio mejorado con método estándar y de respaldo
+// Solicitar permisos usando el servicio mejorado con un sistema de dos intentos
 export const requestMediaPermissions = async (
   type: 'camera' | 'microphone' | 'both',
   onPermissionRequested: (showDialog: boolean) => void
@@ -45,8 +49,7 @@ export const requestMediaPermissions = async (
     console.log(`Necesitamos solicitar permisos de ${type}`);
     onPermissionRequested(true);
     
-    // La función retorna false porque el resultado dependerá 
-    // de la interacción del usuario con el diálogo
+    // Devolvemos false porque el resultado dependerá de la interacción del usuario
     return false;
   } catch (error) {
     console.error(`Error al solicitar permisos de ${type}:`, error);
