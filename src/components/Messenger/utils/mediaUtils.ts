@@ -54,3 +54,53 @@ export const requestMediaPermissions = async (
     return false;
   }
 };
+
+// Función para verificar permisos de micrófono directamente
+export const checkMicrophonePermissions = async (): Promise<boolean> => {
+  try {
+    try {
+      // Intentamos obtener acceso al micrófono y verificar si tenemos permisos
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (stream) {
+        // Si logramos obtener el stream, tenemos permisos
+        // Detenemos el stream inmediatamente después de verificar
+        stopMediaStream(stream);
+        return true;
+      }
+    } catch (err) {
+      console.log('No tenemos permisos de micrófono', err);
+      return false;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error al verificar permisos de micrófono:', error);
+    return false;
+  }
+};
+
+// Función para solicitar permisos de micrófono directamente
+export const requestMicrophonePermissions = async (): Promise<boolean> => {
+  try {
+    console.log('Solicitando permisos de micrófono...');
+    
+    try {
+      // Intentamos obtener acceso al micrófono para solicitar permisos
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (stream) {
+        // Si logramos obtener el stream, tenemos permisos
+        // Detenemos el stream inmediatamente después de verificar
+        stopMediaStream(stream);
+        console.log('Permisos de micrófono concedidos');
+        return true;
+      }
+    } catch (err) {
+      console.error('Error al solicitar permisos de micrófono:', err);
+      return false;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error general al solicitar permisos de micrófono:', error);
+    return false;
+  }
+};

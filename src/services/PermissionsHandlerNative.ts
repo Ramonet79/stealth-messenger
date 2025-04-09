@@ -91,15 +91,10 @@ export const takePicture = async (): Promise<string | null> => {
 export const captureAudio = async (): Promise<MediaRecorder | null> => {
   try {
     console.log('Iniciando captura de audio');
-    // Primero verificamos permisos
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) {
-      console.error('No se tienen permisos para micrófono');
-      return null;
-    }
     
-    // Solicitamos acceso al micrófono
+    // Solicitamos acceso al micrófono directamente
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
     if (!stream) {
       console.error('No se pudo obtener el stream de audio');
       return null;
@@ -119,14 +114,8 @@ export const captureAudio = async (): Promise<MediaRecorder | null> => {
 export const captureVideo = async (): Promise<{stream: MediaStream, recorder: MediaRecorder} | null> => {
   try {
     console.log('Iniciando captura de video');
-    // Primero verificamos permisos
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) {
-      console.error('No se tienen permisos para cámara/micrófono');
-      return null;
-    }
     
-    // Solicitamos acceso a la cámara y micrófono
+    // Solicitamos acceso a la cámara y micrófono directamente
     const stream = await navigator.mediaDevices.getUserMedia({ 
       video: { facingMode: 'environment' },
       audio: true 
