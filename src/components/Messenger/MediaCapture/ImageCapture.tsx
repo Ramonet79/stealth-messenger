@@ -1,10 +1,12 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { stopMediaStream, requestMediaPermissions } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
-import { checkCameraAndMicPermissions } from '@/services/PermissionsHandler';
+import { 
+  checkCameraPermissions, 
+  takePicture 
+} from '@/services/PermissionsHandlerNative';
 
 interface ImageCaptureProps {
   onCaptureImage: (imageUrl: string) => void;
@@ -12,22 +14,19 @@ interface ImageCaptureProps {
 }
 
 const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
-
-  useEffect(() => {
-    const initCamera = async () => {
+  const [loading, setLoading] = useState(false);
+  
+  // Verificar permisos al montar el componente
+  React.useEffect(() => {
+    const checkPermissions = async () => {
       try {
-        // Verificamos primero si ya tenemos permisos
-        const hasPermission = await checkCameraAndMicPermissions();
+        const hasPermission = await checkCameraPermissions();
         
         if (hasPermission) {
-          // Si ya tenemos permisos, iniciamos la cámara directamente
-          console.log("Ya tenemos permisos, iniciando cámara...");
-          startCamera();
+          // Si ya tenemos permisos, intentamos tomar foto directamente
+          handleTakePhoto();
         } else {
           // Si no tenemos permisos, mostramos el diálogo
           console.log("Necesitamos solicitar permisos...");
@@ -41,79 +40,42 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
     
     // Esperamos un poco antes de iniciar el proceso
     setTimeout(() => {
-      initCamera();
+      checkPermissions();
     }, 500);
-    
-    // Limpieza al desmontar
-    return () => {
-      stopMediaStream(mediaStreamRef.current);
-      mediaStreamRef.current = null;
-    };
   }, []);
 
-  const startCamera = async () => {
+  const handleTakePhoto = async () => {
+    setLoading(true);
+    
     try {
-      console.log("Iniciando cámara...");
+      console.log("Tomando foto...");
+      const photoUrl = await takePicture();
       
-      if (videoRef.current) {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        });
-        
-        videoRef.current.srcObject = stream;
-        mediaStreamRef.current = stream;
-        
-        try {
-          await videoRef.current.play();
-          console.log("Reproducción de video iniciada");
-        } catch (playError) {
-          console.error("Error al reproducir el video:", playError);
-          setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
-        }
+      if (photoUrl) {
+        console.log("Foto tomada correctamente");
+        onCaptureImage(photoUrl);
+      } else {
+        console.error("No se pudo obtener la foto");
+        setError("No se pudo capturar la imagen. Intenta de nuevo.");
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Error al acceder a la cámara:', error);
-      setError("No se pudo acceder a la cámara. Por favor, verifica los permisos.");
+      console.error("Error al tomar foto:", error);
+      setError("Error al tomar la foto: " + (error instanceof Error ? error.message : "Error desconocido"));
+      setLoading(false);
     }
   };
 
-  const handleCaptureImage = () => {
-    if (videoRef.current && canvasRef.current && mediaStreamRef.current) {
-      console.log("Capturando imagen...");
-      const context = canvasRef.current.getContext('2d');
-      
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        
-        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-        
-        const imageUrl = canvasRef.current.toDataURL('image/jpeg');
-        console.log("Imagen capturada correctamente");
-        
-        // Detenemos el stream
-        stopMediaStream(mediaStreamRef.current);
-        mediaStreamRef.current = null;
-        
-        // Enviamos la imagen
-        onCaptureImage(imageUrl);
-      }
-    } else {
-      console.error("No se pudo capturar la imagen");
-      setError("No se pudo capturar la imagen. Intenta de nuevo.");
-    }
-  };
-
-  // Manejador de respuesta de permisos - ahora inicia la cámara cuando se conceden permisos
+  // Manejador de respuesta de permisos
   const handlePermissionResponse = (granted: boolean) => {
     console.log("Respuesta de permisos recibida:", granted);
     setShowPermissionsRequest(false);
     
     if (granted) {
-      console.log("Permisos concedidos, iniciando cámara después de un breve retraso...");
+      console.log("Permisos concedidos, tomando foto...");
       // Añadimos un pequeño retraso para evitar problemas de timing
       setTimeout(() => {
-        startCamera();
+        handleTakePhoto();
       }, 1000);
     } else {
       setError("Para usar la cámara, es necesario conceder los permisos.");
@@ -144,27 +106,28 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
               <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
                 {error}
               </AlertWithClose>
+            ) : loading ? (
+              <div className="text-white text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p>Capturando imagen...</p>
+              </div>
             ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-                muted
-              />
+              <div className="text-white text-center p-4">
+                <p>Preparando cámara...</p>
+              </div>
             )}
-            <canvas ref={canvasRef} className="hidden" />
           </div>
           
-          <div className="bg-black p-4 flex justify-center">
-            <button
-              onClick={handleCaptureImage}
-              className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
-              disabled={!!error || !mediaStreamRef.current}
-            >
-              <div className="w-14 h-14 rounded-full border-4 border-black"></div>
-            </button>
-          </div>
+          {!error && !loading && (
+            <div className="bg-black p-4 flex justify-center">
+              <button
+                onClick={handleTakePhoto}
+                className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
+              >
+                <div className="w-14 h-14 rounded-full border-4 border-black"></div>
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

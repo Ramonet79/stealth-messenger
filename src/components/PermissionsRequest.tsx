@@ -4,10 +4,9 @@ import { Shield, Camera as CameraIcon, Mic, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlertWithClose } from './ui/alert-with-close';
 import { 
-  checkCameraAndMicPermissions, 
-  requestCameraAndMicPermissions,
-  requestPermissionsManually
-} from '@/services/PermissionsHandler';
+  checkCameraPermissions, 
+  requestCameraPermissions
+} from '@/services/PermissionsHandlerNative';
 
 interface PermissionsRequestProps {
   onRequestComplete: (granted: boolean) => void;
@@ -26,7 +25,8 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
   useEffect(() => {
     const checkExistingPermissions = async () => {
       try {
-        const hasPermissions = await checkCameraAndMicPermissions();
+        // Solo verificamos permisos de cámara, ya que es lo que podemos manejar con el plugin
+        const hasPermissions = await checkCameraPermissions();
         console.log('¿Tiene permisos ya concedidos?', hasPermissions);
         
         if (hasPermissions) {
@@ -54,17 +54,22 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
       // Esperamos un poco para evitar problemas de timing
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Solicitar permisos basados en el tipo
       let granted = false;
       
-      // Si ya intentamos el método estándar y falló, usamos el método manual
-      if (hasTriedStandardRequest) {
-        console.log('Intentando solicitud manual de permisos...');
-        granted = await requestPermissionsManually();
-      } else {
-        // Primer intento con el método estándar
-        console.log('Intentando solicitud estándar de permisos...');
-        granted = await requestCameraAndMicPermissions();
-        setHasTriedStandardRequest(true);
+      if (permissionType === 'camera' || permissionType === 'both') {
+        granted = await requestCameraPermissions();
+      } else if (permissionType === 'microphone') {
+        // Para micrófono, usamos una solicitud manual
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            granted = true;
+          }
+        } catch (e) {
+          console.error('Error al solicitar permisos de micrófono:', e);
+        }
       }
       
       console.log('Resultado de solicitud de permisos:', granted);
@@ -75,6 +80,7 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
           onRequestComplete(true);
         } else {
           setError("No se pudieron obtener los permisos necesarios. Por favor, inténtalo de nuevo o verifica la configuración de tu dispositivo.");
+          setHasTriedStandardRequest(true);
         }
         setLoading(false);
       }, 1000);
@@ -83,6 +89,7 @@ const PermissionsRequest: React.FC<PermissionsRequestProps> = ({
       console.error('Error al solicitar permisos:', err);
       setError(`Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
       setLoading(false);
+      setHasTriedStandardRequest(true);
     }
   };
 
