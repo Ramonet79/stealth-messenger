@@ -10,9 +10,14 @@ import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { useSupabaseAuth } from "./hooks/useSupabaseAuth";
 import { useEffect } from "react";
+import { Capacitor } from '@capacitor/core';
 
 // Set page title
 document.title = "dScrt";
+
+// Log platform information
+console.log("Ejecutando en plataforma:", Capacitor.getPlatform());
+console.log("¿Es plataforma nativa?:", Capacitor.isNativePlatform());
 
 const queryClient = new QueryClient();
 
@@ -23,6 +28,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (user && sessionStorage.getItem('firstLogin') === 'true') {
       console.log("First login detected in ProtectedRoute, pattern creation will be triggered");
+    }
+    
+    // Verificar que estamos en una plataforma nativa y registrar información
+    if (Capacitor.isNativePlatform()) {
+      console.log("Ejecutando en dispositivo nativo:", Capacitor.getPlatform());
     }
   }, [user]);
 

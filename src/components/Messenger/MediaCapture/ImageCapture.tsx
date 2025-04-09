@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { stopMediaStream, requestMediaPermissions } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
+import { checkCameraAndMicPermissions } from '@/services/PermissionsHandler';
 
 interface ImageCaptureProps {
   onCaptureImage: (imageUrl: string) => void;
@@ -20,14 +21,17 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
   useEffect(() => {
     const initCamera = async () => {
       try {
-        const hasPermission = await requestMediaPermissions('camera', (show) => {
-          console.log("Setting permissions dialog visible:", show);
-          setShowPermissionsRequest(show);
-        });
-
-        // Si ya tenemos permisos, iniciamos la cámara directamente
+        // Verificamos primero si ya tenemos permisos
+        const hasPermission = await checkCameraAndMicPermissions();
+        
         if (hasPermission) {
+          // Si ya tenemos permisos, iniciamos la cámara directamente
+          console.log("Ya tenemos permisos, iniciando cámara...");
           startCamera();
+        } else {
+          // Si no tenemos permisos, mostramos el diálogo
+          console.log("Necesitamos solicitar permisos...");
+          setShowPermissionsRequest(true);
         }
       } catch (err) {
         console.error('Error en verificación de permisos:', err);
@@ -35,7 +39,10 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
       }
     };
     
-    initCamera();
+    // Esperamos un poco antes de iniciar el proceso
+    setTimeout(() => {
+      initCamera();
+    }, 500);
     
     // Limpieza al desmontar
     return () => {
@@ -103,8 +110,11 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
     setShowPermissionsRequest(false);
     
     if (granted) {
-      console.log("Permisos concedidos, iniciando cámara");
-      startCamera();
+      console.log("Permisos concedidos, iniciando cámara después de un breve retraso...");
+      // Añadimos un pequeño retraso para evitar problemas de timing
+      setTimeout(() => {
+        startCamera();
+      }, 1000);
     } else {
       setError("Para usar la cámara, es necesario conceder los permisos.");
     }
