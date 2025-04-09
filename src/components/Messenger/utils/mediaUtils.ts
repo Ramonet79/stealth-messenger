@@ -1,4 +1,6 @@
 
+import { checkCameraPermissions } from "@/services/PermissionsHandlerNative";
+
 // Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -16,5 +18,31 @@ export const stopMediaStream = (stream: MediaStream | null): void => {
     } catch (e) {
       console.error("Error al detener stream de medios:", e);
     }
+  }
+};
+
+// Function to request media permissions (bridge to native permissions)
+export const requestMediaPermissions = async (
+  type: 'camera' | 'microphone' | 'both',
+  setShowPermissionsDialog: (show: boolean) => void
+): Promise<boolean> => {
+  try {
+    console.log(`Verificando permisos de ${type}...`);
+    
+    // Verificamos si ya tenemos permisos
+    const hasPermissions = await checkCameraPermissions();
+    
+    if (hasPermissions) {
+      console.log('Ya tenemos permisos necesarios');
+      return true;
+    }
+    
+    // Si no tenemos permisos, mostramos el diálogo
+    console.log('No tenemos permisos, mostrando diálogo...');
+    setShowPermissionsDialog(true);
+    return false;
+  } catch (error) {
+    console.error('Error al verificar permisos:', error);
+    return false;
   }
 };

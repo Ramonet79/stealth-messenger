@@ -41,16 +41,7 @@ const config: CapacitorConfig = {
       microphoneUsageDescription: "Esta aplicación necesita acceso al micrófono para enviar audios y videos con sonido",
       permissions: ["camera", "microphone"],
       // Agregar configuraciones adicionales para mejorar compatibilidad
-      presentationStyle: "fullscreen",
-      resultType: "dataUrl"
-    },
-    Permissions: {
-      permissions: [
-        "camera",
-        "microphone",
-        "photos",
-        "media"
-      ]
+      presentationStyle: "fullscreen"
     }
   }
 };

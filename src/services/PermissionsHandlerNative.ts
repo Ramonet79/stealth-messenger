@@ -1,5 +1,5 @@
 
-import { Camera, CameraPermissionState } from '@capacitor/camera';
+import { Camera, CameraPermissionState, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
 /**
@@ -55,8 +55,8 @@ export async function takePicture(): Promise<string | null> {
     const image = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
-      resultType: 'dataUrl',
-      source: 'CAMERA'
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Camera
     });
     
     return image.dataUrl || null;
