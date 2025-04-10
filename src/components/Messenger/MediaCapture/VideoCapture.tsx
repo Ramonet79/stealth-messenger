@@ -1,10 +1,10 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { formatTime, stopMediaStream, isNativePlatform } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
-import { captureVideo, captureVideoNative, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
+import { requestMediaPermissions } from '../utils/mediaUtils';
+import { recordVideo } from '@/composables/useMediaCapture';
+import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface VideoCaptureProps {
   onCaptureVideo: (videoUrl: string, duration: number) => void;
@@ -12,262 +12,173 @@ interface VideoCaptureProps {
 }
 
 const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel }) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordedVideo, setRecordedVideo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const videoChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    const initVideo = async () => {
-      try {
-        console.log('Verificando permisos para video...');
-        const hasPermission = await requestCameraPermissions();
+    let timerId: NodeJS.Timeout;
 
-        if (hasPermission) {
-          console.log('Permisos existentes, iniciando cámara');
-          if (isNativePlatform()) {
-            startNativeRecording();
-          } else {
-            startCamera();
-          }
-        } else {
-          console.log('Sin permisos, mostrando diálogo');
-          setShowPermissionsRequest(true);
+    if (recording && recordingStartTime) {
+      timerId = setInterval(() => {
+        const now = Date.now();
+        const elapsed = (now - recordingStartTime) / 1000;
+        if (elapsed >= 10) {
+          stopRecording();
         }
-      } catch (err) {
-        console.error('Error en verificación de permisos:', err);
-        setError('Error al verificar permisos. Por favor, inténtalo de nuevo.');
-      }
-    };
-    
-    initVideo();
-    
-    // Limpieza al desmontar
-    return () => {
-      if (recordingInterval) {
-        clearInterval(recordingInterval);
-      }
-      stopMediaStream(mediaStreamRef.current);
-      mediaStreamRef.current = null;
-    };
-  }, []);
-
-  const startNativeRecording = async () => {
-    try {
-      console.log("Iniciando grabación de video con API nativa...");
-      setIsProcessing(true);
-      
-      // En plataformas nativas, usamos la API de Capacitor para grabar video
-      const videoUrl = await captureVideoNative();
-      
-      if (videoUrl) {
-        console.log("Video capturado con API nativa:", videoUrl);
-        // Usamos una duración estimada ya que no podemos medir la duración real
-        onCaptureVideo(videoUrl, 10); // Duración fija de 10 segundos
-      } else {
-        console.error("No se pudo capturar el video con API nativa");
-        setError("No se pudo capturar el video. Por favor, intenta de nuevo.");
-      }
-    } catch (error) {
-      console.error('Error al capturar video con API nativa:', error);
-      setError("Error al grabar video. Por favor, intenta de nuevo.");
-    } finally {
-      setIsProcessing(false);
+      }, 100);
     }
-  };
 
-  const startCamera = async () => {
-    try {
-      console.log("Iniciando cámara para video...");
-      
-      // Usamos la nueva función captureVideo
-      const videoCapture = await captureVideo();
-      if (!videoCapture) {
-        setError("No se pudo iniciar la cámara. Verifica los permisos e intenta de nuevo.");
-        return;
-      }
-      
-      const { stream, recorder } = videoCapture;
-      mediaStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
+    return () => clearInterval(timerId);
+  }, [recording, recordingStartTime]);
+
+  useEffect(() => {
+    const setupMedia = async () => {
+      const hasPermissions = await requestMediaPermissions('video', setShowPermissionsDialog);
+      if (hasPermissions) {
         try {
-          await videoRef.current.play();
-          console.log("Reproducción de video iniciada");
-          
-          // Iniciar grabación automáticamente
-          startRecording();
-        } catch (playError) {
-          console.error("Error al reproducir video:", playError);
-          setError("No se pudo iniciar la cámara. Por favor, intenta de nuevo.");
-        }
-      }
-    } catch (error) {
-      console.error('Error al acceder a la cámara/micrófono:', error);
-      setError("No se pudo acceder a la cámara o micrófono. Por favor, verifica los permisos.");
-    }
-  };
+          const newStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: true,
+          });
+          setStream(newStream);
 
-  const startRecording = () => {
-    try {
-      console.log("Iniciando grabación de video...");
-      
-      if (!mediaRecorderRef.current) {
-        setError("No se pudo iniciar la grabación. Falta el MediaRecorder.");
-        return;
-      }
-      
-      const mediaRecorder = mediaRecorderRef.current;
-      videoChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          videoChunksRef.current.push(event.data);
+          const newMediaRecorder = new MediaRecorder(newStream, {
+            mimeType: 'video/webm;codecs=vp8,opus',
+          });
+          setMediaRecorder(newMediaRecorder);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = newStream;
+          }
+        } catch (e) {
+          console.error('Error al acceder a la cámara:', e);
+          setError('Error al acceder a la cámara: ' + (e instanceof Error ? e.message : 'Error desconocido'));
         }
-      };
-      
-      mediaRecorder.onerror = (event) => {
-        console.error("Error en el MediaRecorder de video:", event);
-        setError("Error al grabar video. Por favor, intenta de nuevo.");
-      };
-      
-      mediaRecorder.start();
-      console.log("Grabación de video iniciada");
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      const interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
-      setRecordingInterval(interval);
-    } catch (error) {
-      console.error("Error al iniciar grabación de video:", error);
-      setError("No se pudo iniciar la grabación de video. Intenta de nuevo.");
+      }
+    };
+
+    if (!isNativePlatform()) {
+      setupMedia();
     }
-  };
+
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    };
+  }, [setShowPermissionsDialog]);
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaStreamRef.current) {
-      console.log("Deteniendo grabación de video...");
-      
-      try {
-        mediaRecorderRef.current.stop();
-        
-        mediaRecorderRef.current.onstop = () => {
-          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-          const videoUrl = URL.createObjectURL(videoBlob);
-          console.log("Video grabado, tamaño:", videoBlob.size);
-          
-          // Detenemos stream
-          stopMediaStream(mediaStreamRef.current);
-          
-          // Limpiamos intervalo
-          if (recordingInterval) {
-            clearInterval(recordingInterval);
-          }
-          
-          // Enviamos video
-          onCaptureVideo(videoUrl, recordingTime);
-        };
-      } catch (error) {
-        console.error("Error al detener grabación de video:", error);
-        setError("Error al finalizar la grabación de video. Intenta de nuevo.");
-      }
-    } else {
-      console.error("No se pudo detener la grabación de video");
-      setError("No se pudo completar la grabación de video. Intenta de nuevo.");
+    if (isNativePlatform()) {
+      return;
+    }
+
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      stream?.getTracks().forEach((track) => track.stop());
+      setRecording(false);
     }
   };
 
-  // Manejador de respuesta de permisos
-  const handlePermissionResponse = (granted: boolean) => {
-    console.log("Respuesta de permisos para video:", granted);
-    setShowPermissionsRequest(false);
-    
-    if (granted) {
-      console.log("Permisos concedidos, iniciando cámara para video");
+  const handleDataAvailable = ({ data }: BlobEvent) => {
+    const videoUrl = URL.createObjectURL(data);
+    setRecordedVideo(videoUrl);
+    const durationInSeconds = 10;
+    onCaptureVideo(videoUrl, durationInSeconds);
+  };
+
+  const handleRecord = async () => {
+    try {
+      setRecording(true);
+      setRecordingStartTime(Date.now());
+      
       if (isNativePlatform()) {
-        startNativeRecording();
+        // For native platforms, we use the recordVideo function
+        const videoFile = await recordVideo();
+        if (videoFile) {
+          const videoUrl = URL.createObjectURL(videoFile);
+          const durationInSeconds = 10; // Assuming 10 seconds as default
+          onCaptureVideo(videoUrl, durationInSeconds);
+        } else {
+          setError('No se pudo grabar el video.');
+          setRecording(false);
+        }
       } else {
-        startCamera();
+        if (!stream || !mediaRecorder) {
+          setError('Cámara no inicializada correctamente.');
+          setRecording(false);
+          return;
+        }
+
+        mediaRecorder.ondataavailable = handleDataAvailable;
+        mediaRecorder.start();
       }
-    } else {
-      setError("Para grabar video, es necesario conceder los permisos de cámara y micrófono.");
+    } catch (e) {
+      console.error('Error al grabar video:', e);
+      setError('Error al grabar video: ' + (e instanceof Error ? e.message : 'Error desconocido'));
+      setRecording(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {showPermissionsRequest ? (
-        <PermissionsRequest 
-          onRequestComplete={handlePermissionResponse}
-          permissionType="both" 
+      {showPermissionsDialog && (
+        <PermissionsRequest
+          onRequestComplete={(granted) => {
+            setShowPermissionsDialog(false);
+            if (!granted) {
+              setError('Se requieren permisos de cámara y micrófono para grabar video.');
+            }
+          }}
+          permissionType="both"
         />
-      ) : (
-        <>
-          <div className="bg-black p-3 flex justify-between items-center">
-            <div className="text-white">
-              {isRecording && (
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2"></div>
-                  <span>{formatTime(recordingTime)}</span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={onCancel}
-              className="p-2 rounded-full bg-gray-800 text-white"
-            >
-              <X size={24} />
-            </button>
-          </div>
-          
-          <div className="flex-1 relative flex items-center justify-center bg-black">
-            {error ? (
-              <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
-                {error}
-              </AlertWithClose>
-            ) : isProcessing ? (
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-                  <div className="w-12 h-12 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
-                </div>
-                <p className="text-white text-xl">Procesando video...</p>
-              </div>
-            ) : (
+      )}
+      <div className="bg-black p-3 flex justify-between items-center">
+        <div className="text-white">Video</div>
+        <button onClick={onCancel} className="p-2 rounded-full bg-gray-800 text-white">
+          <X size={24} />
+        </button>
+      </div>
+      <div className="flex-1 relative flex items-center justify-center bg-black">
+        {error ? (
+          <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
+            {error}
+          </AlertWithClose>
+        ) : (
+          <>
+            {stream && (
               <video
                 ref={videoRef}
+                className="max-w-full max-h-full"
                 autoPlay
-                playsInline
-                className="w-full h-full object-cover"
                 muted
+                style={{ transform: 'scaleX(-1)' }}
               />
             )}
-          </div>
-          
-          <div className="bg-black p-4 flex justify-center">
-            {isRecording && !error && !isProcessing && (
-              <button
-                onClick={stopRecording}
-                className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"
-              >
-                <div className="w-8 h-8 rounded bg-white"></div>
-              </button>
+            {!stream && !isNativePlatform() && (
+              <div className="text-white text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p>Iniciando cámara...</p>
+              </div>
             )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
+      <div className="bg-black p-4 flex justify-center">
+        <button
+          onClick={handleRecord}
+          className={`w-16 h-16 rounded-full ${
+            recording ? 'bg-red-500 animate-pulse' : 'bg-white'
+          } flex items-center justify-center`}
+        >
+          <div className={`w-14 h-14 rounded-full border-4 ${recording ? 'border-red-700' : 'border-black'}`}></div>
+        </button>
+      </div>
     </div>
   );
 };
