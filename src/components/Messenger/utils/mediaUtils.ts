@@ -35,8 +35,10 @@ export const requestMediaPermissions = async (
     
     if (type === 'camera') {
       hasPermissions = await checkCameraPermissions();
+    } else if (type === 'microphone') {
+      hasPermissions = await checkMicrophonePermissions();
     } else {
-      // Para micrófono o ambos, usamos la verificación completa
+      // Para ambos, usamos la verificación completa
       hasPermissions = await checkCameraAndMicPermissions();
     }
     
