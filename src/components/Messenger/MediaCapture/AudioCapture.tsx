@@ -1,10 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Mic } from 'lucide-react';
-import { formatTime, stopMediaStream } from '../utils/mediaUtils';
+import { formatTime, stopMediaStream, isNativePlatform } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
-import { captureAudio, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
+import { captureAudio, captureAudioNative, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
 
 interface AudioCaptureProps {
   onCaptureAudio: (audioUrl: string, duration: number) => void;
@@ -17,6 +17,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -28,10 +29,13 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
         console.log('Verificando permisos para audio...');
         const hasPermission = await requestCameraPermissions();
 
-        // Si ya tenemos permisos, iniciamos grabación directamente
         if (hasPermission) {
           console.log('Permisos existentes, iniciando grabación');
-          startRecording();
+          if (isNativePlatform()) {
+            startNativeRecording();
+          } else {
+            startRecording();
+          }
         } else {
           console.log('Sin permisos, mostrando diálogo');
           setShowPermissionsRequest(true);
@@ -55,11 +59,35 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     };
   }, []);
 
+  const startNativeRecording = async () => {
+    try {
+      console.log("Iniciando grabación de audio con API nativa...");
+      setIsProcessing(true);
+      
+      // En plataformas nativas, usamos la API de Capacitor para grabar audio
+      const audioUrl = await captureAudioNative();
+      
+      if (audioUrl) {
+        console.log("Audio capturado con API nativa:", audioUrl);
+        // Usamos una duración estimada ya que no podemos medir la duración real
+        onCaptureAudio(audioUrl, 10); // Duración fija de 10 segundos
+      } else {
+        console.error("No se pudo capturar el audio con API nativa");
+        setError("No se pudo capturar el audio. Por favor, intenta de nuevo.");
+      }
+    } catch (error) {
+      console.error('Error al capturar audio con API nativa:', error);
+      setError("Error al grabar audio. Por favor, intenta de nuevo.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const startRecording = async () => {
     try {
-      console.log("Iniciando grabación de audio...");
+      console.log("Iniciando grabación de audio con MediaRecorder...");
       
-      // Usamos la nueva función captureAudio para obtener el MediaRecorder
+      // Usamos la función captureAudio para obtener el MediaRecorder
       const recorder = await captureAudio();
       if (!recorder) {
         setError("No se pudo iniciar la grabación. Verifica los permisos e intenta de nuevo.");
@@ -145,7 +173,11 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
     
     if (granted) {
       console.log("Permisos de micrófono concedidos, iniciando grabación");
-      startRecording();
+      if (isNativePlatform()) {
+        startNativeRecording();
+      } else {
+        startRecording();
+      }
     } else {
       setError("Para grabar audio, es necesario conceder los permisos de micrófono.");
     }
@@ -182,6 +214,13 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
               <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
                 {error}
               </AlertWithClose>
+            ) : isProcessing ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-white text-xl">Procesando audio...</p>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center">
                 <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
@@ -195,7 +234,7 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
           </div>
           
           <div className="bg-black p-4 flex justify-center">
-            {isRecording && !error && (
+            {isRecording && !error && !isProcessing && (
               <button
                 onClick={stopRecording}
                 className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"

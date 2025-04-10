@@ -106,3 +106,13 @@ export const requestMicrophonePermissions = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// Helper para determinar si estamos en plataforma nativa (Capacitor)
+export const isNativePlatform = (): boolean => {
+  try {
+    // @ts-ignore - Capacitor podría no estar definido en todos los entornos
+    return window.Capacitor && window.Capacitor.isNativePlatform();
+  } catch (e) {
+    return false;
+  }
+};

@@ -73,7 +73,7 @@ export const captureImage = async () => {
   }
 };
 
-// Función para tomar una foto (alias de captureImage para mantener compatibilidad con ImageCapture.tsx)
+// Función para tomar una foto (alias de captureImage para mantener compatibilidad)
 export const takePicture = async (): Promise<string | null> => {
   try {
     const result = await captureImage();
@@ -87,10 +87,83 @@ export const takePicture = async (): Promise<string | null> => {
   }
 };
 
+// Función para capturar audio
+export const captureAudioNative = async (): Promise<string | null> => {
+  try {
+    if (!isNativePlatform()) {
+      // En navegador web, usar MediaRecorder
+      return null;
+    }
+    
+    console.log('Intentando capturar audio con Camera.getPhoto (prompts nativo)');
+    // Usamos Camera.getPhoto pero con configuración especial que en iOS activa la grabación de audio
+    const audio = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Prompt, // Esto mostrará todas las opciones incluyendo grabadora de audio
+      promptLabelHeader: 'Audio',
+      promptLabelCancel: 'Cancelar',
+      promptLabelPhoto: 'Biblioteca',
+      promptLabelPicture: 'Grabar Audio'
+    });
+    
+    console.log('Audio capturado correctamente', audio);
+    
+    if (audio && audio.webPath) {
+      return audio.webPath;
+    }
+    return null;
+  } catch (e) {
+    console.error('Error al capturar audio:', e);
+    return null;
+  }
+};
+
+// Función para capturar video
+export const captureVideoNative = async (): Promise<string | null> => {
+  try {
+    if (!isNativePlatform()) {
+      // En navegador web, usar MediaRecorder
+      return null;
+    }
+    
+    console.log('Intentando capturar video con Camera.getPhoto (video)');
+    const video = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera, // Esto podría activar la cámara de video en algunos dispositivos
+      promptLabelHeader: 'Video',
+      promptLabelCancel: 'Cancelar',
+      promptLabelPhoto: 'Biblioteca',
+      promptLabelPicture: 'Grabar Video'
+    });
+    
+    console.log('Video capturado correctamente', video);
+    
+    if (video && video.webPath) {
+      return video.webPath;
+    }
+    return null;
+  } catch (e) {
+    console.error('Error al capturar video:', e);
+    return null;
+  }
+};
+
 // Función para iniciar captura de audio (interfaz compatible para AudioCapture.tsx)
 export const captureAudio = async (): Promise<MediaRecorder | null> => {
   try {
     console.log('Iniciando captura de audio');
+    
+    // Si estamos en plataforma nativa, usamos captureAudioNative
+    if (isNativePlatform()) {
+      console.log('Plataforma nativa detectada, usando captura nativa');
+      // Devolvemos null porque en plataforma nativa no usamos MediaRecorder
+      // El componente AudioCapture.tsx verificará si estamos en plataforma nativa
+      return null;
+    }
     
     // Solicitamos acceso al micrófono directamente
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -114,6 +187,14 @@ export const captureAudio = async (): Promise<MediaRecorder | null> => {
 export const captureVideo = async (): Promise<{stream: MediaStream, recorder: MediaRecorder} | null> => {
   try {
     console.log('Iniciando captura de video');
+    
+    // Si estamos en plataforma nativa, usamos captureVideoNative
+    if (isNativePlatform()) {
+      console.log('Plataforma nativa detectada, usando captura nativa');
+      // Devolvemos null porque en plataforma nativa no usamos MediaRecorder
+      // El componente VideoCapture.tsx verificará si estamos en plataforma nativa
+      return null;
+    }
     
     // Solicitamos acceso a la cámara y micrófono directamente
     const stream = await navigator.mediaDevices.getUserMedia({ 

@@ -1,10 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { formatTime, stopMediaStream } from '../utils/mediaUtils';
+import { formatTime, stopMediaStream, isNativePlatform } from '../utils/mediaUtils';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
-import { captureVideo, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
+import { captureVideo, captureVideoNative, requestCameraPermissions } from '@/services/PermissionsHandlerNative';
 
 interface VideoCaptureProps {
   onCaptureVideo: (videoUrl: string, duration: number) => void;
@@ -17,6 +17,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -29,10 +30,13 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         console.log('Verificando permisos para video...');
         const hasPermission = await requestCameraPermissions();
 
-        // Si ya tenemos permisos, iniciamos cámara directamente
         if (hasPermission) {
           console.log('Permisos existentes, iniciando cámara');
-          startCamera();
+          if (isNativePlatform()) {
+            startNativeRecording();
+          } else {
+            startCamera();
+          }
         } else {
           console.log('Sin permisos, mostrando diálogo');
           setShowPermissionsRequest(true);
@@ -54,6 +58,30 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       mediaStreamRef.current = null;
     };
   }, []);
+
+  const startNativeRecording = async () => {
+    try {
+      console.log("Iniciando grabación de video con API nativa...");
+      setIsProcessing(true);
+      
+      // En plataformas nativas, usamos la API de Capacitor para grabar video
+      const videoUrl = await captureVideoNative();
+      
+      if (videoUrl) {
+        console.log("Video capturado con API nativa:", videoUrl);
+        // Usamos una duración estimada ya que no podemos medir la duración real
+        onCaptureVideo(videoUrl, 10); // Duración fija de 10 segundos
+      } else {
+        console.error("No se pudo capturar el video con API nativa");
+        setError("No se pudo capturar el video. Por favor, intenta de nuevo.");
+      }
+    } catch (error) {
+      console.error('Error al capturar video con API nativa:', error);
+      setError("Error al grabar video. Por favor, intenta de nuevo.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -169,7 +197,11 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     
     if (granted) {
       console.log("Permisos concedidos, iniciando cámara para video");
-      startCamera();
+      if (isNativePlatform()) {
+        startNativeRecording();
+      } else {
+        startCamera();
+      }
     } else {
       setError("Para grabar video, es necesario conceder los permisos de cámara y micrófono.");
     }
@@ -206,6 +238,13 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
               <AlertWithClose onClose={onCancel} variant="destructive" className="m-4">
                 {error}
               </AlertWithClose>
+            ) : isProcessing ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-white text-xl">Procesando video...</p>
+              </div>
             ) : (
               <video
                 ref={videoRef}
@@ -218,7 +257,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
           </div>
           
           <div className="bg-black p-4 flex justify-center">
-            {isRecording && !error && (
+            {isRecording && !error && !isProcessing && (
               <button
                 onClick={stopRecording}
                 className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"
