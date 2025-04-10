@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'dScrt',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
+    androidScheme: 'http', // Cambiado de https a http
     cleartext: true,
     allowNavigation: ['*'],
     hostname: 'lovable.app'
