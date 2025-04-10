@@ -5,11 +5,11 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.ca70e353ea8f4f748cd44e57c75305d7',
   appName: 'dScrt',
   webDir: 'dist',
-  // Desactivamos la conexión al servidor de desarrollo para usar la versión compilada
-  // server: {
-  //   url: 'https://ca70e353ea8f4f748cd44e57c75305d7.lovable.dev',
-  //   cleartext: true
-  // },
+  server: {
+    androidScheme: 'https',
+    cleartext: true,
+    allowNavigation: ['*']
+  },
   android: {
     allowMixedContent: true,
     webContentsDebuggingEnabled: true,
@@ -23,6 +23,7 @@ const config: CapacitorConfig = {
       "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
       "android.permission.READ_MEDIA_AUDIO",
+      "android.permission.INTERNET",
       "android.permission.ACCESS_NETWORK_STATE",
       "android.permission.POST_NOTIFICATIONS"
     ]
@@ -33,7 +34,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     LiveReload: {
-      enabled: false  // Desactivamos LiveReload para asegurar que se use la versión compilada
+      enabled: false
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
@@ -42,7 +43,6 @@ const config: CapacitorConfig = {
       cameraUsageDescription: "Esta aplicación necesita acceso a la cámara para enviar fotos y videos",
       microphoneUsageDescription: "Esta aplicación necesita acceso al micrófono para enviar audios y videos con sonido",
       permissions: ["camera", "microphone"],
-      // Agregar configuraciones adicionales para mejorar compatibilidad
       presentationStyle: "fullscreen"
     }
   }
