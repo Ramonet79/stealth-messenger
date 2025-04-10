@@ -13,7 +13,7 @@ const filePathToUrl = (filePath: string): string => {
 // Función para convertir MediaFile a File
 const mediaFileToFile = async (mediaFile: MediaFile): Promise<File | null> => {
   try {
-    const filePath = mediaFile.fullPath || mediaFile.localURL;
+    const filePath = mediaFile.fullPath || mediaFile.name;
     if (!filePath) {
       console.error('No se pudo obtener la ruta del archivo');
       return null;
@@ -52,14 +52,14 @@ export async function recordAudio(): Promise<File | null> {
 
     const mediaFiles = await MediaCapture.captureAudio(options);
     
-    if (mediaFiles && mediaFiles.length > 0) {
+    if (Array.isArray(mediaFiles) && mediaFiles.length > 0) {
       console.log('Audio grabado:', mediaFiles[0]);
       return mediaFileToFile(mediaFiles[0]);
     }
     
     return null;
-  } catch (error) {
-    if (error.code !== CaptureError.CAPTURE_NO_MEDIA_FILES) {
+  } catch (error: any) {
+    if (error.code !== 3) { // 3 es CAPTURE_NO_MEDIA_FILES en CaptureError
       console.error('Error al grabar audio:', error);
     }
     return null;
@@ -82,14 +82,14 @@ export async function recordVideo(): Promise<File | null> {
 
     const mediaFiles = await MediaCapture.captureVideo(options);
     
-    if (mediaFiles && mediaFiles.length > 0) {
+    if (Array.isArray(mediaFiles) && mediaFiles.length > 0) {
       console.log('Video grabado:', mediaFiles[0]);
       return mediaFileToFile(mediaFiles[0]);
     }
     
     return null;
-  } catch (error) {
-    if (error.code !== CaptureError.CAPTURE_NO_MEDIA_FILES) {
+  } catch (error: any) {
+    if (error.code !== 3) { // 3 es CAPTURE_NO_MEDIA_FILES en CaptureError
       console.error('Error al grabar video:', error);
     }
     return null;
