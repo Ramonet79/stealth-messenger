@@ -39,7 +39,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
 
   useEffect(() => {
     const setupMedia = async () => {
-      const hasPermissions = await requestMediaPermissions('video', setShowPermissionsDialog);
+      const hasPermissions = await requestMediaPermissions('both', setShowPermissionsDialog);
       if (hasPermissions) {
         try {
           const newStream = await navigator.mediaDevices.getUserMedia({
@@ -98,11 +98,10 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       setRecordingStartTime(Date.now());
       
       if (isNativePlatform()) {
-        // For native platforms, we use the recordVideo function
         const videoFile = await recordVideo();
         if (videoFile) {
           const videoUrl = URL.createObjectURL(videoFile);
-          const durationInSeconds = 10; // Assuming 10 seconds as default
+          const durationInSeconds = 10;
           onCaptureVideo(videoUrl, durationInSeconds);
         } else {
           setError('No se pudo grabar el video.');
