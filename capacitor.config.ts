@@ -8,7 +8,8 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     cleartext: true,
-    allowNavigation: ['*']
+    allowNavigation: ['*'],
+    hostname: 'lovable.app'
   },
   android: {
     allowMixedContent: true,
