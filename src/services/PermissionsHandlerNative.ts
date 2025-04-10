@@ -1,5 +1,5 @@
 
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource, MediaType } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
 // Define una función para verificar si estamos en una plataforma nativa
@@ -95,8 +95,19 @@ export const captureAudioNative = async (): Promise<string | null> => {
       return null;
     }
     
-    console.log('Intentando capturar audio con Camera.getPhoto (prompts nativo)');
-    // Usamos Camera.getPhoto pero con configuración especial que en iOS activa la grabación de audio
+    console.log('Iniciando captura de audio con Camera.pickMedia');
+    const result = await Camera.pickMedia({
+      // Intentamos forzar sólo selección de audio
+      mediaType: MediaType.Audio
+    });
+    
+    if (result && result.webPath) {
+      console.log('Audio capturado con éxito:', result.webPath);
+      return result.webPath;
+    }
+    
+    // Como alternativa, usamos la función genérica que puede mostrar grabadora
+    console.log('Intentando capturar audio con Camera.getPhoto');
     const audio = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
@@ -128,12 +139,24 @@ export const captureVideoNative = async (): Promise<string | null> => {
       return null;
     }
     
-    console.log('Intentando capturar video con Camera.getPhoto (video)');
+    console.log('Iniciando captura de video con Camera.pickMedia');
+    const result = await Camera.pickMedia({
+      // Especificamos que queremos video
+      mediaType: MediaType.Video
+    });
+    
+    if (result && result.webPath) {
+      console.log('Video capturado con éxito:', result.webPath);
+      return result.webPath;
+    }
+    
+    // Como alternativa, usamos getPhoto que en algunos dispositivos abre la cámara de video
+    console.log('Intentando capturar video con Camera.getPhoto');
     const video = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
       resultType: CameraResultType.Uri,
-      source: CameraSource.Camera, // Esto podría activar la cámara de video en algunos dispositivos
+      source: CameraSource.Camera,
       promptLabelHeader: 'Video',
       promptLabelCancel: 'Cancelar',
       promptLabelPhoto: 'Biblioteca',

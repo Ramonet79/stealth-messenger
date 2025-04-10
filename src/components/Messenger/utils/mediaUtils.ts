@@ -60,6 +60,11 @@ export const requestMediaPermissions = async (
 // Función para verificar permisos de micrófono directamente
 export const checkMicrophonePermissions = async (): Promise<boolean> => {
   try {
+    if (isNativePlatform()) {
+      // En plataformas nativas, asumimos que los permisos se verificarán al usar la función
+      return true;
+    }
+    
     try {
       // Intentamos obtener acceso al micrófono y verificar si tenemos permisos
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -84,6 +89,12 @@ export const checkMicrophonePermissions = async (): Promise<boolean> => {
 export const requestMicrophonePermissions = async (): Promise<boolean> => {
   try {
     console.log('Solicitando permisos de micrófono...');
+    
+    if (isNativePlatform()) {
+      // En plataformas nativas, usamos la solicitud de permisos de cámara
+      // ya que el plugin de Camera también maneja permisos de micrófono para video
+      return await requestCameraPermissions();
+    }
     
     try {
       // Intentamos obtener acceso al micrófono para solicitar permisos
