@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { recordVideo } from '@/composables/useMediaCapture';
+import { recordVideo } from '@/composables/useMediaCapture'; // Import genérico que usará .native.ts en plataformas nativas
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface VideoCaptureProps {

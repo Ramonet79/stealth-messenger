@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { recordAudio } from '@/composables/useMediaCapture';
+import { recordAudio } from '@/composables/useMediaCapture'; // Import genérico que usará .native.ts en plataformas nativas
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface AudioCaptureProps {
@@ -56,18 +57,18 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
       setRecordingStartTime(Date.now());
       
       if (isNativePlatform()) {
-        // For native platforms, we use the recordAudio function
+        // Para plataformas nativas, usamos la función recordAudio
         const audioFile = await recordAudio();
         if (audioFile) {
           const audioUrl = URL.createObjectURL(audioFile);
-          const durationInSeconds = 10; // Assuming 10 seconds as default
+          const durationInSeconds = 10; // Asumimos 10 segundos como predeterminado
           onCaptureAudio(audioUrl, durationInSeconds);
         } else {
           setError('No se pudo grabar el audio.');
           setRecording(false);
         }
       } else {
-        // For web, continue with existing implementation
+        // Para web, continuamos con la implementación existente
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
         setMediaRecorder(recorder);

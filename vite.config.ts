@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Configuración para resolver archivos .native.ts en dispositivos nativos
+    extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.native.ts', '.native.tsx']
   },
   // Ensure proper history API fallback for SPA navigation
   build: {
