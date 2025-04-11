@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import useMediaCapture from '@/hooks/useMediaCapture'; // Importa el hook
 
 interface Contact {
   id: string;
@@ -37,7 +37,8 @@ const ChatList: React.FC<ChatListProps> = ({
   onBack 
 }) => {
   const { t } = useLanguage();
-  
+  const { startCapture } = useMediaCapture(); // Usa el hook
+
   return (
     <div className="flex flex-col h-full bg-messenger-background">
       <div className="flex items-center justify-between p-4 border-b">
@@ -76,7 +77,9 @@ const ChatList: React.FC<ChatListProps> = ({
             <BookOpen size={20} />
           </button>
           <button 
-            onClick={onNewChat}
+            onClick={() => { 
+              startCapture(); // Inicia la captura al hacer clic
+            }}
             className="p-2 rounded-full bg-messenger-primary text-white hover:bg-messenger-secondary transition-colors"
           >
             <Plus size={20} />
