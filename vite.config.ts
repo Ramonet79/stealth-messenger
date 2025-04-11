@@ -25,14 +25,16 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Add conditional alias for useMediaCapture
-      "@/composables/useMediaCapture": 
+      // Use environment variable to determine platform
+      // During build time, we'll default to web implementation
+      // Native implementation will be used at runtime via file extension resolution
+      "@/hooks/useMediaCapture": 
         process.env.CAPACITOR_PLATFORM
-          ? path.resolve(__dirname, "src/composables/useMediaCapture.native.ts")
-          : path.resolve(__dirname, "src/composables/useMediaCapture.ts")
+          ? path.resolve(__dirname, "src/hooks/useMediaCapture.native.ts")
+          : path.resolve(__dirname, "src/hooks/useMediaCapture.ts")
     },
-    // Configuración para resolver archivos .native.ts en dispositivos nativos
-    extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.native.ts', '.native.tsx']
+    // Extensions to resolve, with native extensions first
+    extensions: ['.native.ts', '.native.tsx', '.ts', '.tsx', '.js', '.jsx', '.json']
   },
   // Ensure proper history API fallback for SPA navigation
   build: {

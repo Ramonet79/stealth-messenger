@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import useMediaCapture from '@/hooks/useMediaCapture'; // Importa el hook
+import useMediaCapture from '@/hooks/useMediaCapture'; // Correct import
 
 interface Contact {
   id: string;
@@ -37,7 +37,7 @@ const ChatList: React.FC<ChatListProps> = ({
   onBack 
 }) => {
   const { t } = useLanguage();
-  const { startCapture } = useMediaCapture(); // Usa el hook
+  const { startCapture } = useMediaCapture(); // Use the hook
 
   return (
     <div className="flex flex-col h-full bg-messenger-background">

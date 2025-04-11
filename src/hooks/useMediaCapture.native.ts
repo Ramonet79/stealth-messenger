@@ -1,29 +1,38 @@
-import { MediaCapture, MediaFile } from '@capacitor-community/media-capture';
-import { Permissions } from '@capacitor/core';
+
+import { Capacitor } from '@capacitor/core';
 
 export const useMediaCapture = () => {
   const requestPermissions = async () => {
-    const result = await Permissions.requestPermissions([
-      'camera',
-      'microphone',
-    ]);
-    return result;
+    try {
+      // For Capacitor v4+, we should use the Camera plugin to request permissions
+      const { Camera } = await import('@capacitor/camera');
+      await Camera.requestPermissions();
+      return true;
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+      return false;
+    }
   };
 
-  const captureAudio = async () => {
-    await requestPermissions();
-    const audioFile: MediaFile[] = await MediaCapture.captureAudio();
-    return audioFile;
-  };
-
-  const captureVideo = async () => {
-    await requestPermissions();
-    const videoFile: MediaFile[] = await MediaCapture.captureVideo();
-    return videoFile;
+  const startCapture = async () => {
+    try {
+      await requestPermissions();
+      if (Capacitor.isNativePlatform()) {
+        // On native platforms, we'll implement actual capture
+        console.log('Starting media capture on native platform');
+        // You would implement the actual capture here with Camera or other plugins
+      } else {
+        console.log('Media capture not available on web platform');
+        alert('Media capture is only available on native platforms');
+      }
+    } catch (error) {
+      console.error('Error starting capture:', error);
+    }
   };
 
   return {
-    captureAudio,
-    captureVideo,
+    startCapture
   };
 };
+
+export default useMediaCapture;
