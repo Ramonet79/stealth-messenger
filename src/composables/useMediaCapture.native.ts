@@ -1,40 +1,59 @@
+import {
+  MediaCapture,
+  CaptureAudioOptions,
+  CaptureImageOptions,
+  CaptureVideoOptions,
+  MediaFile
+} from '@whiteguru/capacitor-plugin-media-capture'
 
-import { MediaCapture, MediaFile } from '@awesome-cordova-plugins/media-capture';
-import { Filesystem } from '@capacitor/filesystem';
+// 🔄 Utilidad: convierte MediaFile a File compatible con Supabase o Web
+async function mediaFileToFile(mediaFile: MediaFile, type: 'photo' | 'video' | 'audio'): Promise<File> {
+  const response = await fetch(mediaFile.path!)
+  const blob = await response.blob()
+  const extension = mediaFile.name?.split('.').pop() || 'dat'
+  const mime = blob.type || `${type}/${extension}`
 
+  return new File([blob], `${type}_${Date.now()}.${extension}`, { type: mime })
+}
+
+// 📸 FOTO
+export async function capturePhoto(): Promise<File | null> {
+  try {
+    const options: CaptureImageOptions = { limit: 1 }
+    const result = await MediaCapture.captureImage(options)
+
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'photo')
+  } catch (error) {
+    console.error('Error al capturar foto:', error)
+    return null
+  }
+}
+
+// 🎥 VÍDEO
 export async function recordVideo(): Promise<File | null> {
   try {
-    const mediaFiles = await MediaCapture.captureVideo({ limit: 1, duration: 10 });
-    if (!Array.isArray(mediaFiles) || mediaFiles.length === 0) return null;
-    return await mediaFileToFile(mediaFiles[0], 'video');
-  } catch (err) {
-    console.error('Error al grabar video:', err);
-    return null;
+    const options: CaptureVideoOptions = { limit: 1, duration: 10 }
+    const result = await MediaCapture.captureVideo(options)
+
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'video')
+  } catch (error) {
+    console.error('Error al grabar vídeo:', error)
+    return null
   }
 }
 
+// 🎙️ AUDIO
 export async function recordAudio(): Promise<File | null> {
   try {
-    const mediaFiles = await MediaCapture.captureAudio({ limit: 1, duration: 10 });
-    if (!Array.isArray(mediaFiles) || mediaFiles.length === 0) return null;
-    return await mediaFileToFile(mediaFiles[0], 'audio');
-  } catch (err) {
-    console.error('Error al grabar audio:', err);
-    return null;
+    const options: CaptureAudioOptions = { limit: 1, duration: 10 }
+    const result = await MediaCapture.captureAudio(options)
+
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'audio')
+  } catch (error) {
+    console.error('Error al grabar audio:', error)
+    return null
   }
-}
-
-async function mediaFileToFile(mediaFile: MediaFile, type: 'video' | 'audio'): Promise<File> {
-  const response = await fetch(mediaFile.fullPath);
-  const blob = await response.blob();
-  const ext = mediaFile.name.split('.').pop();
-  return new File([blob], `${type}_${Date.now()}.${ext}`, { type: blob.type });
-}
-
-// Add capturePhoto for consistency with web implementation
-export async function capturePhoto(): Promise<File | null> {
-  // This is a placeholder - in a real implementation, you'd use the Camera plugin
-  // But for the purposes of this example, we're focusing on audio and video
-  console.warn('capturePhoto not fully implemented in native version');
-  return null;
 }
