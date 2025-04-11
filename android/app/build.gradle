@@ -23,10 +23,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    // Añadimos la configuración para asegurar compatibilidad con Java 1.8
+    // Aseguramos compatibilidad con Java 17
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
@@ -59,6 +59,7 @@ try {
     logger.warn("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 
+// Asegurando que Kotlin también use JVM 17
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = "17"
