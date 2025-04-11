@@ -1,4 +1,3 @@
-
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
@@ -26,7 +25,7 @@ export async function capturePhoto(): Promise<File | null> {
   }
 }
 
-export async function recordVideo(): Promise<File | null> {
+export async function captureVideo(): Promise<File | null> {
   await requestMediaPermissions();
   try {
     const video = await Camera.getPhoto({
