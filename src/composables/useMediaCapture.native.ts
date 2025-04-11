@@ -22,7 +22,7 @@ export async function capturePhoto(): Promise<File | null> {
     console.log('Intentando capturar foto usando captureVideo como alternativa');
     // Usamos captureVideo con duración corta como alternativa
     const result = await MediaCapture.captureVideo({
-      quality: 'high',
+      quality: 'hd',
       duration: 1, // Duración mínima para simular captura de foto
     });
 
@@ -40,7 +40,7 @@ export async function recordVideo(): Promise<File | null> {
   try {
     const result = await MediaCapture.captureVideo({
       duration: 30,
-      quality: 'high',
+      quality: 'hd',
     });
 
     if (!result || !result.file) return null;
@@ -58,7 +58,7 @@ export async function recordAudio(): Promise<File | null> {
     console.log('Intentando capturar audio usando captureVideo como alternativa');
     // Usamos captureVideo, pero indicamos al usuario que es para audio
     const result = await MediaCapture.captureVideo({
-      quality: 'medium',
+      quality: 'sd',
       duration: 30,
     });
 
