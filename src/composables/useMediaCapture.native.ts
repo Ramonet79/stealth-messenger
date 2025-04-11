@@ -3,6 +3,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 
 let audioFile: MediaObject | null = null;
+let audioFilePath: string = '';
 
 export async function capturePhoto(): Promise<Blob | null> {
   try {
@@ -24,12 +25,13 @@ export async function capturePhoto(): Promise<Blob | null> {
 
 export async function captureVideo(): Promise<Blob | null> {
   try {
+    // En Capacitor Camera, no existe mediaType, así que usamos la misma función
+    // pero el usuario seleccionará un video en la UI nativa
     const video = await Camera.getPhoto({
       quality: 80,
       allowEditing: false,
       resultType: CameraResultType.Uri,
       source: CameraSource.Camera,
-      mediaType: 'video' as any, // Type workaround
     });
 
     const response = await fetch(video.webPath!);
@@ -43,6 +45,8 @@ export async function captureVideo(): Promise<Blob | null> {
 
 export function startAudioRecording(): void {
   const fileName = 'recording.mp3';
+  // Guardamos la ruta del archivo para usarla después
+  audioFilePath = fileName;
   audioFile = Media.create(fileName);
   audioFile.startRecord();
 }
@@ -58,7 +62,8 @@ export function stopAudioRecording(): Promise<Blob | null> {
 
     setTimeout(async () => {
       try {
-        const response = await fetch(audioFile!.getFile().localURL);
+        // Usamos directamente la ruta del archivo en lugar de getFile()
+        const response = await fetch(audioFilePath);
         const blob = await response.blob();
         resolve(blob);
       } catch (e) {
