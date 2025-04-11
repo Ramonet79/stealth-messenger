@@ -1,3 +1,4 @@
+
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
