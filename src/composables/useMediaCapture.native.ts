@@ -1,72 +1,72 @@
 
-import { MediaCapture } from '@whiteguru/capacitor-plugin-media-capture';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Media, MediaObject } from '@awesome-cordova-plugins/media';
+import { Capacitor } from '@capacitor/core';
 
-// 🔄 Utilidad: convierte el resultado a File compatible con Supabase o Web
-async function resultToFile(path: string, type: 'photo' | 'video' | 'audio'): Promise<File> {
-  try {
-    const response = await fetch(path);
-    const blob = await response.blob();
-    const extension = path.split('.').pop() || 'dat';
-    const mime = blob.type || `${type}/${extension}`;
-
-    return new File([blob], `${type}_${Date.now()}.${extension}`, { type: mime });
-  } catch (error) {
-    console.error('Error al convertir resultado a File:', error);
-    throw error;
-  }
-}
-
-// 📸 FOTO - Adaptado a través de captureVideo
+// 📸 Capturar Foto
 export async function capturePhoto(): Promise<File | null> {
   try {
-    console.log('Intentando capturar foto usando captureVideo como alternativa');
-    // Usamos captureVideo con duración corta como alternativa
-    const result = await MediaCapture.captureVideo({
-      quality: 'hd',
-      duration: 1, // Duración mínima para simular captura de foto
+    const photo = await Camera.getPhoto({
+      quality: 90,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera
     });
 
-    if (!result || !result.file) return null;
-    console.log('Resultado de captura:', result.file);
-    return await resultToFile(result.file.path, 'photo');
-  } catch (error) {
-    console.error('Error al capturar foto:', error);
+    if (!photo.webPath) return null;
+    const response = await fetch(photo.webPath);
+    const blob = await response.blob();
+    return new File([blob], `photo_${Date.now()}.jpeg`, { type: 'image/jpeg' });
+  } catch (err) {
+    console.error('Error capturando foto:', err);
     return null;
   }
 }
 
-// 🎥 VÍDEO
+// 🎥 Grabar Video (usando cámara directamente)
 export async function recordVideo(): Promise<File | null> {
   try {
-    const result = await MediaCapture.captureVideo({
-      duration: 30,
-      quality: 'hd',
+    const video = await Camera.getPhoto({
+      quality: 90,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera,
+      presentationStyle: 'fullscreen'
     });
 
-    if (!result || !result.file) return null;
-    console.log('Video capturado:', result.file);
-    return await resultToFile(result.file.path, 'video');
-  } catch (error) {
-    console.error('Error al grabar vídeo:', error);
+    if (!video.webPath) return null;
+    const response = await fetch(video.webPath);
+    const blob = await response.blob();
+    return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+  } catch (err) {
+    console.error('Error grabando video:', err);
     return null;
   }
 }
 
-// 🎙️ AUDIO - Adaptado a través de captureVideo
+// 🎙️ Grabar Audio (en Android/iOS con Cordova plugin)
 export async function recordAudio(): Promise<File | null> {
-  try {
-    console.log('Intentando capturar audio usando captureVideo como alternativa');
-    // Usamos captureVideo, pero indicamos al usuario que es para audio
-    const result = await MediaCapture.captureVideo({
-      quality: 'sd',
-      duration: 30,
-    });
+  return new Promise((resolve, reject) => {
+    if (!Capacitor.isNativePlatform()) {
+      console.error('Grabación de audio solo disponible en dispositivo');
+      return resolve(null);
+    }
 
-    if (!result || !result.file) return null;
-    console.log('Audio capturado (mediante video):', result.file);
-    return await resultToFile(result.file.path, 'audio');
-  } catch (error) {
-    console.error('Error al grabar audio:', error);
-    return null;
-  }
+    try {
+      const filename = `audio_${Date.now()}.m4a`;
+      const file: MediaObject = Media.create(filename);
+
+      file.startRecord();
+      console.log('🎙 Grabando audio...');
+
+      setTimeout(() => {
+        file.stopRecord();
+        console.log('✅ Grabación finalizada');
+
+        resolve(new File([], filename, { type: 'audio/m4a' }));
+      }, 5000); // Duración: 5 segundos
+
+    } catch (err) {
+      console.error('Error al grabar audio:', err);
+      resolve(null);
+    }
+  });
 }
