@@ -1,8 +1,9 @@
 
 import {
   MediaCapture,
-  MediaCaptureOptions,
-  MediaCapturePlugin,
+  CaptureAudioOptions,
+  CaptureImageOptions,
+  CaptureVideoOptions,
   MediaFile
 } from '@whiteguru/capacitor-plugin-media-capture';
 
@@ -19,51 +20,41 @@ async function mediaFileToFile(mediaFile: MediaFile, type: 'photo' | 'video' | '
 // 📸 FOTO
 export async function capturePhoto(): Promise<File | null> {
   try {
-    const options: MediaCaptureOptions = { 
-      mode: 'photo',
-      quality: 90 
-    };
-    const result = await MediaCapture.capture(options);
+    const options: CaptureImageOptions = { limit: 1 }
+    const result = await MediaCapture.captureImage(options)
 
-    if (!result.file) return null;
-    return await mediaFileToFile(result.file, 'photo');
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'photo')
   } catch (error) {
-    console.error('Error al capturar foto:', error);
-    return null;
+    console.error('Error al capturar foto:', error)
+    return null
   }
 }
 
 // 🎥 VÍDEO
 export async function recordVideo(): Promise<File | null> {
   try {
-    const options: MediaCaptureOptions = { 
-      mode: 'video',
-      duration: 10,
-      quality: 80
-    };
-    const result = await MediaCapture.capture(options);
+    const options: CaptureVideoOptions = { limit: 1, duration: 10 }
+    const result = await MediaCapture.captureVideo(options)
 
-    if (!result.file) return null;
-    return await mediaFileToFile(result.file, 'video');
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'video')
   } catch (error) {
-    console.error('Error al grabar vídeo:', error);
-    return null;
+    console.error('Error al grabar vídeo:', error)
+    return null
   }
 }
 
 // 🎙️ AUDIO
 export async function recordAudio(): Promise<File | null> {
   try {
-    const options: MediaCaptureOptions = { 
-      mode: 'audio',
-      duration: 10
-    };
-    const result = await MediaCapture.capture(options);
+    const options: CaptureAudioOptions = { limit: 1, duration: 10 }
+    const result = await MediaCapture.captureAudio(options)
 
-    if (!result.file) return null;
-    return await mediaFileToFile(result.file, 'audio');
+    if (!result.files || result.files.length === 0) return null
+    return await mediaFileToFile(result.files[0], 'audio')
   } catch (error) {
-    console.error('Error al grabar audio:', error);
-    return null;
+    console.error('Error al grabar audio:', error)
+    return null
   }
 }
