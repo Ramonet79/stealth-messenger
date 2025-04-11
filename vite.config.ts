@@ -31,7 +31,9 @@ export default defineConfig(({ mode }) => ({
       "@/hooks/useMediaCapture": 
         process.env.CAPACITOR_PLATFORM
           ? path.resolve(__dirname, "src/hooks/useMediaCapture.native.ts")
-          : path.resolve(__dirname, "src/hooks/useMediaCapture.ts")
+          : path.resolve(__dirname, "src/hooks/useMediaCapture.ts"),
+      // Alias para composables para simplificar importaciones
+      "@/composables": path.resolve(__dirname, "src/composables")
     },
     // Extensions to resolve, with native extensions first
     extensions: ['.native.ts', '.native.tsx', '.ts', '.tsx', '.js', '.jsx', '.json']

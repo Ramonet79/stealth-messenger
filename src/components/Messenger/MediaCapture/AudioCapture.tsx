@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { recordAudio } from '@/composables/useMediaCapture'; // Import genérico que usará .native.ts en plataformas nativas
+import { recordAudio } from '@/composables'; // Corregida la importación
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface AudioCaptureProps {
