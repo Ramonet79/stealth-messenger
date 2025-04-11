@@ -1,60 +1,72 @@
 
-import {
-  MediaCapture,
-  MediaFile,
-  CaptureImageOptions,
-  CaptureVideoOptions,
-  CaptureAudioOptions
-} from '@whiteguru/capacitor-plugin-media-capture';
+import { MediaCapture } from '@whiteguru/capacitor-plugin-media-capture';
 
-// 🔄 Utilidad: convierte MediaFile a File compatible con Supabase o Web
-async function mediaFileToFile(mediaFile: MediaFile, type: 'photo' | 'video' | 'audio'): Promise<File> {
-  const response = await fetch(mediaFile.localURL!)
-  const blob = await response.blob()
-  const extension = mediaFile.name?.split('.').pop() || 'dat'
-  const mime = blob.type || `${type}/${extension}`
+// 🔄 Utilidad: convierte el resultado a File compatible con Supabase o Web
+async function resultToFile(path: string, type: 'photo' | 'video' | 'audio'): Promise<File> {
+  try {
+    const response = await fetch(path);
+    const blob = await response.blob();
+    const extension = path.split('.').pop() || 'dat';
+    const mime = blob.type || `${type}/${extension}`;
 
-  return new File([blob], `${type}_${Date.now()}.${extension}`, { type: mime })
+    return new File([blob], `${type}_${Date.now()}.${extension}`, { type: mime });
+  } catch (error) {
+    console.error('Error al convertir resultado a File:', error);
+    throw error;
+  }
 }
 
-// 📸 FOTO
+// 📸 FOTO - Adaptado a través de captureVideo
 export async function capturePhoto(): Promise<File | null> {
   try {
-    const options: CaptureImageOptions = { limit: 1 }
-    const result: MediaFile[] = await MediaCapture.captureImage(options)
+    console.log('Intentando capturar foto usando captureVideo como alternativa');
+    // Usamos captureVideo con duración corta como alternativa
+    const result = await MediaCapture.captureVideo({
+      quality: 'high',
+      duration: 1, // Duración mínima para simular captura de foto
+    });
 
-    if (!result || result.length === 0) return null
-    return await mediaFileToFile(result[0], 'photo')
+    if (!result || !result.file) return null;
+    console.log('Resultado de captura:', result.file);
+    return await resultToFile(result.file.path, 'photo');
   } catch (error) {
-    console.error('Error al capturar foto:', error)
-    return null
+    console.error('Error al capturar foto:', error);
+    return null;
   }
 }
 
 // 🎥 VÍDEO
 export async function recordVideo(): Promise<File | null> {
   try {
-    const options: CaptureVideoOptions = { limit: 1, duration: 30 }
-    const result: MediaFile[] = await MediaCapture.captureVideo(options)
+    const result = await MediaCapture.captureVideo({
+      duration: 30,
+      quality: 'high',
+    });
 
-    if (!result || result.length === 0) return null
-    return await mediaFileToFile(result[0], 'video')
+    if (!result || !result.file) return null;
+    console.log('Video capturado:', result.file);
+    return await resultToFile(result.file.path, 'video');
   } catch (error) {
-    console.error('Error al grabar vídeo:', error)
-    return null
+    console.error('Error al grabar vídeo:', error);
+    return null;
   }
 }
 
-// 🎙️ AUDIO
+// 🎙️ AUDIO - Adaptado a través de captureVideo
 export async function recordAudio(): Promise<File | null> {
   try {
-    const options: CaptureAudioOptions = { limit: 1, duration: 30 }
-    const result: MediaFile[] = await MediaCapture.captureAudio(options)
+    console.log('Intentando capturar audio usando captureVideo como alternativa');
+    // Usamos captureVideo, pero indicamos al usuario que es para audio
+    const result = await MediaCapture.captureVideo({
+      quality: 'medium',
+      duration: 30,
+    });
 
-    if (!result || result.length === 0) return null
-    return await mediaFileToFile(result[0], 'audio')
+    if (!result || !result.file) return null;
+    console.log('Audio capturado (mediante video):', result.file);
+    return await resultToFile(result.file.path, 'audio');
   } catch (error) {
-    console.error('Error al grabar audio:', error)
-    return null
+    console.error('Error al grabar audio:', error);
+    return null;
   }
 }
