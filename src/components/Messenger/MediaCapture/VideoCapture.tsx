@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { recordVideo } from '@/composables'; // Corregida la importación
+import { captureVideo } from '@/composables'; 
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface VideoCaptureProps {
@@ -99,15 +98,15 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       setRecordingStartTime(Date.now());
       
       if (isNativePlatform()) {
-        const videoFile = await recordVideo();
-        if (videoFile) {
-          const videoUrl = URL.createObjectURL(videoFile);
+        const videoBlob = await captureVideo();
+        if (videoBlob) {
+          const videoUrl = URL.createObjectURL(videoBlob);
           const durationInSeconds = 10;
           onCaptureVideo(videoUrl, durationInSeconds);
         } else {
           setError('No se pudo grabar el video.');
-          setRecording(false);
         }
+        setRecording(false);
       } else {
         if (!stream || !mediaRecorder) {
           setError('Cámara no inicializada correctamente.');

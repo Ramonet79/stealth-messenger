@@ -4,9 +4,9 @@ import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { 
-  checkCameraPermissions, 
-  takePicture 
+  checkCameraPermissions
 } from '@/services/PermissionsHandlerNative';
+import { capturePhoto } from '@/composables';
 
 interface ImageCaptureProps {
   onCaptureImage: (imageUrl: string) => void;
@@ -49,10 +49,11 @@ const ImageCapture: React.FC<ImageCaptureProps> = ({ onCaptureImage, onCancel })
     
     try {
       console.log("Tomando foto...");
-      const photoUrl = await takePicture();
+      const photoBlob = await capturePhoto();
       
-      if (photoUrl) {
+      if (photoBlob) {
         console.log("Foto tomada correctamente");
+        const photoUrl = URL.createObjectURL(photoBlob);
         onCaptureImage(photoUrl);
       } else {
         console.error("No se pudo obtener la foto");

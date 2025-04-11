@@ -1,72 +1,70 @@
 
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
-import { Capacitor } from '@capacitor/core';
 
-// 📸 Capturar Foto
-export async function capturePhoto(): Promise<File | null> {
+let audioFile: MediaObject | null = null;
+
+export async function capturePhoto(): Promise<Blob | null> {
   try {
-    const photo = await Camera.getPhoto({
-      quality: 90,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera
-    });
-
-    if (!photo.webPath) return null;
-    const response = await fetch(photo.webPath);
-    const blob = await response.blob();
-    return new File([blob], `photo_${Date.now()}.jpeg`, { type: 'image/jpeg' });
-  } catch (err) {
-    console.error('Error capturando foto:', err);
-    return null;
-  }
-}
-
-// 🎥 Grabar Video (usando cámara directamente)
-export async function recordVideo(): Promise<File | null> {
-  try {
-    const video = await Camera.getPhoto({
-      quality: 90,
+    const image = await Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
       resultType: CameraResultType.Uri,
       source: CameraSource.Camera,
-      presentationStyle: 'fullscreen'
     });
 
-    if (!video.webPath) return null;
-    const response = await fetch(video.webPath);
+    const response = await fetch(image.webPath!);
     const blob = await response.blob();
-    return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
-  } catch (err) {
-    console.error('Error grabando video:', err);
+    return blob;
+  } catch (error) {
+    console.error('Error capturing photo:', error);
     return null;
   }
 }
 
-// 🎙️ Grabar Audio (en Android/iOS con Cordova plugin)
-export async function recordAudio(): Promise<File | null> {
-  return new Promise((resolve, reject) => {
-    if (!Capacitor.isNativePlatform()) {
-      console.error('Grabación de audio solo disponible en dispositivo');
-      return resolve(null);
-    }
+export async function captureVideo(): Promise<Blob | null> {
+  try {
+    const video = await Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera,
+      mediaType: 'video' as any, // Type workaround
+    });
 
-    try {
-      const filename = `audio_${Date.now()}.m4a`;
-      const file: MediaObject = Media.create(filename);
+    const response = await fetch(video.webPath!);
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error('Error capturing video:', error);
+    return null;
+  }
+}
 
-      file.startRecord();
-      console.log('🎙 Grabando audio...');
+export function startAudioRecording(): void {
+  const fileName = 'recording.mp3';
+  audioFile = Media.create(fileName);
+  audioFile.startRecord();
+}
 
-      setTimeout(() => {
-        file.stopRecord();
-        console.log('✅ Grabación finalizada');
-
-        resolve(new File([], filename, { type: 'audio/m4a' }));
-      }, 5000); // Duración: 5 segundos
-
-    } catch (err) {
-      console.error('Error al grabar audio:', err);
+export function stopAudioRecording(): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    if (!audioFile) {
       resolve(null);
+      return;
     }
+
+    audioFile.stopRecord();
+
+    setTimeout(async () => {
+      try {
+        const response = await fetch(audioFile!.getFile().localURL);
+        const blob = await response.blob();
+        resolve(blob);
+      } catch (e) {
+        console.error('Error fetching audio blob:', e);
+        resolve(null);
+      }
+    }, 1000); // Give the system a second to finish writing the file
   });
 }

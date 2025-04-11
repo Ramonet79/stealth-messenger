@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { recordAudio } from '@/composables'; // Corregida la importación
+import { startAudioRecording, stopAudioRecording } from '@/composables'; 
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 interface AudioCaptureProps {
@@ -57,16 +57,21 @@ const AudioCapture: React.FC<AudioCaptureProps> = ({ onCaptureAudio, onCancel })
       setRecordingStartTime(Date.now());
       
       if (isNativePlatform()) {
-        // Para plataformas nativas, usamos la función recordAudio
-        const audioFile = await recordAudio();
-        if (audioFile) {
-          const audioUrl = URL.createObjectURL(audioFile);
-          const durationInSeconds = 10; // Asumimos 10 segundos como predeterminado
-          onCaptureAudio(audioUrl, durationInSeconds);
-        } else {
-          setError('No se pudo grabar el audio.');
-          setRecording(false);
-        }
+        // Para plataformas nativas, usamos las nuevas funciones
+        startAudioRecording();
+        
+        // Establecemos un temporizador para detener la grabación después de un tiempo
+        setTimeout(async () => {
+          const audioBlob = await stopAudioRecording();
+          if (audioBlob) {
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const durationInSeconds = 10; // Asumimos 10 segundos como predeterminado
+            onCaptureAudio(audioUrl, durationInSeconds);
+          } else {
+            setError('No se pudo grabar el audio.');
+            setRecording(false);
+          }
+        }, 5000); // 5 segundos de grabación
       } else {
         // Para web, continuamos con la implementación existente
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
