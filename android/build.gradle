@@ -22,3 +22,12 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// 👇 Forzamos target JVM compatible (para evitar error 21)
+allprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}
