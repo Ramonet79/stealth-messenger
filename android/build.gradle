@@ -1,33 +1,42 @@
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    ext.kotlin_version = '1.8.10'
+
     repositories {
         google()
         mavenCentral()
     }
+
     dependencies {
-        // Usar la versión compatible definida en gradle.properties
-        classpath "com.android.tools.build:gradle:$androidGradlePluginVersion"
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'com.google.gms:google-services:4.4.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
+
+// Importa variables si usas un archivo separado (opcional, puedes eliminar si no lo usas)
+apply from: "variables.gradle"
 
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+// ✅ Compatibilidad Java 17
+tasks.withType(JavaCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-// 👇 Forzamos target JVM compatible (para evitar error 21)
-allprojects {
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            jvmTarget = "1.8"
-        }
-    }
 }
