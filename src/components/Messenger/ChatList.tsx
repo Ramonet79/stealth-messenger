@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -39,6 +40,11 @@ const ChatList: React.FC<ChatListProps> = ({
   const { t } = useLanguage();
   const { startCapture } = useMediaCapture(); // Use the hook
 
+  const handleCopyUsername = () => {
+    navigator.clipboard.writeText(username);
+    // Podríamos añadir un toast aquí para confirmar copia
+  };
+
   return (
     <div className="flex flex-col h-full bg-messenger-background">
       <div className="flex items-center justify-between p-4 border-b">
@@ -54,7 +60,12 @@ const ChatList: React.FC<ChatListProps> = ({
             <h1 className="text-lg font-bold">dScrt</h1>
             <div className="flex items-center">
               <p className="text-xs text-gray-500 mr-2">@{username}</p>
-              <button className="text-xs text-blue-500">Copiar</button>
+              <button 
+                onClick={handleCopyUsername} 
+                className="text-xs text-blue-500"
+              >
+                Copiar
+              </button>
             </div>
           </div>
         </div>
@@ -77,9 +88,7 @@ const ChatList: React.FC<ChatListProps> = ({
             <BookOpen size={20} />
           </button>
           <button 
-            onClick={() => { 
-              startCapture(); // Inicia la captura al hacer clic
-            }}
+            onClick={onNewChat}
             className="p-2 rounded-full bg-messenger-primary text-white hover:bg-messenger-secondary transition-colors"
           >
             <Plus size={20} />
