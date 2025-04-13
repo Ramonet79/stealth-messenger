@@ -3,6 +3,8 @@ import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import useMediaCapture from '@/hooks/useMediaCapture'; // Correct import
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Contact {
   id: string;
@@ -39,10 +41,15 @@ const ChatList: React.FC<ChatListProps> = ({
 }) => {
   const { t } = useLanguage();
   const { startCapture } = useMediaCapture(); // Use the hook
+  const { toast } = useToast();
+  const { user } = useSupabaseAuth();
 
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(username);
-    // Podríamos añadir un toast aquí para confirmar copia
+    toast({
+      title: "Username copiado",
+      description: "Nombre de usuario copiado al portapapeles",
+    });
   };
 
   return (

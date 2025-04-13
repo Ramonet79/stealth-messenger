@@ -53,12 +53,22 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
   
   const [view, setView] = useState<AppView>('list');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [username] = useState<string>('dscrt_user123');
+  const [username, setUsername] = useState<string>('');
   const [showPatternLock, setShowPatternLock] = useState<boolean>(false);
   const [contactsWithActiveLock, setContactsWithActiveLock] = useState<string[]>([]);
   
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (user && user.email) {
+      const extractedUsername = user.user_metadata?.username || 
+                               user.email.split('@')[0] || 
+                               `usuario_${user.id.substring(0, 8)}`;
+      setUsername(extractedUsername);
+      console.log('Username actualizado:', extractedUsername);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
