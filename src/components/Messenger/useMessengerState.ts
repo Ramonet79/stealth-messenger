@@ -269,22 +269,77 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     }
   };
 
-  const handleCreateChat = (phone: string, name: string) => {
-    const now = new Date();
-    const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+  const handleCreateChat = async (contactUsername: string, contactAlias: string) => {
+    if (!user) return;
     
-    const newContact: Contact = {
-      id: uuidv4(),
-      name,
-      phone,
-      lastMessage: 'Nuevo contacto',
-      timestamp,
-      unread: false
-    };
-    
-    setContacts([newContact, ...contacts]);
-    setSelectedContactId(newContact.id);
-    setView('conversation');
+    try {
+      const { data: contactProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', contactUsername)
+        .single();
+      
+      if (profileError || !contactProfile) {
+        console.error("Error al buscar el perfil del contacto:", profileError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo encontrar el contacto especificado",
+        });
+        return;
+      }
+      
+      const { data: newContactData, error: contactError } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          contact_id: contactProfile.id,
+          name: contactAlias,
+          full_name: contactUsername
+        })
+        .select()
+        .single();
+      
+      if (contactError || !newContactData) {
+        console.error("Error al crear contacto:", contactError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo crear el contacto",
+        });
+        return;
+      }
+      
+      const now = new Date();
+      const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+      
+      const newContact: Contact = {
+        id: newContactData.id,
+        name: contactAlias,
+        phone: '',
+        lastMessage: 'Nuevo contacto',
+        timestamp,
+        unread: false,
+        fullName: contactUsername
+      };
+      
+      setContacts([newContact, ...contacts]);
+      setSelectedContactId(newContact.id);
+      setView('conversation');
+      
+      toast({
+        title: "Contacto creado",
+        description: `Has añadido a ${contactAlias} como contacto`,
+      });
+      
+    } catch (error) {
+      console.error("Error inesperado al crear contacto:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo crear el contacto",
+      });
+    }
   };
 
   const handleAcceptRequest = (requestId: string) => {

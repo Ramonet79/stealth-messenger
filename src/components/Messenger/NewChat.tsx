@@ -1,20 +1,24 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, UserRound } from 'lucide-react';
+import { ArrowLeft, UserRound, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface NewChatProps {
   onCreateChat: (username: string, name: string) => void;
   onCancel: () => void;
-  onBack?: () => void; // Añadimos esta prop para mantener compatibilidad
+  onBack?: () => void;
 }
 
 const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => {
   const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [step, setStep] = useState(1);
+  const [alias, setAlias] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   // Esta función utiliza onCancel o onBack, lo que esté disponible
   const handleBack = () => {
@@ -25,18 +29,66 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
     }
   };
 
-  const handleSubmitUsername = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (username.trim()) {
-      setStep(2);
+  const checkUsernameExists = async (username: string) => {
+    if (!username.trim()) return false;
+
+    setLoading(true);
+    setUsernameError('');
+    
+    try {
+      // Verificar si el usuario existe en la tabla profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .eq('username', username)
+        .single();
+      
+      if (error) {
+        console.error("Error al verificar usuario:", error);
+        setUsernameError(t('username_not_found') || 'Usuario no encontrado');
+        setLoading(false);
+        return false;
+      }
+      
+      if (data) {
+        setLoading(false);
+        return true;
+      } else {
+        setUsernameError(t('username_not_found') || 'Usuario no encontrado');
+        setLoading(false);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error inesperado:", error);
+      setUsernameError(t('error_checking_username') || 'Error al verificar el usuario');
+      setLoading(false);
+      return false;
     }
   };
 
-  const handleSubmitName = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onCreateChat(username, name);
+    
+    if (!username.trim() || !alias.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Campos requeridos",
+        description: "Por favor, completa todos los campos",
+      });
+      return;
     }
+    
+    const userExists = await checkUsernameExists(username);
+    if (!userExists) {
+      toast({
+        variant: "destructive",
+        title: "Usuario no encontrado",
+        description: "El nombre de usuario no existe en el sistema",
+      });
+      return;
+    }
+    
+    onCreateChat(username, alias);
   };
 
   return (
@@ -54,75 +106,63 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
       </div>
 
       <div className="flex-1 p-6">
-        {step === 1 ? (
-          <form onSubmit={handleSubmitUsername} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {t('username')}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('username_placeholder')}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
-                  required
-                />
-              </div>
-              <p className="text-xs text-gray-500">
-                {t('enter_username_description')}
-              </p>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex items-center justify-center mb-8">
+            <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
+              <UserRound size={40} className="text-gray-500" />
             </div>
-            <Button 
-              type="submit"
-              className="w-full bg-messenger-primary hover:bg-messenger-secondary"
-              disabled={!username.trim()}
-            >
-              {t('continue')}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleSubmitName} className="space-y-6">
-            <div className="flex items-center justify-center mb-8">
-              <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
-                <UserRound size={40} className="text-gray-500" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {t('contact_name')}
-              </label>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              {t('username')} <span className="text-gray-500 text-xs">(proporcionado por tu contacto dScrt)</span>
+            </label>
+            <div className="relative">
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('name_placeholder')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setUsernameError('');
+                }}
+                placeholder={t('username_placeholder') || "@usuario"}
+                className={`w-full px-4 py-2 border ${usernameError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent`}
                 required
               />
+              {usernameError && (
+                <div className="flex items-center text-red-500 text-xs mt-1">
+                  <AlertCircle size={12} className="mr-1" />
+                  {usernameError}
+                </div>
+              )}
             </div>
-            
-            <div className="flex space-x-3">
-              <Button 
-                type="button"
-                onClick={() => setStep(1)}
-                variant="outline"
-                className="flex-1"
-              >
-                {t('back')}
-              </Button>
-              <Button 
-                type="submit"
-                className="flex-1 bg-messenger-primary hover:bg-messenger-secondary"
-                disabled={!name.trim()}
-              >
-                {t('save')}
-              </Button>
-            </div>
-          </form>
-        )}
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              {t('contact_alias') || 'Alias del contacto'}
+            </label>
+            <input
+              type="text"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+              placeholder={t('alias_placeholder') || "¿Cómo quieres llamar a este contacto?"}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent"
+              required
+            />
+            <p className="text-xs text-gray-500">
+              {t('alias_description') || "Este nombre será visible solo para ti en tus conversaciones"}
+            </p>
+          </div>
+          
+          <Button 
+            type="submit"
+            className="w-full bg-messenger-primary hover:bg-messenger-secondary"
+            disabled={loading || !username.trim() || !alias.trim()}
+          >
+            {loading ? t('checking') || "Verificando..." : t('save') || "Guardar"}
+          </Button>
+        </form>
       </div>
     </div>
   );
