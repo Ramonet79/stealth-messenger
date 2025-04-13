@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Contact } from '@/components/Messenger/types';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { patternService } from '@/services/patternService';
 
 export const useContacts = () => {
   const [contacts, setContacts] = useState<Contact[]>([

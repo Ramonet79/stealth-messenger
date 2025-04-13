@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppView, Contact } from '@/components/Messenger/types';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useContacts } from './useContacts';
@@ -28,6 +28,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
   
   const {
     messages,
+    setMessages,
     loadMessages,
     handleSendMessage
   } = useMessages(updateContactMessage);
@@ -112,7 +113,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
           unread: false
         };
         
-        setContacts([newContact, ...contacts]);
+        handleCreateChat(request.username, request.username);
         setView('list');
       }
     },
@@ -120,9 +121,8 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     handleBlockRequest,
     handleEditContact,
     handleDeleteContact: (contactId: string) => {
-      const updatedContacts = handleDeleteContact(contactId);
+      handleDeleteContact(contactId);
       setMessages(messages.filter(message => message.contactId !== contactId));
-      return updatedContacts;
     },
     handleSaveContactPattern,
   };

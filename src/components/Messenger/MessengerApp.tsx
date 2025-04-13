@@ -8,6 +8,7 @@ import ContactDirectory from './ContactDirectory';
 import { AppView } from './types';
 import { useMessengerState } from '@/hooks/messenger/useMessengerState';
 import PrivacyNotice from './PrivacyNotice';
+import PatternLock from '@/components/PatternLock';
 
 interface MessengerAppProps {
   onLogout: () => void;

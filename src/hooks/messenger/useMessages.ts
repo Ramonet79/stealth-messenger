@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Message } from '@/components/Messenger/types';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { messageService } from '@/services/messageService';
 import { useToast } from '@/hooks/use-toast';
 
-export const useMessages = (updateContactMessage: (contactId: string, message: string, timestamp: string, unread: boolean) => void) => {
+export const useMessages = (updateContactMessage: (contactId: string, message: string, timestamp: string, unread?: boolean) => void) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
@@ -107,7 +106,7 @@ export const useMessages = (updateContactMessage: (contactId: string, message: s
               ? '🎥 Video' 
               : '🎤 Audio';
         
-        updateContactMessage(contactId, messagePreview, timestamp);
+        updateContactMessage(contactId, messagePreview, timestamp, false);
       }
     } catch (error) {
       console.error("Error inesperado al enviar mensaje:", error);
