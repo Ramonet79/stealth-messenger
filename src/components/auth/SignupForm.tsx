@@ -18,11 +18,11 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Esquema de validación para el registro
+// Esquema de validación actualizado para el registro
 const signupSchema = z.object({
   username: z.string()
-    .min(3, "El nombre de usuario debe tener al menos 3 caracteres")
-    .max(20, "El nombre de usuario no puede tener más de 20 caracteres")
+    .min(8, "El nombre de usuario debe tener al menos 8 caracteres")
+    .max(18, "El nombre de usuario no puede tener más de 18 caracteres")
     .regex(/^[a-zA-Z0-9_]+$/, "Solo se permiten letras, números y guiones bajos"),
   email: z.string().email("Email inválido"),
   password: z.string()
@@ -54,9 +54,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     },
   });
 
-  // Verificar disponibilidad de nombre de usuario
+  // Verificar disponibilidad de nombre de usuario - versión mejorada
   const checkUsernameAvailability = async (username: string) => {
-    if (username.length < 3) {
+    if (username.length < 8) {
       setUsernameAvailable(null);
       return;
     }
@@ -64,19 +64,26 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     setCheckingUsername(true);
     
     try {
+      // Consulta case-insensitive para verificar si el username ya existe
       const { data, error } = await supabase
         .from('profiles')
         .select('username')
-        .eq('username', username)
-        .single();
+        .ilike('username', username)
+        .limit(1);
       
-      if (error && error.code === 'PGRST116') {
-        setUsernameAvailable(true);
-      } else {
+      if (error) {
+        console.error('Error al verificar nombre de usuario:', error);
         setUsernameAvailable(false);
+      } else if (data && data.length > 0) {
+        // Si hay resultados, el nombre de usuario no está disponible
+        setUsernameAvailable(false);
+      } else {
+        // Si no hay resultados, el nombre de usuario está disponible
+        setUsernameAvailable(true);
       }
     } catch (error) {
       console.error('Error al verificar nombre de usuario:', error);
+      setUsernameAvailable(false);
     } finally {
       setCheckingUsername(false);
     }
@@ -90,7 +97,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       clearTimeout(typingTimeout);
     }
     
-    if (username && username.length >= 3) {
+    if (username && username.length >= 8) {
       const timeout = setTimeout(() => {
         checkUsernameAvailability(username);
       }, 500);
@@ -110,6 +117,34 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     try {
       setIsSubmitting(true);
       const { email, password, username } = data;
+      
+      // Verificación final antes del registro
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .ilike('username', username)
+        .limit(1);
+        
+      if (checkError) {
+        console.error("Error al verificar disponibilidad del usuario:", checkError);
+        toast({
+          variant: "destructive",
+          title: "Error de verificación",
+          description: "No se pudo verificar la disponibilidad del nombre de usuario",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (existingUsers && existingUsers.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Nombre de usuario no disponible",
+          description: "Este nombre de usuario ya está registrado. Por favor, elige otro.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
       
       console.log("Iniciando registro con:", { email, username });
       
@@ -194,6 +229,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
               {!checkingUsername && usernameAvailable === true && (
                 <p className="text-xs text-green-500 mt-1">Nombre de usuario disponible</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">
+                Este será tu identificador único en dScrt. Otros usuarios podrán utilizarlo para encontrarte y comenzar conversaciones contigo.
+              </p>
               <FormMessage />
             </FormItem>
           )}

@@ -36,12 +36,12 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
     setUsernameError('');
     
     try {
-      // Verificar si el usuario existe en la tabla profiles
+      // Cambiamos a una búsqueda case-insensitive para ser consistentes con el registro
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username')
-        .eq('username', username)
-        .single();
+        .ilike('username', username)
+        .limit(1);
       
       if (error) {
         console.error("Error al verificar usuario:", error);
@@ -50,7 +50,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
         return false;
       }
       
-      if (data) {
+      if (data && data.length > 0) {
         setLoading(false);
         return true;
       } else {
