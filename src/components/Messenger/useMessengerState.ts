@@ -5,6 +5,7 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { patternService } from '@/services/patternService';
 import { messageService } from '@/services/messageService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) => void) => {
   const [contacts, setContacts] = useState<Contact[]>([
