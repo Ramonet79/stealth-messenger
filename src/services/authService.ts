@@ -9,18 +9,22 @@ export const signUpUser = async (
   recoveryEmail: string
 ): Promise<AuthResponse> => {
   try {
-    // Primero verificamos si el username ya existe
-    const { data: existingUser, error: usernameCheckError } = await supabase
+    // Primero verificamos si el username ya existe (usando ilike para case-insensitive)
+    const { data: existingUsers, error: usernameCheckError } = await supabase
       .from('profiles')
       .select('username')
-      .eq('username', username)
-      .maybeSingle();
+      .ilike('username', username)
+      .limit(1);
     
     if (usernameCheckError) {
       console.error('Error al verificar nombre de usuario:', usernameCheckError);
+      return { 
+        data: null, 
+        error: { message: 'Error al verificar la disponibilidad del nombre de usuario.' } 
+      };
     }
     
-    if (existingUser) {
+    if (existingUsers && existingUsers.length > 0) {
       return { 
         data: null, 
         error: { message: 'Este nombre de usuario ya está en uso. Por favor, elige otro.' } 

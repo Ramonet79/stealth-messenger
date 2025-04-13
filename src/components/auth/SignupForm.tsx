@@ -163,6 +163,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
           title: "Error de registro",
           description: error.message,
         });
+        setIsSubmitting(false);
         return;
       }
       
