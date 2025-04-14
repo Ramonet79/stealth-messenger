@@ -25,7 +25,7 @@ allprojects {
         mavenCentral()
     }
     
-    // Forzar Java 17 para todos los proyectos
+    // Forzar Java 17 para todos los proyectos (sin options.release)
     tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -38,7 +38,7 @@ allprojects {
     }
 }
 
-// ✅ Compatibilidad Java 17
+// ✅ Compatibilidad Java 17 (sin options.release)
 tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

@@ -17,11 +17,11 @@ dependencies {
     implementation "androidx.webkit:webkit:1.4.0"
 }
 
-// Forzar Java 17 para este módulo
+// Forzar Java 17 para este módulo usando la forma correcta (sin options.release)
 tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-    options.release.set(17)
+    // Eliminamos la línea options.release.set(17) que estaba causando el error
 }
 
 if (hasProperty('postBuildExtras')) {
