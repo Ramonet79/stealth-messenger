@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen, Copy } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -44,8 +43,8 @@ const ChatList: React.FC<ChatListProps> = ({
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(username);
     toast({
-      title: "Username copiado",
-      description: "Nombre de usuario copiado al portapapeles",
+      title: "Nombre de usuario copiado",
+      description: "Puedes compartir este nombre de usuario para que otros te encuentren en dScrt",
     });
   };
 
@@ -62,13 +61,16 @@ const ChatList: React.FC<ChatListProps> = ({
           </button>
           <div>
             <h1 className="text-lg font-bold">dScrt</h1>
-            <div className="flex items-center">
-              <p className="text-xs text-gray-500 mr-2">@{username}</p>
+            <div className="flex flex-col">
+              <p className="text-xs text-gray-500">Nombre de usuario: {username}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Comparte este nombre de usuario con otros para comenzar conversaciones en dScrt
+              </p>
               <button 
                 onClick={handleCopyUsername} 
-                className="text-xs text-blue-500"
+                className="text-xs text-blue-500 mt-1 flex items-center self-start"
               >
-                Copiar
+                <Copy size={12} className="mr-1" /> Copiar nombre de usuario
               </button>
             </div>
           </div>
