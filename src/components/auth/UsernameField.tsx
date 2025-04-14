@@ -4,7 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Control } from 'react-hook-form';
+import { Control, useWatch } from 'react-hook-form';
 import * as z from "zod";
 
 interface UsernameFieldProps {
@@ -16,6 +16,12 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Use the useWatch hook to observe changes to the username field
+  const username = useWatch({
+    control,
+    name,
+  });
 
   // Function to check username availability
   const checkUsernameAvailability = async (username: string) => {
@@ -52,31 +58,26 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
     }
   };
 
-  // Detect changes in the username field
+  // Watch for changes in the username field
   useEffect(() => {
-    const subscription = control._subjects.watch.subscribe(({ name: fieldName, value }) => {
-      if (fieldName === name && value) {
-        if (typingTimeout) {
-          clearTimeout(typingTimeout);
-        }
-        
-        if (value && value.length >= 8) {
-          const timeout = setTimeout(() => {
-            checkUsernameAvailability(value);
-          }, 500);
-          
-          setTypingTimeout(timeout);
-        } else {
-          setUsernameAvailable(null);
-        }
-      }
-    });
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+    
+    if (username && username.length >= 8) {
+      const timeout = setTimeout(() => {
+        checkUsernameAvailability(username);
+      }, 500);
+      
+      setTypingTimeout(timeout);
+    } else {
+      setUsernameAvailable(null);
+    }
     
     return () => {
-      subscription.unsubscribe();
       if (typingTimeout) clearTimeout(typingTimeout);
     };
-  }, [control, name]);
+  }, [username]);
 
   return (
     <FormField
