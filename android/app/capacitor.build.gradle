@@ -17,7 +17,7 @@ dependencies {
     implementation "androidx.webkit:webkit:1.4.0"
 }
 
-// Forzar Java 17 para este módulo usando la forma correcta (sin options.release)
+// Configuración correcta para Java 17
 tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

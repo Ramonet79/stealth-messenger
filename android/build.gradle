@@ -16,7 +16,7 @@ buildscript {
     }
 }
 
-// Importa variables si usas un archivo separado (opcional, puedes eliminar si no lo usas)
+// Importa variables si usas un archivo separado
 apply from: "variables.gradle"
 
 allprojects {
@@ -25,7 +25,7 @@ allprojects {
         mavenCentral()
     }
     
-    // Forzar Java 17 para todos los proyectos (sin options.release)
+    // Configuración correcta para Java 17 en todos los proyectos
     tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -38,7 +38,7 @@ allprojects {
     }
 }
 
-// ✅ Compatibilidad Java 17 (sin options.release)
+// Configuración global para Java 17
 tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
