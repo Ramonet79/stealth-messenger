@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:amazon="http://schemas.amazon.com/apk/res/android">
+<application  android:usesCleartextTraffic="true">
+<provider android:name="org.apache.cordova.mediacapture.FileProvider" android:authorities="${applicationId}.cordova.plugin.mediacapture.provider" android:exported="false" android:grantUriPermissions="true">
+  <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/mediacapture_provider_paths"/>
+</provider>
+</application>
+<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+</manifest>
