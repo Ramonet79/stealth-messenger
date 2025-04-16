@@ -4,6 +4,21 @@ import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
 import { requestMediaPermissions } from './usePermissions';
 
+// Define the extended Navigator interface with Cordova properties
+declare global {
+  interface Navigator {
+    device?: {
+      capture?: {
+        captureVideo(
+          success: (mediaFiles: any[]) => void,
+          error: (error: any) => void,
+          options?: { limit?: number; duration?: number; quality?: number }
+        ): void;
+      };
+    };
+  }
+}
+
 export async function capturePhoto(): Promise<File | null> {
   await requestMediaPermissions();
   try {
