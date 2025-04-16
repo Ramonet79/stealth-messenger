@@ -1,129 +1,120 @@
 
-import { checkCameraPermissions, requestCameraPermissions } from "@/services/PermissionsHandlerNative";
-import { checkCameraAndMicPermissions } from "@/utils/permissions";
+import { Camera } from '@capacitor/camera';
+import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
-// Format recording time (seconds to MM:SS)
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Function to stop media stream tracks
-export const stopMediaStream = (stream: MediaStream | null): void => {
-  if (stream) {
-    try {
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      console.log("Stream detenido correctamente");
-    } catch (e) {
-      console.error("Error al detener stream de medios:", e);
-    }
-  }
-};
-
-// Function to request media permissions (bridge to native permissions)
 export const requestMediaPermissions = async (
   type: 'camera' | 'microphone' | 'both',
-  setShowPermissionsDialog: (show: boolean) => void
+  setShowDialog?: (show: boolean) => void
 ): Promise<boolean> => {
+  console.log(`Solicitando permisos de ${type}...`);
+  
   try {
-    console.log(`Verificando permisos de ${type}...`);
-    
-    // Verificamos si ya tenemos permisos
-    let hasPermissions = false;
-    
-    if (type === 'camera') {
-      hasPermissions = await checkCameraPermissions();
-    } else if (type === 'microphone') {
-      hasPermissions = await checkMicrophonePermissions();
+    if (isNativePlatform()) {
+      // En plataformas nativas
+      console.log('Verificando permisos en plataforma nativa');
+      
+      if (type === 'camera' || type === 'both') {
+        const { Camera } = await import('@capacitor/camera');
+        const cameraPermission = await Camera.requestPermissions();
+        console.log('Estado de permiso de cámara:', cameraPermission.camera);
+        
+        if (cameraPermission.camera !== 'granted') {
+          console.log('Permiso de cámara no concedido');
+          return false;
+        }
+      }
+      
+      if (type === 'microphone' || type === 'both') {
+        // Para micrófono, utilizamos getUserMedia
+        try {
+          console.log('Solicitando permiso de micrófono...');
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => track.stop());
+          console.log('Permiso de micrófono concedido');
+        } catch (e) {
+          console.error('Error al solicitar permiso de micrófono:', e);
+          return false;
+        }
+      }
+      
+      return true;
     } else {
-      // Para ambos, usamos la verificación completa
-      hasPermissions = await checkCameraAndMicPermissions();
-    }
-    
-    if (hasPermissions) {
-      console.log('Ya tenemos permisos necesarios');
-      return true;
-    }
-    
-    // Si no tenemos permisos, mostramos el diálogo
-    console.log('No tenemos permisos, mostrando diálogo...');
-    setShowPermissionsDialog(true);
-    return false;
-  } catch (error) {
-    console.error('Error al verificar permisos:', error);
-    return false;
-  }
-};
-
-// Función para verificar permisos de micrófono directamente
-export const checkMicrophonePermissions = async (): Promise<boolean> => {
-  try {
-    if (isNativePlatform()) {
-      // En plataformas nativas, asumimos que los permisos se verificarán al usar la función
-      return true;
-    }
-    
-    try {
-      // Intentamos obtener acceso al micrófono y verificar si tenemos permisos
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (stream) {
-        // Si logramos obtener el stream, tenemos permisos
-        // Detenemos el stream inmediatamente después de verificar
-        stopMediaStream(stream);
-        return true;
+      // En plataformas web
+      console.log('Verificando permisos en web');
+      
+      if (setShowDialog) {
+        console.log('Mostrando diálogo de solicitud de permisos');
+        setShowDialog(true);
+        return false; // El diálogo se encargará de actualizar el estado
       }
-    } catch (err) {
-      console.log('No tenemos permisos de micrófono', err);
-      return false;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error al verificar permisos de micrófono:', error);
-    return false;
-  }
-};
-
-// Función para solicitar permisos de micrófono directamente
-export const requestMicrophonePermissions = async (): Promise<boolean> => {
-  try {
-    console.log('Solicitando permisos de micrófono...');
-    
-    if (isNativePlatform()) {
-      // En plataformas nativas, usamos la solicitud de permisos de cámara
-      // ya que el plugin de Camera también maneja permisos de micrófono para video
-      return await requestCameraPermissions();
-    }
-    
-    try {
-      // Intentamos obtener acceso al micrófono para solicitar permisos
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (stream) {
-        // Si logramos obtener el stream, tenemos permisos
-        // Detenemos el stream inmediatamente después de verificar
-        stopMediaStream(stream);
-        console.log('Permisos de micrófono concedidos');
+      
+      try {
+        if (type === 'camera' || type === 'both') {
+          console.log('Solicitando acceso a cámara...');
+          const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          videoStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (type === 'microphone' || type === 'both') {
+          console.log('Solicitando acceso a micrófono...');
+          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        console.log('Todos los permisos concedidos');
         return true;
+      } catch (e) {
+        console.error('Error al solicitar permisos:', e);
+        return false;
       }
-    } catch (err) {
-      console.error('Error al solicitar permisos de micrófono:', err);
-      return false;
     }
-    
-    return false;
-  } catch (error) {
-    console.error('Error general al solicitar permisos de micrófono:', error);
-    return false;
-  }
-};
-
-// Helper para determinar si estamos en plataforma nativa (Capacitor)
-export const isNativePlatform = (): boolean => {
-  try {
-    // @ts-ignore - Capacitor podría no estar definido en todos los entornos
-    return window.Capacitor && window.Capacitor.isNativePlatform();
   } catch (e) {
+    console.error('Error general al solicitar permisos:', e);
     return false;
+  }
+};
+
+export const captureMedia = async (type: 'photo' | 'video'): Promise<Blob | null> => {
+  try {
+    console.log(`Capturando ${type}...`);
+    
+    if (isNativePlatform()) {
+      const { Camera } = await import('@capacitor/camera');
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: 'base64',
+        source: 'CAMERA'
+      });
+      
+      if (image.base64String) {
+        const base64Data = image.base64String;
+        const byteString = atob(base64Data);
+        const mimeType = type === 'photo' ? 'image/jpeg' : 'video/mp4';
+        
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        
+        return new Blob([ab], { type: mimeType });
+      }
+    } else {
+      // Implementación web
+      console.log('Captura de medios no implementada para web');
+    }
+    
+    return null;
+  } catch (e) {
+    console.error(`Error al capturar ${type}:`, e);
+    return null;
   }
 };
