@@ -46,7 +46,7 @@ export const useMediaCapture = () => {
         
         try {
           if (type === 'video') {
-            // Implementación nativa para video usando cordova-plugin-media-capture
+            // Implementación nativa para video
             console.log('Utilizando plugin nativo para grabación de video');
             const { captureVideo } = await import('../composables/useMediaCapture.native');
             const videoFile = await captureVideo();

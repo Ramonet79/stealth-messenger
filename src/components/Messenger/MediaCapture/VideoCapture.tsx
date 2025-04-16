@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Video } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
 import PermissionsRequest from '@/components/PermissionsRequest';
 import { requestMediaPermissions } from '../utils/mediaUtils';
-import { captureVideo } from '@/composables'; 
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 import { useToast } from '@/hooks/use-toast';
 import useMediaCapture from '@/hooks/useMediaCapture';
@@ -50,57 +50,61 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   }, [recording, recordingStartTime]);
 
   useEffect(() => {
-    const setupMedia = async () => {
-      console.log('Configurando stream de video...');
-      const hasPermissions = await requestMediaPermissions('both', setShowPermissionsDialog);
-      console.log('¿Tiene permisos para video?', hasPermissions);
-      
-      if (hasPermissions && !isNativePlatform()) {
-        try {
-          console.log('Solicitando acceso a cámara y micrófono...');
-          const newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
-            audio: true,
-          });
-          console.log('Stream obtenido correctamente');
-          setStream(newStream);
-
-          const newMediaRecorder = new MediaRecorder(newStream, {
-            mimeType: 'video/webm;codecs=vp8,opus',
-          });
-          console.log('MediaRecorder creado con éxito');
-          setMediaRecorder(newMediaRecorder);
-
-          if (videoRef.current) {
-            videoRef.current.srcObject = newStream;
-            console.log('Video preview activado');
-          }
-        } catch (e) {
-          console.error('Error al acceder a la cámara:', e);
-          setError('Error al acceder a la cámara: ' + (e instanceof Error ? e.message : 'Error desconocido'));
-          toast({
-            title: "Error",
-            description: "No se pudo acceder a la cámara",
-            variant: "destructive"
-          });
-        }
+    const initCapture = async () => {
+      if (isNativePlatform()) {
+        // En dispositivos móviles, intentamos iniciar la captura nativa automáticamente
+        handleRecord();
+      } else {
+        // En web, configuramos el stream para la interfaz de grabación
+        setupWebMediaStream();
       }
     };
-
-    if (!isNativePlatform()) {
-      setupMedia();
-    } else {
-      console.log('En plataforma nativa, omitiendo configuración de MediaRecorder web');
-    }
-
+    
+    initCapture();
+    
     return () => {
       if (stream) {
-        console.log('Limpiando stream de video...');
         stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
       }
     };
-  }, [setShowPermissionsDialog]);
+  }, []);
+
+  const setupWebMediaStream = async () => {
+    console.log('Configurando stream de video para web...');
+    const hasPermissions = await requestMediaPermissions('both', setShowPermissionsDialog);
+    console.log('¿Tiene permisos para video?', hasPermissions);
+    
+    if (hasPermissions) {
+      try {
+        console.log('Solicitando acceso a cámara y micrófono...');
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: true,
+        });
+        console.log('Stream obtenido correctamente');
+        setStream(newStream);
+
+        const newMediaRecorder = new MediaRecorder(newStream, {
+          mimeType: 'video/webm;codecs=vp8,opus',
+        });
+        console.log('MediaRecorder creado con éxito');
+        setMediaRecorder(newMediaRecorder);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream;
+          console.log('Video preview activado');
+        }
+      } catch (e) {
+        console.error('Error al acceder a la cámara:', e);
+        setError('Error al acceder a la cámara: ' + (e instanceof Error ? e.message : 'Error desconocido'));
+        toast({
+          title: "Error",
+          description: "No se pudo acceder a la cámara",
+          variant: "destructive"
+        });
+      }
+    }
+  };
 
   const stopRecording = () => {
     console.log('Deteniendo grabación de video...');
@@ -151,7 +155,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         try {
           const videoBlob = await startCapture('video');
           
-          if (videoBlob) {
+          if (videoBlob instanceof File) {
             console.log('Video capturado con éxito:', videoBlob);
             const videoUrl = URL.createObjectURL(videoBlob);
             const durationInSeconds = 10; // Valor por defecto para grabaciones nativas
@@ -161,26 +165,13 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
               description: `Video grabado correctamente`,
             });
           } else {
-            console.log('Intentando fallback a método directo captureVideo');
-            const videoFile = await captureVideo();
-            
-            if (videoFile) {
-              console.log('Video capturado con método fallback:', videoFile);
-              const videoUrl = URL.createObjectURL(videoFile);
-              onCaptureVideo(videoUrl, 10);
-              toast({
-                title: "Video capturado",
-                description: "Video grabado correctamente (método alternativo)",
-              });
-            } else {
-              console.error('No se pudo grabar el video.');
-              setError('No se pudo grabar el video.');
-              toast({
-                title: "Error",
-                description: "No se pudo grabar el video",
-                variant: "destructive"
-              });
-            }
+            console.error('No se pudo grabar el video o no se seleccionó ninguno.');
+            setError('No se pudo grabar el video o el usuario canceló la operación.');
+            toast({
+              title: "Error",
+              description: "No se pudo grabar el video",
+              variant: "destructive"
+            });
           }
         } catch (err) {
           console.error('Error al grabar video nativo:', err);
@@ -192,6 +183,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
           });
         }
         setRecording(false);
+        onCancel(); // Cerramos la interfaz después de intentar grabar con la API nativa
       } else {
         if (!stream || !mediaRecorder) {
           console.error('Cámara no inicializada correctamente.');
@@ -237,6 +229,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
                 title: "Permisos concedidos",
                 description: "Ahora puedes grabar video",
               });
+              setupWebMediaStream();
             }
           }}
           permissionType="both"
@@ -277,7 +270,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
             {isNativePlatform() && !recording && (
               <div className="text-white text-center">
                 <Video size={64} className="mx-auto mb-6 text-blue-500" />
-                <p className="mb-4">Presiona el botón para grabar video</p>
+                <p className="mb-4">Preparando la grabación de video...</p>
               </div>
             )}
             
@@ -291,23 +284,25 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
         )}
       </div>
       
-      <div className="bg-black p-4 flex justify-center">
-        {recording ? (
-          <button
-            onClick={stopRecording}
-            className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center animate-pulse"
-          >
-            <div className="w-8 h-8 bg-white rounded-sm"></div>
-          </button>
-        ) : (
-          <button
-            onClick={handleRecord}
-            className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
-          >
-            <div className="w-14 h-14 rounded-full border-4 border-black"></div>
-          </button>
-        )}
-      </div>
+      {!isNativePlatform() && (
+        <div className="bg-black p-4 flex justify-center">
+          {recording ? (
+            <button
+              onClick={stopRecording}
+              className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center animate-pulse"
+            >
+              <div className="w-8 h-8 bg-white rounded-sm"></div>
+            </button>
+          ) : (
+            <button
+              onClick={handleRecord}
+              className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
+            >
+              <div className="w-14 h-14 rounded-full border-4 border-black"></div>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

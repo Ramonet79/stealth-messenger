@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { SendHorizontal, Mic, Camera, Video, Smile } from 'lucide-react';
 import EmojiKeyboard from './EmojiKeyboard';
@@ -87,17 +88,19 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
         console.log(`Resultado de captura de ${type}:`, result);
         
         if (result) {
-          if (type === 'image' && typeof result === 'object') {
+          if (type === 'image' && result instanceof File) {
             const url = URL.createObjectURL(result);
             handleCaptureImage(url);
-          } else if (type === 'video' && typeof result === 'object') {
+          } else if (type === 'video' && result instanceof File) {
             const url = URL.createObjectURL(result);
             handleCaptureVideo(url, 10); // Duración estimada
           } else if (type === 'audio' && result === true) {
             // La captura de audio se maneja de manera asíncrona
             console.log('Captura de audio iniciada, esperando finalización');
           } else {
-            console.log('Modo de captura no reconocido');
+            console.log('El resultado de la captura no es del tipo esperado');
+            // Si no se pudo capturar directamente, mostramos la interfaz normal
+            setCaptureMode(type);
           }
         } else {
           // Si no se pudo capturar directamente, mostramos la interfaz normal

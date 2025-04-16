@@ -43,64 +43,78 @@ export async function capturePhoto(): Promise<File | null> {
 
 export async function captureVideo(): Promise<File | null> {
   await requestMediaPermissions();
-  try {
-    console.log('Intentando capturar video con plugin de Cordova');
-    
-    // Intentamos usar el plugin de Cordova para captura de video
-    if (window.navigator && window.navigator.device && window.navigator.device.capture) {
-      return new Promise((resolve, reject) => {
-        window.navigator.device.capture.captureVideo(
-          (mediaFiles) => {
-            console.log('Video capturado con éxito:', mediaFiles);
-            if (mediaFiles && mediaFiles.length > 0) {
-              const videoPath = mediaFiles[0].fullPath;
-              fetch(videoPath)
-                .then(response => response.blob())
-                .then(blob => {
-                  const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
-                  resolve(videoFile);
-                })
-                .catch(error => {
-                  console.error('Error al procesar archivo de video:', error);
-                  reject(error);
-                });
-            } else {
-              console.log('No se seleccionó ningún video');
-              resolve(null);
-            }
-          },
-          (error) => {
-            console.error('Error al capturar video con plugin Cordova:', error);
-            reject(error);
-          },
-          { limit: 1, duration: 30, quality: 1 }
-        );
-      });
-    } else {
-      // Fallback al método Camera.getPhoto con opciones específicas para video
-      console.log('Plugin de captura no disponible, intentando con Camera API');
-      const video = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        // Intentamos forzar el modo de video
-        saveToGallery: true,
-        presentationStyle: 'fullscreen',
-        promptLabelHeader: 'Capturar Video',
-        promptLabelPicture: 'Grabar Video',
-        webUseInput: true,
-      });
+  
+  // Primero verificamos si estamos en una plataforma nativa
+  if (!Capacitor.isNativePlatform()) {
+    console.error('La captura de video nativa solo está disponible en dispositivos móviles');
+    return null;
+  }
 
-      if (video?.webPath) {
-        const response = await fetch(video.webPath);
+  try {
+    console.log('Usando Camera.pickVideo para capturar video');
+    // Utilizamos el método pickVideo que permite al usuario seleccionar o grabar un video
+    const result = await Camera.pickVideo({
+      quality: 90,
+    });
+    
+    console.log('Resultado de pickVideo:', result);
+    
+    if (result?.path || result?.webPath) {
+      const videoPath = result.path || result.webPath;
+      console.log('Video capturado en:', videoPath);
+      
+      try {
+        const response = await fetch(videoPath);
         const blob = await response.blob();
         return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+      } catch (fetchError) {
+        console.error('Error al procesar el archivo de video:', fetchError);
+        return null;
       }
+    } else {
+      console.log('No se recibió un video válido');
+      return null;
     }
-    return null;
   } catch (err) {
-    console.error('Error al grabar video:', err);
+    console.error('Error al capturar video:', err);
+    
+    // Intento fallback con el plugin Cordova
+    try {
+      console.log('Intentando captura de video con plugin Cordova');
+      if (window.navigator && window.navigator.device && window.navigator.device.capture) {
+        return new Promise((resolve, reject) => {
+          window.navigator.device.capture.captureVideo(
+            (mediaFiles) => {
+              console.log('Video capturado con plugin Cordova:', mediaFiles);
+              if (mediaFiles && mediaFiles.length > 0) {
+                const videoPath = mediaFiles[0].fullPath;
+                fetch(videoPath)
+                  .then(response => response.blob())
+                  .then(blob => {
+                    const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+                    resolve(videoFile);
+                  })
+                  .catch(error => {
+                    console.error('Error al procesar archivo de video:', error);
+                    reject(error);
+                  });
+              } else {
+                console.log('No se seleccionó ningún video');
+                resolve(null);
+              }
+            },
+            (error) => {
+              console.error('Error al capturar video con plugin Cordova:', error);
+              reject(error);
+            },
+            { limit: 1, duration: 30, quality: 1 }
+          );
+        });
+      }
+    } catch (cordovaError) {
+      console.error('Error con el plugin Cordova:', cordovaError);
+    }
+    
     return null;
   }
 }
