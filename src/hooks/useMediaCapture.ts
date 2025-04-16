@@ -1,7 +1,7 @@
 
 // Web implementation fallback
 export const useMediaCapture = () => {
-  const startCapture = async (type = 'image') => {
+  const startCapture = async (type = 'media') => {
     try {
       console.log(`Starting media capture (${type}) on web platform`);
       alert('This feature is designed for native mobile platforms. Some capabilities may be limited on web.');

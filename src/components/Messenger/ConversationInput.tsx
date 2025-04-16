@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { SendHorizontal, Mic, Camera, Video, Smile } from 'lucide-react';
+import { SendHorizontal, Mic, Camera, Smile } from 'lucide-react';
 import EmojiKeyboard from './EmojiKeyboard';
 import { MediaCaptureMode } from './types';
 import ImageCapture from './MediaCapture/ImageCapture';
@@ -71,47 +71,47 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     setCaptureMode(null);
   };
 
-  const handleMediaButton = async (type: MediaCaptureMode) => {
-    console.log(`Botón de ${type} pulsado`);
+  const handleUnifiedMediaCapture = async () => {
+    console.log('Botón de captura unificada pulsado');
     
-    // Para plataformas nativas, intentamos usar directamente el startCapture
-    if (isNativePlatform() && type === 'video') {
+    if (isNativePlatform()) {
       try {
-        console.log(`Iniciando captura directa de ${type}`);
+        console.log('Iniciando captura multimedia unificada nativa');
         toast({
           title: "Iniciando cámara",
-          description: `Preparando captura de ${type}...`,
+          description: "Preparando captura multimedia...",
         });
         
-        // Capturamos el video directamente con la API nativa
-        const result = await startCapture(type);
-        console.log(`Resultado de captura de ${type}:`, result);
+        // Utilizamos el nuevo tipo 'media' para captura unificada
+        const result = await startCapture('media');
+        console.log('Resultado de captura multimedia:', result);
         
         if (result && result instanceof File) {
           const url = URL.createObjectURL(result);
-          console.log(`URL creada para ${type}:`, url);
+          console.log('URL creada para archivo multimedia:', url);
           
-          if (type === 'video') {
-            // Estimamos 10 segundos como duración predeterminada
+          // Determinamos si es una imagen o un video basándonos en el tipo MIME
+          if (result.type.startsWith('video/')) {
+            // Para video, estimamos 10 segundos como duración predeterminada
             handleCaptureVideo(url, 10);
+          } else if (result.type.startsWith('image/')) {
+            // Para imagen
+            handleCaptureImage(url);
           } else {
-            console.log('Tipo de archivo no reconocido');
-            setCaptureMode(type);
+            console.log('Tipo de archivo no reconocido:', result.type);
           }
         } else {
-          // Si no se pudo capturar directamente, mostramos la interfaz normal
-          console.log('Fallback a interfaz de captura estándar');
-          setCaptureMode(type);
+          console.log('No se recibió archivo o el usuario canceló la operación');
         }
       } catch (error) {
-        console.error(`Error en captura directa de ${type}:`, error);
-        // Si hay error, mostramos la interfaz normal como fallback
-        setCaptureMode(type);
+        console.error('Error en captura multimedia unificada:', error);
+        // Si hay error en la captura nativa, mostramos la interfaz de imagen como fallback
+        setCaptureMode('image');
       }
     } else {
-      // En otros casos, mostramos la interfaz de captura estándar
-      console.log('Usando interfaz estándar para captura');
-      setCaptureMode(type);
+      // En web, mostramos la interfaz estándar de captura de imagen
+      console.log('Usando interfaz estándar para captura de imagen en web');
+      setCaptureMode('image');
     }
   };
 
@@ -141,20 +141,11 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
       <form onSubmit={handleSendMessage} className="p-3 bg-white border-t flex items-center">
         <button
           type="button"
-          onClick={() => handleMediaButton('image')}
+          onClick={handleUnifiedMediaCapture}
           className="p-2 rounded-full text-gray-500 hover:bg-gray-100 mr-1"
-          aria-label="Enviar imagen"
+          aria-label="Enviar foto o video"
         >
           <Camera size={22} />
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => handleMediaButton('video')}
-          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 mr-1"
-          aria-label="Enviar video"
-        >
-          <Video size={22} />
         </button>
         
         <div className="flex-1 relative">

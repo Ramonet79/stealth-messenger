@@ -1,4 +1,3 @@
-
 export interface Contact {
   id: string;
   name: string;
@@ -33,7 +32,7 @@ export interface Request {
 
 export type AppView = 'list' | 'conversation' | 'new' | 'requests' | 'settings' | 'directory' | 'contactLock';
 
-export type MediaCaptureMode = 'image' | 'audio' | 'video' | null;
+export type MediaCaptureMode = 'image' | 'audio' | 'video' | 'media' | null;
 
 export interface PrivacyNoticeState {
   hasSeenMediaPrivacyNotice: boolean;

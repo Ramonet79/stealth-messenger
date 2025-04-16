@@ -30,7 +30,7 @@ export const useMediaCapture = () => {
     }
   };
 
-  const startCapture = async (type = 'image') => {
+  const startCapture = async (type = 'media') => {
     try {
       console.log(`Iniciando captura de ${type}...`);
       const hasPermissions = await requestPermissions();
@@ -42,36 +42,70 @@ export const useMediaCapture = () => {
       }
       
       if (Capacitor.isNativePlatform()) {
-        console.log(`Ejecutando captura de ${type} en plataforma nativa`);
+        console.log(`Ejecutando captura nativa unificada`);
         
         try {
-          if (type === 'video') {
-            // Implementación nativa para video
-            console.log('Utilizando captureVideo desde composables/useMediaCapture.native');
-            const { captureVideo } = await import('../composables/useMediaCapture.native');
-            const videoFile = await captureVideo();
-            console.log('Video capturado con plugin nativo:', videoFile);
-            return videoFile;
-          } else if (type === 'audio') {
-            // Implementación nativa para audio
-            console.log('Utilizando plugin nativo para grabación de audio');
-            const { startAudioRecording, stopAudioRecording } = await import('../composables/useMediaCapture.native');
-            await startAudioRecording();
-            // Aquí podríamos necesitar una manera de saber cuándo detener la grabación
-            // por ahora retornamos true para indicar que se inició correctamente
-            return true;
-          } else {
-            // Implementación nativa de imagen por defecto
+          // Si el tipo es media, usamos la interfaz nativa completa que permite elegir entre foto y video
+          if (type === 'media') {
+            // La mejor opción es utilizar pickVideo que abre la interfaz completa de la cámara
+            // donde el usuario puede elegir entre foto y video (como WhatsApp)
+            console.log('Utilizando Camera.pickVideo para interfaz unificada foto/video');
+            const result = await Camera.pickVideo({
+              quality: 90,
+              // No establecemos saveToGallery para que el usuario decida si guardar
+            });
+            
+            console.log('Resultado de captura unificada:', result);
+            
+            if (result?.path || result?.webPath) {
+              const mediaPath = result.path || result.webPath;
+              console.log('Archivo capturado correctamente en:', mediaPath);
+              
+              try {
+                console.log('Procesando archivo multimedia capturado...');
+                const response = await fetch(mediaPath);
+                const blob = await response.blob();
+                
+                // Determinamos si es video o imagen basándonos en el tipo MIME
+                const isVideo = blob.type.startsWith('video/');
+                const extension = isVideo ? '.mp4' : '.jpg';
+                const mediaType = isVideo ? 'video/mp4' : 'image/jpeg';
+                const filePrefix = isVideo ? 'video' : 'photo';
+                
+                const mediaFile = new File(
+                  [blob], 
+                  `${filePrefix}_${Date.now()}${extension}`, 
+                  { type: mediaType }
+                );
+                
+                console.log(`Archivo ${isVideo ? 'video' : 'foto'} procesado exitosamente, tamaño:`, mediaFile.size, 'bytes');
+                return mediaFile;
+              } catch (fetchError) {
+                console.error('Error al procesar el archivo multimedia:', fetchError);
+                return null;
+              }
+            } else {
+              console.log('No se recibió un archivo válido o el usuario canceló la captura');
+              return null;
+            }
+          } else if (type === 'image') {
+            // Mantener el comportamiento actual para captura específica de imágenes
             console.log('Utilizando capturePhoto desde composables/useMediaCapture.native');
             const { capturePhoto } = await import('../composables/useMediaCapture.native');
             console.log('Tomando foto nativa...');
             const photoFile = await capturePhoto();
             console.log('Foto capturada:', photoFile);
             return photoFile;
+          } else if (type === 'audio') {
+            // Mantener el comportamiento actual para audio
+            console.log('Utilizando plugin nativo para grabación de audio');
+            const { startAudioRecording, stopAudioRecording } = await import('../composables/useMediaCapture.native');
+            await startAudioRecording();
+            return true;
           }
         } catch (error) {
-          console.error(`Error al iniciar captura de ${type}:`, error);
-          alert(`Error al iniciar captura de ${type}: ${error.message || 'Error desconocido'}`);
+          console.error(`Error al iniciar captura unificada:`, error);
+          alert(`Error al iniciar captura: ${error.message || 'Error desconocido'}`);
           return null;
         }
       } else {
@@ -80,8 +114,8 @@ export const useMediaCapture = () => {
         return null;
       }
     } catch (error) {
-      console.error(`Error al iniciar captura de ${type}:`, error);
-      alert(`Error al iniciar captura de ${type}: ${error.message || 'Error desconocido'}`);
+      console.error(`Error al iniciar captura:`, error);
+      alert(`Error al iniciar captura: ${error.message || 'Error desconocido'}`);
       return null;
     }
   };
