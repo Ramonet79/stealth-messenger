@@ -115,6 +115,11 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     }
   };
 
+  const handleAudioCapture = () => {
+    console.log('Iniciando captura de audio');
+    setCaptureMode('audio');
+  };
+
   return (
     <div>
       {captureMode === 'image' && (
@@ -178,7 +183,7 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
         ) : (
           <button
             type="button"
-            onClick={() => handleMediaButton('audio')}
+            onClick={handleAudioCapture}
             className="ml-2 p-2 bg-messenger-primary text-white rounded-full hover:bg-messenger-secondary transition-colors"
             aria-label="Grabar audio"
           >
