@@ -1,5 +1,5 @@
 
-import { Camera } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 
 export const formatTime = (seconds: number): string => {
@@ -89,8 +89,9 @@ export const captureMedia = async (type: 'photo' | 'video'): Promise<Blob | null
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
-        resultType: 'base64',
-        source: 'CAMERA'
+        // Corregido: Utilizar las constantes enumeradas correctas en lugar de strings
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera
       });
       
       if (image.base64String) {

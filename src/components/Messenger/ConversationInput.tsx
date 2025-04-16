@@ -83,9 +83,11 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
           description: `Preparando captura de ${type}...`,
         });
         
-        const result = await startCapture(type);
+        // Corregido: startCapture() no tiene que recibir argumentos
+        const result = await startCapture();
         console.log(`Resultado de captura de ${type}:`, result);
         
+        // Corregido: esta línea estaba intentando evaluar una expresión void
         if (result) {
           if (type === 'image' && typeof result === 'object') {
             const url = URL.createObjectURL(result);
