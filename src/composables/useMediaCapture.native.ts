@@ -51,39 +51,43 @@ export async function captureVideo(): Promise<File | null> {
   }
 
   try {
-    console.log('Usando Camera.pickVideo para capturar video');
+    console.log('🎥 Iniciando Camera.pickVideo para captura de video nativa');
     // Utilizamos el método pickVideo que permite al usuario seleccionar o grabar un video
     const result = await Camera.pickVideo({
       quality: 90,
+      // No establecemos saveToGallery para que funcione como WhatsApp (el usuario decide si guardar)
     });
     
     console.log('Resultado de pickVideo:', result);
     
     if (result?.path || result?.webPath) {
       const videoPath = result.path || result.webPath;
-      console.log('Video capturado en:', videoPath);
+      console.log('Video capturado correctamente en:', videoPath);
       
       try {
+        console.log('Procesando archivo de video capturado...');
         const response = await fetch(videoPath);
         const blob = await response.blob();
-        return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+        const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+        console.log('Video procesado exitosamente, tamaño:', videoFile.size, 'bytes');
+        return videoFile;
       } catch (fetchError) {
         console.error('Error al procesar el archivo de video:', fetchError);
         return null;
       }
     } else {
-      console.log('No se recibió un video válido');
+      console.log('No se recibió un video válido o el usuario canceló la captura');
       return null;
     }
   } catch (err) {
-    console.error('Error al capturar video:', err);
+    console.error('Error al capturar video con Camera.pickVideo:', err);
     
     // Intento fallback con el plugin Cordova
     try {
-      console.log('Intentando captura de video con plugin Cordova');
-      if (window.navigator && window.navigator.device && window.navigator.device.capture) {
+      console.log('Intentando captura de video con plugin Cordova (fallback)');
+      if (window.navigator && window.navigator.device?.capture) {
         return new Promise((resolve, reject) => {
-          window.navigator.device.capture.captureVideo(
+          window.navigator.device?.capture?.captureVideo(
             (mediaFiles) => {
               console.log('Video capturado con plugin Cordova:', mediaFiles);
               if (mediaFiles && mediaFiles.length > 0) {
@@ -92,14 +96,15 @@ export async function captureVideo(): Promise<File | null> {
                   .then(response => response.blob())
                   .then(blob => {
                     const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+                    console.log('Video Cordova procesado exitosamente');
                     resolve(videoFile);
                   })
                   .catch(error => {
-                    console.error('Error al procesar archivo de video:', error);
+                    console.error('Error al procesar archivo de video Cordova:', error);
                     reject(error);
                   });
               } else {
-                console.log('No se seleccionó ningún video');
+                console.log('No se seleccionó ningún video en Cordova');
                 resolve(null);
               }
             },
@@ -110,12 +115,14 @@ export async function captureVideo(): Promise<File | null> {
             { limit: 1, duration: 30, quality: 1 }
           );
         });
+      } else {
+        console.error('Plugin Cordova no disponible');
+        return null;
       }
     } catch (cordovaError) {
       console.error('Error con el plugin Cordova:', cordovaError);
+      return null;
     }
-    
-    return null;
   }
 }
 

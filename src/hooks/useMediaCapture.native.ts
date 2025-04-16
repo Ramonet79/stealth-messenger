@@ -47,7 +47,7 @@ export const useMediaCapture = () => {
         try {
           if (type === 'video') {
             // Implementación nativa para video
-            console.log('Utilizando plugin nativo para grabación de video');
+            console.log('Utilizando captureVideo desde composables/useMediaCapture.native');
             const { captureVideo } = await import('../composables/useMediaCapture.native');
             const videoFile = await captureVideo();
             console.log('Video capturado con plugin nativo:', videoFile);
@@ -62,6 +62,7 @@ export const useMediaCapture = () => {
             return true;
           } else {
             // Implementación nativa de imagen por defecto
+            console.log('Utilizando capturePhoto desde composables/useMediaCapture.native');
             const { capturePhoto } = await import('../composables/useMediaCapture.native');
             console.log('Tomando foto nativa...');
             const photoFile = await capturePhoto();

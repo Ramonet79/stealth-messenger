@@ -75,31 +75,27 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     console.log(`Botón de ${type} pulsado`);
     
     // Para plataformas nativas, intentamos usar directamente el startCapture
-    if (isNativePlatform()) {
+    if (isNativePlatform() && type === 'video') {
       try {
         console.log(`Iniciando captura directa de ${type}`);
         toast({
-          title: "Iniciando captura",
+          title: "Iniciando cámara",
           description: `Preparando captura de ${type}...`,
         });
         
-        // Pasamos el tipo de medio a la función startCapture
+        // Capturamos el video directamente con la API nativa
         const result = await startCapture(type);
         console.log(`Resultado de captura de ${type}:`, result);
         
-        if (result) {
-          if (type === 'image' && result instanceof File) {
-            const url = URL.createObjectURL(result);
-            handleCaptureImage(url);
-          } else if (type === 'video' && result instanceof File) {
-            const url = URL.createObjectURL(result);
-            handleCaptureVideo(url, 10); // Duración estimada
-          } else if (type === 'audio' && result === true) {
-            // La captura de audio se maneja de manera asíncrona
-            console.log('Captura de audio iniciada, esperando finalización');
+        if (result && result instanceof File) {
+          const url = URL.createObjectURL(result);
+          console.log(`URL creada para ${type}:`, url);
+          
+          if (type === 'video') {
+            // Estimamos 10 segundos como duración predeterminada
+            handleCaptureVideo(url, 10);
           } else {
-            console.log('El resultado de la captura no es del tipo esperado');
-            // Si no se pudo capturar directamente, mostramos la interfaz normal
+            console.log('Tipo de archivo no reconocido');
             setCaptureMode(type);
           }
         } else {
@@ -113,8 +109,8 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
         setCaptureMode(type);
       }
     } else {
-      // En web simplemente mostramos la interfaz de captura
-      console.log('Usando interfaz estándar para captura en web');
+      // En otros casos, mostramos la interfaz de captura estándar
+      console.log('Usando interfaz estándar para captura');
       setCaptureMode(type);
     }
   };

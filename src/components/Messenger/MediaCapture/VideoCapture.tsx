@@ -27,6 +27,26 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   const { startCapture } = useMediaCapture();
 
   useEffect(() => {
+    const initCapture = async () => {
+      if (isNativePlatform()) {
+        console.log('Iniciando captura nativa de video');
+        handleRecord();
+      } else {
+        console.log('Configurando interfaz web para grabación de video');
+        await setupWebMediaStream();
+      }
+    };
+    
+    initCapture();
+    
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     let timerId: NodeJS.Timeout | null = null;
 
     if (recording && recordingStartTime) {
@@ -49,26 +69,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     };
   }, [recording, recordingStartTime]);
 
-  useEffect(() => {
-    const initCapture = async () => {
-      if (isNativePlatform()) {
-        // En dispositivos móviles, intentamos iniciar la captura nativa automáticamente
-        handleRecord();
-      } else {
-        // En web, configuramos el stream para la interfaz de grabación
-        setupWebMediaStream();
-      }
-    };
-    
-    initCapture();
-    
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
   const setupWebMediaStream = async () => {
     console.log('Configurando stream de video para web...');
     const hasPermissions = await requestMediaPermissions('both', setShowPermissionsDialog);
@@ -88,6 +88,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
           mimeType: 'video/webm;codecs=vp8,opus',
         });
         console.log('MediaRecorder creado con éxito');
+        newMediaRecorder.ondataavailable = handleDataAvailable;
         setMediaRecorder(newMediaRecorder);
 
         if (videoRef.current) {
@@ -143,8 +144,8 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     try {
       console.log('🎥 Iniciando grabación de video...');
       toast({
-        title: "Grabación iniciada",
-        description: "Grabando video...",
+        title: "Iniciando captura",
+        description: "Preparando cámara de video...",
       });
       
       setRecording(true);
@@ -153,6 +154,7 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       if (isNativePlatform()) {
         console.log('Usando API nativa para captura de video');
         try {
+          console.log('Llamando a startCapture("video")');
           const videoBlob = await startCapture('video');
           
           if (videoBlob instanceof File) {
@@ -165,12 +167,11 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
               description: `Video grabado correctamente`,
             });
           } else {
-            console.error('No se pudo grabar el video o no se seleccionó ninguno.');
+            console.log('No se recibió un video o el usuario canceló la operación');
             setError('No se pudo grabar el video o el usuario canceló la operación.');
             toast({
-              title: "Error",
-              description: "No se pudo grabar el video",
-              variant: "destructive"
+              title: "Información",
+              description: "Captura de video cancelada",
             });
           }
         } catch (err) {
@@ -192,9 +193,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
           return;
         }
 
-        console.log('Configurando manejador de datos para MediaRecorder web');
-        mediaRecorder.ondataavailable = handleDataAvailable;
-        
         console.log('Iniciando grabación web...');
         mediaRecorder.start();
       }

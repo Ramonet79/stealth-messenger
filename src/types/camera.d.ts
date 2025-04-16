@@ -11,6 +11,7 @@ declare module '@capacitor/camera' {
       webPath?: string;
       format?: string;
       saved?: boolean;
+      duration?: number;
     }>;
   }
 }
