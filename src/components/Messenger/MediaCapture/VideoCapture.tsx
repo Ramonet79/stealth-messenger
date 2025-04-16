@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Video } from 'lucide-react';
 import { AlertWithClose } from '@/components/ui/alert-with-close';
@@ -7,6 +6,7 @@ import { requestMediaPermissions } from '../utils/mediaUtils';
 import { captureVideo } from '@/composables'; 
 import { isNativePlatform } from '@/services/PermissionsHandlerNative';
 import { useToast } from '@/hooks/use-toast';
+import useMediaCapture from '@/hooks/useMediaCapture';
 
 interface VideoCaptureProps {
   onCaptureVideo: (videoUrl: string, duration: number) => void;
@@ -24,8 +24,8 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
   const [elapsedTime, setElapsedTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
+  const { startCapture } = useMediaCapture();
 
-  // Efecto para actualizar el tiempo transcurrido durante la grabación
   useEffect(() => {
     let timerId: NodeJS.Timeout | null = null;
 
@@ -49,7 +49,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     };
   }, [recording, recordingStartTime]);
 
-  // Efecto para configurar el stream de video
   useEffect(() => {
     const setupMedia = async () => {
       console.log('Configurando stream de video...');
@@ -91,7 +90,6 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
     if (!isNativePlatform()) {
       setupMedia();
     } else {
-      // En plataformas nativas no necesitamos configurar el MediaRecorder
       console.log('En plataforma nativa, omitiendo configuración de MediaRecorder web');
     }
 
@@ -151,7 +149,8 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
       if (isNativePlatform()) {
         console.log('Usando API nativa para captura de video');
         try {
-          const videoBlob = await captureVideo();
+          const videoBlob = await startCapture('video');
+          
           if (videoBlob) {
             console.log('Video capturado con éxito:', videoBlob);
             const videoUrl = URL.createObjectURL(videoBlob);
@@ -162,13 +161,26 @@ const VideoCapture: React.FC<VideoCaptureProps> = ({ onCaptureVideo, onCancel })
               description: `Video grabado correctamente`,
             });
           } else {
-            console.error('No se pudo grabar el video.');
-            setError('No se pudo grabar el video.');
-            toast({
-              title: "Error",
-              description: "No se pudo grabar el video",
-              variant: "destructive"
-            });
+            console.log('Intentando fallback a método directo captureVideo');
+            const videoFile = await captureVideo();
+            
+            if (videoFile) {
+              console.log('Video capturado con método fallback:', videoFile);
+              const videoUrl = URL.createObjectURL(videoFile);
+              onCaptureVideo(videoUrl, 10);
+              toast({
+                title: "Video capturado",
+                description: "Video grabado correctamente (método alternativo)",
+              });
+            } else {
+              console.error('No se pudo grabar el video.');
+              setError('No se pudo grabar el video.');
+              toast({
+                title: "Error",
+                description: "No se pudo grabar el video",
+                variant: "destructive"
+              });
+            }
           }
         } catch (err) {
           console.error('Error al grabar video nativo:', err);

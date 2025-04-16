@@ -29,17 +29,59 @@ export async function capturePhoto(): Promise<File | null> {
 export async function captureVideo(): Promise<File | null> {
   await requestMediaPermissions();
   try {
-    const video = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: false,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera,
-    });
+    console.log('Intentando capturar video con plugin de Cordova');
+    
+    // Intentamos usar el plugin de Cordova para captura de video
+    if (window.navigator && window.navigator.device && window.navigator.device.capture) {
+      return new Promise((resolve, reject) => {
+        window.navigator.device.capture.captureVideo(
+          (mediaFiles) => {
+            console.log('Video capturado con éxito:', mediaFiles);
+            if (mediaFiles && mediaFiles.length > 0) {
+              const videoPath = mediaFiles[0].fullPath;
+              fetch(videoPath)
+                .then(response => response.blob())
+                .then(blob => {
+                  const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+                  resolve(videoFile);
+                })
+                .catch(error => {
+                  console.error('Error al procesar archivo de video:', error);
+                  reject(error);
+                });
+            } else {
+              console.log('No se seleccionó ningún video');
+              resolve(null);
+            }
+          },
+          (error) => {
+            console.error('Error al capturar video con plugin Cordova:', error);
+            reject(error);
+          },
+          { limit: 1, duration: 30, quality: 1 }
+        );
+      });
+    } else {
+      // Fallback al método Camera.getPhoto con opciones específicas para video
+      console.log('Plugin de captura no disponible, intentando con Camera API');
+      const video = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        // Intentamos forzar el modo de video
+        saveToGallery: true,
+        presentationStyle: 'fullscreen',
+        promptLabelHeader: 'Capturar Video',
+        promptLabelPicture: 'Grabar Video',
+        webUseInput: true,
+      });
 
-    if (video?.webPath) {
-      const response = await fetch(video.webPath);
-      const blob = await response.blob();
-      return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+      if (video?.webPath) {
+        const response = await fetch(video.webPath);
+        const blob = await response.blob();
+        return new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+      }
     }
     return null;
   } catch (err) {

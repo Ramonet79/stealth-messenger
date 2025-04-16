@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { SendHorizontal, Mic, Camera, Video, Smile } from 'lucide-react';
 import EmojiKeyboard from './EmojiKeyboard';
@@ -83,11 +82,10 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
           description: `Preparando captura de ${type}...`,
         });
         
-        // Corregido: startCapture() no tiene que recibir argumentos
-        const result = await startCapture();
+        // Pasamos el tipo de medio a la función startCapture
+        const result = await startCapture(type);
         console.log(`Resultado de captura de ${type}:`, result);
         
-        // Corregido: esta línea estaba intentando evaluar una expresión void
         if (result) {
           if (type === 'image' && typeof result === 'object') {
             const url = URL.createObjectURL(result);

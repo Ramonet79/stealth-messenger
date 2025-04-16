@@ -30,10 +30,9 @@ export const useMediaCapture = () => {
     }
   };
 
-  // Corregido: La función startCapture no debe tener parámetros para satisfacer el error TS2554
-  const startCapture = async () => {
+  const startCapture = async (type = 'image') => {
     try {
-      console.log('Iniciando captura...');
+      console.log(`Iniciando captura de ${type}...`);
       const hasPermissions = await requestPermissions();
       
       if (!hasPermissions) {
@@ -43,28 +42,45 @@ export const useMediaCapture = () => {
       }
       
       if (Capacitor.isNativePlatform()) {
-        console.log('Ejecutando captura en plataforma nativa');
-        // En plataformas nativas, usaremos las implementaciones específicas
+        console.log(`Ejecutando captura de ${type} en plataforma nativa`);
+        
         try {
-          // Implementación nativa de imagen por defecto
-          const { capturePhoto } = await import('../composables/useMediaCapture.native');
-          console.log('Tomando foto nativa...');
-          const photoFile = await capturePhoto();
-          console.log('Foto capturada:', photoFile);
-          return photoFile;
+          if (type === 'video') {
+            // Implementación nativa para video usando cordova-plugin-media-capture
+            console.log('Utilizando plugin nativo para grabación de video');
+            const { captureVideo } = await import('../composables/useMediaCapture.native');
+            const videoFile = await captureVideo();
+            console.log('Video capturado con plugin nativo:', videoFile);
+            return videoFile;
+          } else if (type === 'audio') {
+            // Implementación nativa para audio
+            console.log('Utilizando plugin nativo para grabación de audio');
+            const { startAudioRecording, stopAudioRecording } = await import('../composables/useMediaCapture.native');
+            await startAudioRecording();
+            // Aquí podríamos necesitar una manera de saber cuándo detener la grabación
+            // por ahora retornamos true para indicar que se inició correctamente
+            return true;
+          } else {
+            // Implementación nativa de imagen por defecto
+            const { capturePhoto } = await import('../composables/useMediaCapture.native');
+            console.log('Tomando foto nativa...');
+            const photoFile = await capturePhoto();
+            console.log('Foto capturada:', photoFile);
+            return photoFile;
+          }
         } catch (error) {
-          console.error('Error al iniciar captura:', error);
-          alert(`Error al iniciar captura: ${error.message || 'Error desconocido'}`);
+          console.error(`Error al iniciar captura de ${type}:`, error);
+          alert(`Error al iniciar captura de ${type}: ${error.message || 'Error desconocido'}`);
           return null;
         }
       } else {
-        console.log('Media capture not available on web platform');
-        alert('La captura solo está disponible en plataformas nativas');
+        console.log(`Media capture (${type}) not available on web platform`);
+        alert(`La captura de ${type} solo está disponible en plataformas nativas`);
         return null;
       }
     } catch (error) {
-      console.error('Error al iniciar captura:', error);
-      alert(`Error al iniciar captura: ${error.message || 'Error desconocido'}`);
+      console.error(`Error al iniciar captura de ${type}:`, error);
+      alert(`Error al iniciar captura de ${type}: ${error.message || 'Error desconocido'}`);
       return null;
     }
   };
