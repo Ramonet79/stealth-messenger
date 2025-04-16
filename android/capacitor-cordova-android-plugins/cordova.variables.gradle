@@ -1,0 +1,18 @@
+// Variables used by the Cordova plugins
+ext {
+    // Versiones de dependencias para plugins de Cordova
+    cordovaAndroidVersion = '10.1.1'
+
+    // Configuraciones de compilación
+    minSdkVersion = 23
+    compileSdkVersion = 35
+    targetSdkVersion = 35
+
+    // Configuración para Java 17
+    javaSourceCompatibility = JavaVersion.VERSION_17
+    javaTargetCompatibility = JavaVersion.VERSION_17
+    kotlinJvmTarget = '17'
+
+    // Otras dependencias relevantes
+    androidXWebkitVersion = '1.12.1'
+}
