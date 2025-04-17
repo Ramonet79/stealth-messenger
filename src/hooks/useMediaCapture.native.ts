@@ -2,22 +2,25 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// First, let's clean up any existing declaration to avoid conflicts
+// Definimos una interfaz clara para el objeto capture
+interface MediaCapturePlugin {
+  captureVideo: (
+    success: (mediaFiles: any[]) => void,
+    error: (error: any) => void,
+    options?: { limit?: number; duration?: number; quality?: number }
+  ) => void;
+  captureImage: (
+    success: (mediaFiles: any[]) => void,
+    error: (error: any) => void,
+    options?: { limit?: number }
+  ) => void;
+}
+
+// Declaramos la extensión de Navigator para incluir el objeto device
 declare global {
   interface Navigator {
     device?: {
-      capture?: {
-        captureVideo: (
-          success: (mediaFiles: any[]) => void,
-          error: (error: any) => void,
-          options?: { limit?: number; duration?: number; quality?: number }
-        ) => void;
-        captureImage: (
-          success: (mediaFiles: any[]) => void,
-          error: (error: any) => void,
-          options?: { limit?: number }
-        ) => void;
-      };
+      capture?: MediaCapturePlugin;
     };
   }
 }
@@ -72,91 +75,101 @@ export const useMediaCapture = () => {
             return new Promise((resolve, reject) => {
               // Si es captura de video o captura unificada (media), lanzamos captura de video
               if (type === 'video' || type === 'media') {
-                window.navigator.device?.capture?.captureVideo(
-                  (mediaFiles) => {
-                    console.log('Archivos capturados con plugin Cordova:', mediaFiles);
-                    
-                    if (mediaFiles && mediaFiles.length > 0) {
-                      const mediaPath = mediaFiles[0].fullPath;
-                      console.log('Ruta del archivo capturado:', mediaPath);
+                if (window.navigator.device?.capture?.captureVideo) {
+                  window.navigator.device.capture.captureVideo(
+                    (mediaFiles) => {
+                      console.log('Archivos capturados con plugin Cordova:', mediaFiles);
                       
-                      // Procesamos el archivo
-                      fetch(mediaPath)
-                        .then(response => response.blob())
-                        .then(blob => {
-                          // Determinamos si es video por la extensión o tipo
-                          const isVideo = 
-                            mediaPath.toLowerCase().endsWith('.mp4') || 
-                            mediaPath.toLowerCase().endsWith('.mov') ||
-                            blob.type.startsWith('video/');
-                          
-                          const extension = isVideo ? '.mp4' : '.jpg';
-                          const mediaType = isVideo ? 'video/mp4' : 'image/jpeg';
-                          const filePrefix = isVideo ? 'video' : 'photo';
-                          
-                          const mediaFile = new File(
-                            [blob], 
-                            `${filePrefix}_${Date.now()}${extension}`, 
-                            { type: mediaType }
-                          );
-                          
-                          console.log(`Archivo multimedia procesado (${mediaFile.type}), tamaño: ${mediaFile.size} bytes`);
-                          resolve(mediaFile);
-                        })
-                        .catch(error => {
-                          console.error('Error al procesar archivo multimedia:', error);
-                          reject(error);
-                        });
-                    } else {
-                      console.log('No se seleccionó ningún archivo');
-                      resolve(null);
-                    }
-                  },
-                  (error) => {
-                    console.error('Error en captura Cordova:', error);
-                    reject(error);
-                  },
-                  { limit: 1, duration: 60, quality: 1 }
-                );
+                      if (mediaFiles && mediaFiles.length > 0) {
+                        const mediaPath = mediaFiles[0].fullPath;
+                        console.log('Ruta del archivo capturado:', mediaPath);
+                        
+                        // Procesamos el archivo
+                        fetch(mediaPath)
+                          .then(response => response.blob())
+                          .then(blob => {
+                            // Determinamos si es video por la extensión o tipo
+                            const isVideo = 
+                              mediaPath.toLowerCase().endsWith('.mp4') || 
+                              mediaPath.toLowerCase().endsWith('.mov') ||
+                              blob.type.startsWith('video/');
+                            
+                            const extension = isVideo ? '.mp4' : '.jpg';
+                            const mediaType = isVideo ? 'video/mp4' : 'image/jpeg';
+                            const filePrefix = isVideo ? 'video' : 'photo';
+                            
+                            const mediaFile = new File(
+                              [blob], 
+                              `${filePrefix}_${Date.now()}${extension}`, 
+                              { type: mediaType }
+                            );
+                            
+                            console.log(`Archivo multimedia procesado (${mediaFile.type}), tamaño: ${mediaFile.size} bytes`);
+                            resolve(mediaFile);
+                          })
+                          .catch(error => {
+                            console.error('Error al procesar archivo multimedia:', error);
+                            reject(error);
+                          });
+                      } else {
+                        console.log('No se seleccionó ningún archivo');
+                        resolve(null);
+                      }
+                    },
+                    (error) => {
+                      console.error('Error en captura Cordova:', error);
+                      reject(error);
+                    },
+                    { limit: 1, duration: 60, quality: 1 }
+                  );
+                } else {
+                  console.error('captureVideo no está disponible en el dispositivo');
+                  reject(new Error('captureVideo no disponible'));
+                }
               }
               // Si es específicamente captura de imagen
               else if (type === 'image') {
-                window.navigator.device?.capture?.captureImage(
-                  (mediaFiles) => {
-                    console.log('Imágenes capturadas con plugin Cordova:', mediaFiles);
-                    
-                    if (mediaFiles && mediaFiles.length > 0) {
-                      const mediaPath = mediaFiles[0].fullPath;
-                      console.log('Ruta de la imagen capturada:', mediaPath);
+                if (window.navigator.device?.capture?.captureImage) {
+                  window.navigator.device.capture.captureImage(
+                    (mediaFiles) => {
+                      console.log('Imágenes capturadas con plugin Cordova:', mediaFiles);
                       
-                      // Procesamos la imagen
-                      fetch(mediaPath)
-                        .then(response => response.blob())
-                        .then(blob => {
-                          const imageFile = new File(
-                            [blob], 
-                            `photo_${Date.now()}.jpg`, 
-                            { type: 'image/jpeg' }
-                          );
-                          
-                          console.log(`Imagen procesada, tamaño: ${imageFile.size} bytes`);
-                          resolve(imageFile);
-                        })
-                        .catch(error => {
-                          console.error('Error al procesar imagen:', error);
-                          reject(error);
-                        });
-                    } else {
-                      console.log('No se capturó ninguna imagen');
-                      resolve(null);
-                    }
-                  },
-                  (error) => {
-                    console.error('Error en captura de imagen Cordova:', error);
-                    reject(error);
-                  },
-                  { limit: 1 }
-                );
+                      if (mediaFiles && mediaFiles.length > 0) {
+                        const mediaPath = mediaFiles[0].fullPath;
+                        console.log('Ruta de la imagen capturada:', mediaPath);
+                        
+                        // Procesamos la imagen
+                        fetch(mediaPath)
+                          .then(response => response.blob())
+                          .then(blob => {
+                            const imageFile = new File(
+                              [blob], 
+                              `photo_${Date.now()}.jpg`, 
+                              { type: 'image/jpeg' }
+                            );
+                            
+                            console.log(`Imagen procesada, tamaño: ${imageFile.size} bytes`);
+                            resolve(imageFile);
+                          })
+                          .catch(error => {
+                            console.error('Error al procesar imagen:', error);
+                            reject(error);
+                          });
+                      } else {
+                        console.log('No se capturó ninguna imagen');
+                        resolve(null);
+                      }
+                    },
+                    (error) => {
+                      console.error('Error en captura de imagen Cordova:', error);
+                      reject(error);
+                    },
+                    { limit: 1 }
+                  );
+                } else {
+                  console.error('captureImage no está disponible en el dispositivo');
+                  reject(new Error('captureImage no disponible'));
+                }
               }
             });
           } else {

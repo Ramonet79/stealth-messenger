@@ -5,16 +5,18 @@ import { Capacitor } from '@capacitor/core';
 import { requestMediaPermissions } from './usePermissions';
 
 // Define the extended Navigator interface with Cordova properties
+interface MediaCapturePlugin {
+  captureVideo(
+    success: (mediaFiles: any[]) => void,
+    error: (error: any) => void,
+    options?: { limit?: number; duration?: number; quality?: number }
+  ): void;
+}
+
 declare global {
   interface Navigator {
     device?: {
-      capture?: {
-        captureVideo(
-          success: (mediaFiles: any[]) => void,
-          error: (error: any) => void,
-          options?: { limit?: number; duration?: number; quality?: number }
-        ): void;
-      };
+      capture?: MediaCapturePlugin;
     };
   }
 }
