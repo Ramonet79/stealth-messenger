@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// Definimos una interfaz clara para el objeto capture
+// Definimos una interfaz unificada para el objeto capture
 interface MediaCapturePlugin {
   captureVideo: (
     success: (mediaFiles: any[]) => void,
@@ -181,7 +181,8 @@ export const useMediaCapture = () => {
               const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
-                resultType: CameraResultType.Uri
+                resultType: CameraResultType.Uri,
+                source: CameraSource.Camera
               });
               
               if (image && image.webPath) {
