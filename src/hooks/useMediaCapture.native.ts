@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// Correct the type declaration for the Cordova media capture plugin
+// First, let's clean up any existing declaration to avoid conflicts
 declare global {
   interface Navigator {
     device?: {
