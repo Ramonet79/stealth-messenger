@@ -1,10 +1,32 @@
+
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
 import { requestMediaPermissions } from './usePermissions';
 
-// Evitamos redefinir MediaCapturePlugin - ya está definido en useMediaCapture.native.ts
-// Usamos la misma definición del tipo para mantener la consistencia
+// Definición unificada de la interfaz MediaCapturePlugin
+interface MediaCapturePlugin {
+  captureVideo: (
+    success: (mediaFiles: any[]) => void,
+    error: (error: any) => void,
+    options?: { limit?: number; duration?: number; quality?: number }
+  ) => void;
+  captureImage?: (
+    success: (mediaFiles: any[]) => void,
+    error: (error: any) => void,
+    options?: { limit?: number; duration?: number; quality?: number }
+  ) => void;
+}
+
+// Ampliamos la definición global para el navegador
+declare global {
+  interface Navigator {
+    device?: {
+      capture?: MediaCapturePlugin;
+    };
+  }
+}
+
 export async function capturePhoto(): Promise<File | null> {
   await requestMediaPermissions();
   try {
@@ -73,33 +95,39 @@ export async function captureVideo(): Promise<File | null> {
       console.log('Intentando captura de video con plugin Cordova (fallback)');
       if (window.navigator && window.navigator.device?.capture) {
         return new Promise((resolve, reject) => {
-          window.navigator.device?.capture?.captureVideo(
-            (mediaFiles) => {
-              console.log('Video capturado con plugin Cordova:', mediaFiles);
-              if (mediaFiles && mediaFiles.length > 0) {
-                const videoPath = mediaFiles[0].fullPath;
-                fetch(videoPath)
-                  .then(response => response.blob())
-                  .then(blob => {
-                    const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
-                    console.log('Video Cordova procesado exitosamente');
-                    resolve(videoFile);
-                  })
-                  .catch(error => {
-                    console.error('Error al procesar archivo de video Cordova:', error);
-                    reject(error);
-                  });
-              } else {
-                console.log('No se seleccionó ningún video en Cordova');
-                resolve(null);
-              }
-            },
-            (error) => {
-              console.error('Error al capturar video con plugin Cordova:', error);
-              reject(error);
-            },
-            { limit: 1, duration: 30, quality: 1 }
-          );
+          // Verificamos que captureVideo existe antes de llamarlo
+          if (window.navigator.device?.capture?.captureVideo) {
+            window.navigator.device.capture.captureVideo(
+              (mediaFiles) => {
+                console.log('Video capturado con plugin Cordova:', mediaFiles);
+                if (mediaFiles && mediaFiles.length > 0) {
+                  const videoPath = mediaFiles[0].fullPath;
+                  fetch(videoPath)
+                    .then(response => response.blob())
+                    .then(blob => {
+                      const videoFile = new File([blob], `video_${Date.now()}.mp4`, { type: 'video/mp4' });
+                      console.log('Video Cordova procesado exitosamente');
+                      resolve(videoFile);
+                    })
+                    .catch(error => {
+                      console.error('Error al procesar archivo de video Cordova:', error);
+                      reject(error);
+                    });
+                } else {
+                  console.log('No se seleccionó ningún video en Cordova');
+                  resolve(null);
+                }
+              },
+              (error) => {
+                console.error('Error al capturar video con plugin Cordova:', error);
+                reject(error);
+              },
+              { limit: 1, duration: 30, quality: 1 }
+            );
+          } else {
+            console.error('Plugin Cordova captureVideo no disponible');
+            resolve(null);
+          }
         });
       } else {
         console.error('Plugin Cordova no disponible');
