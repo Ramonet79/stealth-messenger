@@ -15,3 +15,6 @@ declare module '@capacitor/camera' {
     }>;
   }
 }
+
+// Evitamos la redeclaración de MediaCapturePlugin en este archivo
+// Dejamos la definición unificada en useMediaCapture.native.ts

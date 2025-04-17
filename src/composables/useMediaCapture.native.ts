@@ -1,26 +1,10 @@
-
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
 import { requestMediaPermissions } from './usePermissions';
 
-// Define the extended Navigator interface with Cordova properties
-interface MediaCapturePlugin {
-  captureVideo(
-    success: (mediaFiles: any[]) => void,
-    error: (error: any) => void,
-    options?: { limit?: number; duration?: number; quality?: number }
-  ): void;
-}
-
-declare global {
-  interface Navigator {
-    device?: {
-      capture?: MediaCapturePlugin;
-    };
-  }
-}
-
+// Evitamos redefinir MediaCapturePlugin - ya está definido en useMediaCapture.native.ts
+// Usamos la misma definición del tipo para mantener la consistencia
 export async function capturePhoto(): Promise<File | null> {
   await requestMediaPermissions();
   try {
