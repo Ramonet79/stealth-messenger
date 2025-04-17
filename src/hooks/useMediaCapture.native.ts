@@ -1,8 +1,8 @@
 
 import { Capacitor } from '@capacitor/core';
-import { Camera } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// Declaramos la interfaz global para el plugin de Cordova Media Capture
+// Correct the type declaration for the Cordova media capture plugin
 declare global {
   interface Navigator {
     device?: {
@@ -15,7 +15,7 @@ declare global {
         captureImage: (
           success: (mediaFiles: any[]) => void,
           error: (error: any) => void,
-          options?: { limit?: number; }
+          options?: { limit?: number }
         ) => void;
       };
     };
@@ -168,7 +168,7 @@ export const useMediaCapture = () => {
               const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
-                resultType: 'uri'
+                resultType: CameraResultType.Uri
               });
               
               if (image && image.webPath) {
