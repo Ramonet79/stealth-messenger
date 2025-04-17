@@ -1,22 +1,10 @@
-
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// Definimos una interfaz unificada para el objeto capture
-interface MediaCapturePlugin {
-  captureVideo: (
-    success: (mediaFiles: any[]) => void,
-    error: (error: any) => void,
-    options?: { limit?: number; duration?: number; quality?: number }
-  ) => void;
-  captureImage: (
-    success: (mediaFiles: any[]) => void,
-    error: (error: any) => void,
-    options?: { limit?: number }
-  ) => void;
-}
+// Importamos la interfaz desde un archivo centralizado
+import { MediaCapturePlugin } from '@/types/media-capture';
 
-// Declaramos la extensión de Navigator para incluir el objeto device
+// Declaramos solo la extensión de Navigator sin redefinir MediaCapturePlugin
 declare global {
   interface Navigator {
     device?: {

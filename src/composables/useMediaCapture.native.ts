@@ -1,31 +1,11 @@
-
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Media, MediaObject } from '@awesome-cordova-plugins/media';
 import { Capacitor } from '@capacitor/core';
 import { requestMediaPermissions } from './usePermissions';
+import { MediaCapturePlugin } from '@/types/media-capture';
 
-// Definición unificada de la interfaz MediaCapturePlugin
-interface MediaCapturePlugin {
-  captureVideo: (
-    success: (mediaFiles: any[]) => void,
-    error: (error: any) => void,
-    options?: { limit?: number; duration?: number; quality?: number }
-  ) => void;
-  captureImage?: (
-    success: (mediaFiles: any[]) => void,
-    error: (error: any) => void,
-    options?: { limit?: number; duration?: number; quality?: number }
-  ) => void;
-}
-
-// Ampliamos la definición global para el navegador
-declare global {
-  interface Navigator {
-    device?: {
-      capture?: MediaCapturePlugin;
-    };
-  }
-}
+// Reutilizamos la definición global para el navegador desde el tipo centralizado
+// pero sin redeclarar MediaCapturePlugin que ya está definido en el archivo de tipos
 
 export async function capturePhoto(): Promise<File | null> {
   await requestMediaPermissions();
