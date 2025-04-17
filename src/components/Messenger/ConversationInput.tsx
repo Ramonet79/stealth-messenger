@@ -71,46 +71,57 @@ const ConversationInput: React.FC<ConversationInputProps> = ({ onSendMessage }) 
     setCaptureMode(null);
   };
 
+  // Método unificado para captura de medios (imagen/video) usando la cámara nativa completa
   const handleUnifiedMediaCapture = async () => {
-    console.log('Botón de captura unificada pulsado');
+    console.log('Botón de captura multimedia pulsado');
     
-    if (isNativePlatform()) {
-      try {
-        console.log('Iniciando captura multimedia unificada nativa');
-        toast({
-          title: "Iniciando cámara",
-          description: "Preparando captura multimedia...",
-        });
+    try {
+      toast({
+        title: "Iniciando cámara",
+        description: "Preparando captura multimedia...",
+      });
+      
+      // Iniciar captura unificada usando la API nativa
+      console.log('Iniciando captura multimedia nativa con cordova-plugin-media-capture');
+      
+      const result = await startCapture('media');
+      console.log('Resultado de captura multimedia:', result);
+      
+      if (result && result instanceof File) {
+        const url = URL.createObjectURL(result);
+        console.log('URL creada para archivo multimedia:', url);
         
-        // Utilizamos el nuevo tipo 'media' para captura unificada
-        const result = await startCapture('media');
-        console.log('Resultado de captura multimedia:', result);
-        
-        if (result && result instanceof File) {
-          const url = URL.createObjectURL(result);
-          console.log('URL creada para archivo multimedia:', url);
-          
-          // Determinamos si es una imagen o un video basándonos en el tipo MIME
-          if (result.type.startsWith('video/')) {
-            // Para video, estimamos 10 segundos como duración predeterminada
-            handleCaptureVideo(url, 10);
-          } else if (result.type.startsWith('image/')) {
-            // Para imagen
-            handleCaptureImage(url);
-          } else {
-            console.log('Tipo de archivo no reconocido:', result.type);
-          }
+        // Determinamos si es una imagen o un video basándonos en el tipo MIME
+        if (result.type.startsWith('video/')) {
+          // Para video, estimamos 10 segundos como duración predeterminada
+          // En una implementación real, se podría obtener la duración real del video
+          handleCaptureVideo(url, 10);
+        } else if (result.type.startsWith('image/')) {
+          // Para imagen
+          handleCaptureImage(url);
         } else {
-          console.log('No se recibió archivo o el usuario canceló la operación');
+          console.log('Tipo de archivo no reconocido:', result.type);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Tipo de archivo no soportado",
+          });
         }
-      } catch (error) {
-        console.error('Error en captura multimedia unificada:', error);
-        // Si hay error en la captura nativa, mostramos la interfaz de imagen como fallback
-        setCaptureMode('image');
+      } else {
+        console.log('No se recibió archivo o el usuario canceló la operación');
       }
-    } else {
-      // En web, mostramos la interfaz estándar de captura de imagen
-      console.log('Usando interfaz estándar para captura de imagen en web');
+    } catch (error) {
+      console.error('Error en captura multimedia:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error al capturar multimedia",
+      });
+      
+      // Si hay error en la captura nativa, mostramos la interfaz de imagen como fallback
+      if (isNativePlatform()) {
+        console.log('Error en captura nativa, usando interfaz alternativa');
+      }
       setCaptureMode('image');
     }
   };
