@@ -36,28 +36,54 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
     setUsernameError('');
     
     try {
-      // Cambiamos a una búsqueda case-insensitive para ser consistentes con el registro
-      const { data, error } = await supabase
+      console.log("Verificando usuario:", username);
+      
+      // Primero intentamos una búsqueda exacta
+      const { data: exactMatch, error: exactError } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .eq('username', username)
+        .limit(1);
+      
+      if (exactError) {
+        console.error("Error al verificar usuario (búsqueda exacta):", exactError);
+        setUsernameError(t('username_not_found') || 'Usuario no encontrado');
+        setLoading(false);
+        return false;
+      }
+      
+      if (exactMatch && exactMatch.length > 0) {
+        console.log("Usuario encontrado (búsqueda exacta):", exactMatch);
+        setLoading(false);
+        return true;
+      }
+      
+      // Si no hay coincidencia exacta, intentamos con búsqueda case-insensitive
+      const { data: caseInsensitiveMatch, error: insensitiveError } = await supabase
         .from('profiles')
         .select('id, username')
         .ilike('username', username)
         .limit(1);
       
-      if (error) {
-        console.error("Error al verificar usuario:", error);
+      if (insensitiveError) {
+        console.error("Error al verificar usuario (búsqueda case-insensitive):", insensitiveError);
         setUsernameError(t('username_not_found') || 'Usuario no encontrado');
         setLoading(false);
         return false;
       }
       
-      if (data && data.length > 0) {
+      if (caseInsensitiveMatch && caseInsensitiveMatch.length > 0) {
+        console.log("Usuario encontrado (búsqueda case-insensitive):", caseInsensitiveMatch);
+        // Actualizamos el username con el valor exacto de la base de datos para evitar problemas de case
+        setUsername(caseInsensitiveMatch[0].username);
         setLoading(false);
         return true;
-      } else {
-        setUsernameError(t('username_not_found') || 'Usuario no encontrado');
-        setLoading(false);
-        return false;
       }
+      
+      console.log("Usuario no encontrado tras ambas búsquedas");
+      setUsernameError(t('username_not_found') || 'Usuario no encontrado');
+      setLoading(false);
+      return false;
     } catch (error) {
       console.error("Error inesperado:", error);
       setUsernameError(t('error_checking_username') || 'Error al verificar el usuario');

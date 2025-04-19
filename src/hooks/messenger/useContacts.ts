@@ -70,11 +70,31 @@ export const useContacts = () => {
     if (!user) return;
     
     try {
-      const { data: contactProfile, error: profileError } = await supabase
+      console.log("Buscando usuario:", contactUsername);
+      
+      let profileQuery = supabase
         .from('profiles')
-        .select('id')
-        .eq('username', contactUsername)
-        .single();
+        .select('id, username')
+        .eq('username', contactUsername);
+        
+      let { data: contactProfile, error: profileError } = await profileQuery.maybeSingle();
+      
+      if (!contactProfile) {
+        console.log("No se encontró con búsqueda exacta, intentando case-insensitive");
+        
+        let { data: insensitiveResults, error: insensitiveError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .ilike('username', contactUsername)
+          .limit(1);
+          
+        if (insensitiveError) {
+          console.error("Error en búsqueda case-insensitive:", insensitiveError);
+        } else if (insensitiveResults && insensitiveResults.length > 0) {
+          contactProfile = insensitiveResults[0];
+          console.log("Usuario encontrado con búsqueda case-insensitive:", contactProfile);
+        }
+      }
       
       if (profileError || !contactProfile) {
         console.error("Error al buscar el perfil del contacto:", profileError);
@@ -86,13 +106,30 @@ export const useContacts = () => {
         return;
       }
       
+      const { data: existingContact, error: existingError } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('contact_id', contactProfile.id)
+        .single();
+        
+      if (existingContact) {
+        console.log("Este contacto ya existe en la agenda");
+        toast({
+          variant: "destructive",
+          title: "Contacto duplicado",
+          description: "Este contacto ya existe en tu agenda",
+        });
+        return existingContact.id;
+      }
+      
       const { data: newContactData, error: contactError } = await supabase
         .from('contacts')
         .insert({
           user_id: user.id,
           contact_id: contactProfile.id,
           name: contactAlias,
-          full_name: contactUsername
+          full_name: contactProfile.username
         })
         .select()
         .single();
@@ -117,7 +154,7 @@ export const useContacts = () => {
         lastMessage: 'Nuevo contacto',
         timestamp,
         unread: false,
-        fullName: contactUsername
+        fullName: contactProfile.username
       };
       
       setContacts([newContact, ...contacts]);
