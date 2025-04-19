@@ -1,0 +1,31 @@
+
+-- Para ver todos los usuarios en auth.users
+SELECT id, email, raw_user_meta_data
+FROM auth.users;
+
+-- Para ver los perfiles actuales en public.profiles
+SELECT *
+FROM public.profiles;
+
+-- Para crear perfiles que faltan para usuarios existentes
+-- Ejecutar este SQL en el editor SQL de Supabase
+INSERT INTO public.profiles (id, username, email)
+SELECT 
+  id,
+  raw_user_meta_data->>'username' as username,
+  email
+FROM auth.users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.profiles p WHERE p.id = u.id
+)
+AND raw_user_meta_data->>'username' IS NOT NULL;
+
+-- Para actualizar perfiles con información de los usuarios
+-- Si ya existen los perfiles pero les falta información
+UPDATE public.profiles p
+SET 
+  username = u.raw_user_meta_data->>'username',
+  email = u.email
+FROM auth.users u
+WHERE p.id = u.id
+AND (p.username IS NULL OR p.email IS NULL);

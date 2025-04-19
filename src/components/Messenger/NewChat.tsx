@@ -17,6 +17,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
   const [alias, setAlias] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
+  const [usernameSuggestion, setUsernameSuggestion] = useState<string | null>(null);
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -34,6 +35,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
 
     setLoading(true);
     setUsernameError('');
+    setUsernameSuggestion(null);
     
     try {
       console.log("Verificando usuario:", username);
@@ -74,13 +76,33 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
       
       if (caseInsensitiveMatch && caseInsensitiveMatch.length > 0) {
         console.log("Usuario encontrado (búsqueda case-insensitive):", caseInsensitiveMatch);
+        // Mostrar sugerencia con el nombre de usuario exacto (diferencia de mayúsculas/minúsculas)
+        if (caseInsensitiveMatch[0].username !== username) {
+          setUsernameSuggestion(caseInsensitiveMatch[0].username);
+        }
         // Actualizamos el username con el valor exacto de la base de datos para evitar problemas de case
         setUsername(caseInsensitiveMatch[0].username);
         setLoading(false);
         return true;
       }
       
-      console.log("Usuario no encontrado tras ambas búsquedas");
+      // Último intento: buscar usando "contains" para usuarios con parte del nombre
+      const { data: containsMatch, error: containsError } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .ilike('username', `%${username}%`)
+        .limit(5);
+        
+      if (!containsError && containsMatch && containsMatch.length > 0) {
+        console.log("Usuarios similares encontrados:", containsMatch);
+        // Mostrar el primer resultado como sugerencia
+        setUsernameSuggestion(containsMatch[0].username);
+        setUsernameError(`No se encontró "${username}". ¿Querías decir "${containsMatch[0].username}"?`);
+        setLoading(false);
+        return false;
+      }
+      
+      console.log("Usuario no encontrado tras todas las búsquedas");
       setUsernameError(t('username_not_found') || 'Usuario no encontrado');
       setLoading(false);
       return false;
@@ -117,6 +139,14 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
     onCreateChat(username, alias);
   };
 
+  const useSuggestion = () => {
+    if (usernameSuggestion) {
+      setUsername(usernameSuggestion);
+      setUsernameSuggestion(null);
+      setUsernameError('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-messenger-background">
       <div className="flex items-center p-4 border-b bg-white">
@@ -127,7 +157,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h2 className="font-medium">{t('new_message')}</h2>
+          <h2 className="font-medium">{t('new_message') || "Nuevo mensaje"}</h2>
         </div>
       </div>
 
@@ -141,7 +171,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
           
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              {t('username')} <span className="text-gray-500 text-xs">(proporcionado por tu contacto dScrt)</span>
+              {t('username') || "Nombre de usuario"} <span className="text-gray-500 text-xs">(proporcionado por tu contacto dScrt)</span>
             </label>
             <div className="relative">
               <input
@@ -150,6 +180,7 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
                 onChange={(e) => {
                   setUsername(e.target.value);
                   setUsernameError('');
+                  setUsernameSuggestion(null);
                 }}
                 placeholder={t('username_placeholder') || "@usuario"}
                 className={`w-full px-4 py-2 border ${usernameError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-messenger-primary focus:border-transparent`}
@@ -159,6 +190,17 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
                 <div className="flex items-center text-red-500 text-xs mt-1">
                   <AlertCircle size={12} className="mr-1" />
                   {usernameError}
+                </div>
+              )}
+              {usernameSuggestion && (
+                <div className="mt-1">
+                  <button 
+                    type="button" 
+                    className="text-messenger-primary text-sm hover:underline"
+                    onClick={useSuggestion}
+                  >
+                    Usar "{usernameSuggestion}"
+                  </button>
                 </div>
               )}
             </div>

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -48,7 +49,7 @@ export const signUpUser = async (
     if (existingEmails && existingEmails.length > 0) {
       return { 
         data: null, 
-        error: { message: 'Este correo electrónico ya est�� registrado. Por favor, utiliza otro.' } 
+        error: { message: 'Este correo electrónico ya está registrado. Por favor, utiliza otro.' } 
       };
     }
     
@@ -80,21 +81,35 @@ export const signUpUser = async (
         console.error('Error al llamar función auto-signup:', funcError);
       }
 
-      // Actualizamos el perfil del usuario con el nombre de usuario y email
-      const { error: profileError } = await supabase
+      // IMPORTANTE: Crear explícitamente el perfil del usuario
+      const { error: profileInsertError } = await supabase
         .from('profiles')
-        .update({ 
+        .insert({ 
+          id: data.user.id,
           username,
           email: email
-        })
-        .eq('id', data.user.id);
+        });
 
-      if (profileError) {
-        console.error('Error al actualizar perfil:', profileError);
-        return { 
-          data, 
-          error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileError.message}` } 
-        };
+      if (profileInsertError) {
+        console.error('Error al crear perfil:', profileInsertError);
+        console.log('Intentando actualizar perfil ya existente...');
+        
+        // Si falló la inserción, intentamos una actualización
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .update({ 
+            username,
+            email: email
+          })
+          .eq('id', data.user.id);
+
+        if (profileUpdateError) {
+          console.error('Error también al actualizar perfil:', profileUpdateError);
+          return { 
+            data, 
+            error: { message: `Cuenta creada pero hubo un error al guardar perfil: ${profileUpdateError.message}` } 
+          };
+        }
       }
       
       // Establecer la bandera para el primer inicio de sesión
