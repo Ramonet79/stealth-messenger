@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -88,7 +89,7 @@ export const signUpUser = async (
     try {
       console.log("Llamando a función auto-signup para confirmar email");
       await supabase.functions.invoke('auto-signup', {
-        body: { email: data.user.email, user_id: data.user.id }
+        body: JSON.stringify({ email: data.user.email, user_id: data.user.id })
       });
       console.log("Email confirmado automáticamente");
     } catch (funcError) {

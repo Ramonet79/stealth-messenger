@@ -74,14 +74,14 @@ export const useContacts = () => {
       console.log("Buscando usuario para crear chat:", contactUsername);
       
       // Primera búsqueda: exacta
-      const { data: contactProfile, error: profileError } = await supabase
+      let { data: foundProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id, username')
         .eq('username', contactUsername)
         .maybeSingle();
       
       // Si no se encontró, intentar búsqueda case-insensitive
-      if (!contactProfile) {
+      if (!foundProfile) {
         console.log("No se encontró con búsqueda exacta, intentando case-insensitive");
         
         const { data: insensitiveResults, error: insensitiveError } = await supabase
@@ -101,12 +101,12 @@ export const useContacts = () => {
         }
         
         if (insensitiveResults && insensitiveResults.length > 0) {
-          contactProfile = insensitiveResults[0];
-          console.log("Usuario encontrado con búsqueda case-insensitive:", contactProfile);
+          foundProfile = insensitiveResults[0];
+          console.log("Usuario encontrado con búsqueda case-insensitive:", foundProfile);
         }
       }
       
-      if (!contactProfile) {
+      if (!foundProfile) {
         console.error("No se pudo encontrar el perfil del contacto tras múltiples intentos");
         toast({
           variant: "destructive",
@@ -116,14 +116,14 @@ export const useContacts = () => {
         return null;
       }
       
-      console.log("Contacto encontrado:", contactProfile);
+      console.log("Contacto encontrado:", foundProfile);
       
       // Verificar si el contacto ya existe
       const { data: existingContact, error: existingError } = await supabase
         .from('contacts')
         .select('id')
         .eq('user_id', user.id)
-        .eq('contact_id', contactProfile.id)
+        .eq('contact_id', foundProfile.id)
         .single();
         
       if (!existingError && existingContact) {
@@ -141,9 +141,9 @@ export const useContacts = () => {
         .from('contacts')
         .insert({
           user_id: user.id,
-          contact_id: contactProfile.id,
+          contact_id: foundProfile.id,
           name: contactAlias,
-          full_name: contactProfile.username
+          full_name: foundProfile.username
         })
         .select()
         .single();
@@ -170,7 +170,7 @@ export const useContacts = () => {
         lastMessage: 'Nuevo contacto',
         timestamp,
         unread: false,
-        fullName: contactProfile.username
+        fullName: foundProfile.username
       };
       
       setContacts([newContact, ...contacts]);

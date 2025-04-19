@@ -22,8 +22,16 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Decodificar la información
-    const payload = await req.json();
-    console.log("Payload recibido:", JSON.stringify(payload));
+    const requestText = await req.text();
+    let payload;
+    
+    try {
+      payload = JSON.parse(requestText);
+      console.log("Payload recibido (parseado):", payload);
+    } catch (parseError) {
+      console.error("Error al parsear JSON:", parseError, "Texto recibido:", requestText);
+      throw new Error("Formato de datos inválido");
+    }
     
     const { email, user_id } = payload;
 
