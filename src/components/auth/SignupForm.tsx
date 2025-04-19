@@ -35,7 +35,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   // Función para verificar disponibilidad del usuario y correo
   const checkAvailability = async (username: string, email: string): Promise<{usernameAvailable: boolean, emailAvailable: boolean}> => {
     try {
-      // Verificar nombre de usuario
+      console.log("Verificando disponibilidad de username y email:", username, email);
+      
+      // Verificar nombre de usuario (case insensitive)
       const { data: existingUsernames, error: usernameError } = await supabase
         .from('profiles')
         .select('username')
@@ -47,11 +49,22 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         throw new Error("No se pudo verificar la disponibilidad del nombre de usuario");
       }
       
-      // Verificar email
+      // Verificar también en auth.users (metadatos) por seguridad adicional
+      const { data: authUsers, error: authError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .limit(1);
+        
+      if (authError) {
+        console.error("Error al verificar metadatos de usuario:", authError);
+      }
+      
+      // Verificar email (exacto, case insensitive)
       const { data: existingEmails, error: emailError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('email', email.toLowerCase())
+        .ilike('email', email.toLowerCase())
         .limit(1);
         
       if (emailError) {
@@ -59,8 +72,18 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         throw new Error("No se pudo verificar la disponibilidad del correo electrónico");
       }
       
+      const usernameExists = existingUsernames && existingUsernames.length > 0 || 
+                            authUsers && authUsers.length > 0;
+                            
+      console.log("Resultado verificación:", { 
+        usernameExists,
+        emailExists: existingEmails && existingEmails.length > 0,
+        usernamesFound: existingUsernames,
+        emailsFound: existingEmails
+      });
+      
       return {
-        usernameAvailable: !existingUsernames || existingUsernames.length === 0,
+        usernameAvailable: !usernameExists,
         emailAvailable: !existingEmails || existingEmails.length === 0
       };
     } catch (error) {
@@ -74,6 +97,8 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     try {
       setIsSubmitting(true);
       const { email, password, username } = data;
+      
+      console.log("Iniciando proceso de registro con:", { email, username });
       
       // Verificación final antes del registro
       const availability = await checkAvailability(username, email);
@@ -98,7 +123,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         return;
       }
       
-      console.log("Iniciando registro con:", { email, username });
+      console.log("Validaciones pasadas, procediendo con registro");
       
       // Sign up user directly without email verification
       const { data: authData, error } = await signUp(
@@ -121,6 +146,36 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       
       if (authData?.user) {
         console.log("Registro exitoso, usuario creado:", authData.user.id);
+        
+        // Verificar que el perfil se haya creado correctamente
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+          
+        if (profileError || !profile) {
+          console.error("Advertencia: Perfil posiblemente no creado:", profileError);
+          console.log("Intentando crear perfil manualmente...");
+          
+          // Intentar crear perfil manualmente
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              username: username,
+              email: email
+            });
+            
+          if (insertError) {
+            console.error("Error al crear perfil manualmente:", insertError);
+          } else {
+            console.log("Perfil creado manualmente con éxito");
+          }
+        } else {
+          console.log("Perfil verificado correctamente:", profile);
+        }
+        
         toast({
           title: "Registro exitoso",
           description: "Tu cuenta ha sido creada correctamente",

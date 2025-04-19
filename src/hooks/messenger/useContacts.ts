@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Contact } from '@/components/Messenger/types';
@@ -70,19 +71,20 @@ export const useContacts = () => {
     if (!user) return;
     
     try {
-      console.log("Buscando usuario:", contactUsername);
+      console.log("Buscando usuario para crear chat:", contactUsername);
       
-      let profileQuery = supabase
+      // Primera búsqueda: exacta
+      const { data: contactProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id, username')
-        .eq('username', contactUsername);
-        
-      let { data: contactProfile, error: profileError } = await profileQuery.maybeSingle();
+        .eq('username', contactUsername)
+        .maybeSingle();
       
+      // Si no se encontró, intentar búsqueda case-insensitive
       if (!contactProfile) {
         console.log("No se encontró con búsqueda exacta, intentando case-insensitive");
         
-        let { data: insensitiveResults, error: insensitiveError } = await supabase
+        const { data: insensitiveResults, error: insensitiveError } = await supabase
           .from('profiles')
           .select('id, username')
           .ilike('username', contactUsername)
@@ -90,22 +92,33 @@ export const useContacts = () => {
           
         if (insensitiveError) {
           console.error("Error en búsqueda case-insensitive:", insensitiveError);
-        } else if (insensitiveResults && insensitiveResults.length > 0) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Error al buscar el contacto",
+          });
+          return null;
+        }
+        
+        if (insensitiveResults && insensitiveResults.length > 0) {
           contactProfile = insensitiveResults[0];
           console.log("Usuario encontrado con búsqueda case-insensitive:", contactProfile);
         }
       }
       
-      if (profileError || !contactProfile) {
-        console.error("Error al buscar el perfil del contacto:", profileError);
+      if (!contactProfile) {
+        console.error("No se pudo encontrar el perfil del contacto tras múltiples intentos");
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudo encontrar el contacto especificado",
         });
-        return;
+        return null;
       }
       
+      console.log("Contacto encontrado:", contactProfile);
+      
+      // Verificar si el contacto ya existe
       const { data: existingContact, error: existingError } = await supabase
         .from('contacts')
         .select('id')
@@ -113,8 +126,8 @@ export const useContacts = () => {
         .eq('contact_id', contactProfile.id)
         .single();
         
-      if (existingContact) {
-        console.log("Este contacto ya existe en la agenda");
+      if (!existingError && existingContact) {
+        console.log("Este contacto ya existe en la agenda:", existingContact);
         toast({
           variant: "destructive",
           title: "Contacto duplicado",
@@ -123,6 +136,7 @@ export const useContacts = () => {
         return existingContact.id;
       }
       
+      // Crear nuevo contacto
       const { data: newContactData, error: contactError } = await supabase
         .from('contacts')
         .insert({
@@ -141,8 +155,10 @@ export const useContacts = () => {
           title: "Error",
           description: "No se pudo crear el contacto",
         });
-        return;
+        return null;
       }
+      
+      console.log("Contacto creado exitosamente:", newContactData);
       
       const now = new Date();
       const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;

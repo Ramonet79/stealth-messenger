@@ -12,20 +12,32 @@ FROM public.profiles;
 INSERT INTO public.profiles (id, username, email)
 SELECT 
   id,
-  raw_user_meta_data->>'username' as username,
+  COALESCE(raw_user_meta_data->>'username', email) as username,
   email
 FROM auth.users u
 WHERE NOT EXISTS (
   SELECT 1 FROM public.profiles p WHERE p.id = u.id
 )
-AND raw_user_meta_data->>'username' IS NOT NULL;
+AND (raw_user_meta_data->>'username' IS NOT NULL OR email IS NOT NULL);
 
 -- Para actualizar perfiles con información de los usuarios
 -- Si ya existen los perfiles pero les falta información
 UPDATE public.profiles p
 SET 
-  username = u.raw_user_meta_data->>'username',
+  username = COALESCE(u.raw_user_meta_data->>'username', u.email),
   email = u.email
 FROM auth.users u
 WHERE p.id = u.id
 AND (p.username IS NULL OR p.email IS NULL);
+
+-- Para revisar los contactos existentes
+SELECT * FROM contacts;
+
+-- Para verificar si los perfiles tienen datos válidos
+SELECT * FROM profiles WHERE username IS NULL OR email IS NULL;
+
+-- Para examinar búsquedas de usuarios
+-- Probar lo siguiente con un nombre de usuario específico:
+-- Reemplazar 'nombre_usuario_aqui' con el username a buscar 
+SELECT * FROM profiles WHERE username = 'nombre_usuario_aqui';
+SELECT * FROM profiles WHERE username ILIKE 'nombre_usuario_aqui';

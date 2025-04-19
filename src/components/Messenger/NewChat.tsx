@@ -47,6 +47,8 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
         .eq('username', username)
         .limit(1);
       
+      console.log("Resultados búsqueda exacta:", exactMatch);
+      
       if (exactError) {
         console.error("Error al verificar usuario (búsqueda exacta):", exactError);
         setUsernameError(t('username_not_found') || 'Usuario no encontrado');
@@ -66,6 +68,8 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
         .select('id, username')
         .ilike('username', username)
         .limit(1);
+      
+      console.log("Resultados búsqueda case-insensitive:", caseInsensitiveMatch);
       
       if (insensitiveError) {
         console.error("Error al verificar usuario (búsqueda case-insensitive):", insensitiveError);
@@ -92,6 +96,8 @@ const NewChat: React.FC<NewChatProps> = ({ onCreateChat, onCancel, onBack }) => 
         .select('id, username')
         .ilike('username', `%${username}%`)
         .limit(5);
+      
+      console.log("Resultados búsqueda contiene:", containsMatch);
         
       if (!containsError && containsMatch && containsMatch.length > 0) {
         console.log("Usuarios similares encontrados:", containsMatch);

@@ -46,18 +46,69 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email confirmado automáticamente para:", email);
 
-    // Asegurar que existe un perfil con email
-    const { error: profileError } = await supabase
+    // Verificar si ya existe un perfil para este usuario
+    const { data: existingProfile, error: profileQueryError } = await supabase
       .from('profiles')
-      .update({ email })
-      .eq('id', user_id);
-
-    if (profileError) {
-      console.error("Error al actualizar perfil con email:", profileError);
-      // No lanzamos error aquí para no bloquear la confirmación del email
+      .select('*')
+      .eq('id', user_id)
+      .single();
+    
+    if (profileQueryError && profileQueryError.message !== 'No rows found') {
+      console.error("Error al consultar perfil existente:", profileQueryError);
     }
-
-    return new Response(JSON.stringify({ success: true }), {
+    
+    // Si no existe perfil, intentar crearlo
+    if (!existingProfile) {
+      console.log("No se encontró perfil existente, creando uno nuevo");
+      
+      // Obtener datos del usuario para crear el perfil
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user_id);
+      
+      if (userError) {
+        console.error("Error al obtener datos del usuario:", userError);
+      } else if (userData && userData.user) {
+        // Extraer username de los metadatos del usuario
+        const username = userData.user.user_metadata?.username || email.split('@')[0];
+        console.log("Datos para crear perfil:", { id: user_id, email, username });
+        
+        // Crear perfil
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user_id,
+            email: email,
+            username: username
+          });
+          
+        if (insertError) {
+          console.error("Error al crear perfil desde edge function:", insertError);
+        } else {
+          console.log("Perfil creado exitosamente desde edge function");
+        }
+      }
+    } else {
+      console.log("Perfil ya existente:", existingProfile);
+      
+      // Actualizar el email en el perfil si es necesario
+      if (existingProfile.email !== email) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ email })
+          .eq('id', user_id);
+        
+        if (updateError) {
+          console.error("Error al actualizar email en perfil:", updateError);
+        } else {
+          console.log("Email actualizado en perfil existente");
+        }
+      }
+    }
+    
+    // Respuesta exitosa
+    return new Response(JSON.stringify({ 
+      success: true,
+      message: "Email confirmado y perfil verificado"
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
