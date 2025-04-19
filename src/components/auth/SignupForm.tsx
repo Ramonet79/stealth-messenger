@@ -32,6 +32,43 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     },
   });
 
+  // Función para verificar disponibilidad del usuario y correo
+  const checkAvailability = async (username: string, email: string): Promise<{usernameAvailable: boolean, emailAvailable: boolean}> => {
+    try {
+      // Verificar nombre de usuario
+      const { data: existingUsernames, error: usernameError } = await supabase
+        .from('profiles')
+        .select('username')
+        .ilike('username', username)
+        .limit(1);
+      
+      if (usernameError) {
+        console.error("Error al verificar disponibilidad del usuario:", usernameError);
+        throw new Error("No se pudo verificar la disponibilidad del nombre de usuario");
+      }
+      
+      // Verificar email
+      const { data: existingEmails, error: emailError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email.toLowerCase())
+        .limit(1);
+        
+      if (emailError) {
+        console.error("Error al verificar disponibilidad del email:", emailError);
+        throw new Error("No se pudo verificar la disponibilidad del correo electrónico");
+      }
+      
+      return {
+        usernameAvailable: !existingUsernames || existingUsernames.length === 0,
+        emailAvailable: !existingEmails || existingEmails.length === 0
+      };
+    } catch (error) {
+      console.error("Error en la verificación de disponibilidad:", error);
+      throw error;
+    }
+  };
+
   // Manejar registro
   const handleSignup = async (data: SignupFormValues) => {
     try {
@@ -39,28 +76,23 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
       const { email, password, username } = data;
       
       // Verificación final antes del registro
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('profiles')
-        .select('username')
-        .ilike('username', username)
-        .limit(1);
-        
-      if (checkError) {
-        console.error("Error al verificar disponibilidad del usuario:", checkError);
+      const availability = await checkAvailability(username, email);
+      
+      if (!availability.usernameAvailable) {
         toast({
           variant: "destructive",
-          title: "Error de verificación",
-          description: "No se pudo verificar la disponibilidad del nombre de usuario",
+          title: "Nombre de usuario no disponible",
+          description: "Este nombre de usuario ya está registrado. Por favor, elige otro.",
         });
         setIsSubmitting(false);
         return;
       }
       
-      if (existingUsers && existingUsers.length > 0) {
+      if (!availability.emailAvailable) {
         toast({
           variant: "destructive",
-          title: "Nombre de usuario no disponible",
-          description: "Este nombre de usuario ya está registrado. Por favor, elige otro.",
+          title: "Correo electrónico no disponible",
+          description: "Este correo electrónico ya está registrado. Por favor, utiliza otro o recupera tu contraseña.",
         });
         setIsSubmitting(false);
         return;

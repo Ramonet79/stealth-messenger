@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -10,7 +9,7 @@ export const signUpUser = async (
 ): Promise<AuthResponse> => {
   try {
     // Primero verificamos si el username ya existe (usando ilike para case-insensitive)
-    const { data: existingUsers, error: usernameCheckError } = await supabase
+    const { data: existingUsernames, error: usernameCheckError } = await supabase
       .from('profiles')
       .select('username')
       .ilike('username', username)
@@ -24,10 +23,32 @@ export const signUpUser = async (
       };
     }
     
-    if (existingUsers && existingUsers.length > 0) {
+    if (existingUsernames && existingUsernames.length > 0) {
       return { 
         data: null, 
         error: { message: 'Este nombre de usuario ya está en uso. Por favor, elige otro.' } 
+      };
+    }
+    
+    // También verificamos si el email ya existe
+    const { data: existingEmails, error: emailCheckError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('email', email.toLowerCase())
+      .limit(1);
+      
+    if (emailCheckError) {
+      console.error('Error al verificar email:', emailCheckError);
+      return { 
+        data: null, 
+        error: { message: 'Error al verificar la disponibilidad del correo electrónico.' } 
+      };
+    }
+    
+    if (existingEmails && existingEmails.length > 0) {
+      return { 
+        data: null, 
+        error: { message: 'Este correo electrónico ya est�� registrado. Por favor, utiliza otro.' } 
       };
     }
     
