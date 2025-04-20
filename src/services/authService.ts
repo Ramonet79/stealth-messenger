@@ -88,10 +88,10 @@ export const signUpUser = async (
     try {
       console.log("Llamando a función auto-signup para confirmar email");
       const { data: functionResult } = await supabase.functions.invoke('auto-signup', {
-        body: JSON.stringify({ 
+        body: { 
           email: data.user.email, 
           user_id: data.user.id 
-        })
+        }
       });
       console.log("Email confirmado automáticamente", functionResult);
     } catch (funcError) {
