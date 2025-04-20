@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
 
@@ -87,13 +88,15 @@ export const signUpUser = async (
     // 4. Confirmar email automáticamente con función edge
     try {
       console.log("Llamando a función auto-signup para confirmar email");
-      const { data: functionResult } = await supabase.functions.invoke('auto-signup', {
-        body: { 
+      // Corregido: Ahora pasamos el objeto directamente en el body, sin JSON.stringify()
+      const response = await supabase.functions.invoke<any>('auto-signup', {
+        body: {
           email: data.user.email, 
-          user_id: data.user.id 
+          user_id: data.user.id
         }
       });
-      console.log("Email confirmado automáticamente", functionResult);
+      console.log("Respuesta de auto-signup:", response);
+      console.log("Email confirmado automáticamente", response.data);
     } catch (funcError) {
       console.error('Error al llamar función auto-signup:', funcError);
     }
