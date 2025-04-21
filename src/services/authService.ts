@@ -88,12 +88,12 @@ export const signUpUser = async (
     // 4. Confirmar email automáticamente con función edge
     try {
       console.log("Llamando a función auto-signup para confirmar email");
-      // Corregido: Ahora pasamos el objeto directamente en el body, sin JSON.stringify()
-      const response = await supabase.functions.invoke<any>('auto-signup', {
+      // La corrección está aquí - usamos type assertion para el parámetro body
+      const response = await supabase.functions.invoke('auto-signup', {
         body: {
           email: data.user.email, 
           user_id: data.user.id
-        }
+        } as Record<string, unknown>
       });
       console.log("Respuesta de auto-signup:", response);
       console.log("Email confirmado automáticamente", response.data);
