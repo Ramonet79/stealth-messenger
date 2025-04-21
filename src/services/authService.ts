@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse, RecoveryResponse, AuthError } from '@/types/auth';
+import { AutoSignupPayload } from '@/types/auth-functions';
 
 export const signUpUser = async (
   email: string, 
@@ -89,19 +90,15 @@ export const signUpUser = async (
     try {
       console.log("Llamando a función auto-signup para confirmar email");
       
-      // Solución definitiva: Usamos una interfaz bien tipada para el body
-      interface AutoSignupBody {
-        email: string;
-        user_id: string;
-      }
-      
-      const autoSignupBody: AutoSignupBody = {
-        email: data.user.email!, 
+      // Crear un objeto fuertemente tipado para el body
+      const autoSignupPayload: AutoSignupPayload = {
+        email: data.user.email ?? '', 
         user_id: data.user.id
       };
       
-      const response = await supabase.functions.invoke('auto-signup', {
-        body: autoSignupBody
+      // Usando el tipo apropiado para la función invoke
+      const response = await supabase.functions.invoke<{ data: any }>('auto-signup', {
+        body: autoSignupPayload
       });
       
       console.log("Respuesta de auto-signup:", response);
@@ -229,8 +226,13 @@ export const signInUser = async (
           
           if (authData?.user) {
             // Llamar a función edge para confirmar email
+            const payload: AutoSignupPayload = {
+              email, 
+              user_id: authData.user.id
+            };
+            
             await supabase.functions.invoke('auto-signup', {
-              body: { email, user_id: authData.user.id }
+              body: payload
             });
             
             // Intentar iniciar sesión nuevamente
