@@ -12,6 +12,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Definir interfaz para el payload para asegurar coherencia
+interface AutoSignupPayload {
+  email: string;
+  user_id: string;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("Edge function auto-signup invocada");
   
@@ -22,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Decodificar la información
-    const payload = await req.json();
+    const payload = await req.json() as AutoSignupPayload;
     console.log("Payload recibido:", payload);
     
     const { email, user_id } = payload;
