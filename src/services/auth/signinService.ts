@@ -33,7 +33,7 @@ export const signInUser = async (
               user_id: authData.user.id
             };
             
-            // Corrigiendo el tipo para la invocación de la función
+            // Asegurar tipos correctos para la invocación de la función
             const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
               body: payload
             });

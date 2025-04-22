@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
@@ -95,7 +94,6 @@ export const signUpUser = async (
         user_id: data.user.id
       };
       
-      // Corrigiendo el tipo para la invocación de la función
       const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
         body: autoSignupPayload
       });
