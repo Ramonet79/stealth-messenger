@@ -95,7 +95,8 @@ export const signUpUser = async (
         user_id: data.user.id
       };
       
-      const { data: functionResponse } = await supabase.functions.invoke<{ data: any }>('auto-signup', {
+      // Corrigiendo el tipo para la invocación de la función
+      const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
         body: autoSignupPayload
       });
       
