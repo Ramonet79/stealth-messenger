@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
@@ -89,13 +90,15 @@ export const signUpUser = async (
     try {
       console.log("Llamando a función auto-signup para confirmar email");
       
+      // Definiendo correctamente el payload con el tipo AutoSignupPayload
       const autoSignupPayload: AutoSignupPayload = {
         email: data.user.email ?? '', 
         user_id: data.user.id
       };
       
+      // Utilizando la función invoke con el tipo correcto en el body
       const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
-        body: autoSignupPayload
+        body: autoSignupPayload  // Este es el punto donde ocurría el error
       });
       
       console.log("Respuesta de auto-signup:", functionResponse);

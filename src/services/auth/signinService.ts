@@ -28,12 +28,13 @@ export const signInUser = async (
           const { data: authData } = await supabase.auth.getUser();
           
           if (authData?.user) {
+            // Definiendo correctamente el payload con tipo AutoSignupPayload
             const payload: AutoSignupPayload = {
               email, 
               user_id: authData.user.id
             };
             
-            // Asegurar tipos correctos para la invocación de la función
+            // Utilizando la función invoke con el tipo correcto en el body
             const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
               body: payload
             });
