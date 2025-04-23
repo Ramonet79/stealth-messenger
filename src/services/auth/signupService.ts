@@ -117,11 +117,13 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      await supabase.rpc('ensure_user_profile', {
+      const params = {
         user_id: userId,
         user_email: email,
         user_name: username,
-      } as any); // 👈 Cast para evitar error TS2345
+      };
+      
+      await supabase.rpc('ensure_user_profile', params);
     } catch (rpcError) {
       console.error('Error en RPC:', rpcError);
     }
