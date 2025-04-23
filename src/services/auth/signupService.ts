@@ -117,11 +117,12 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
+      // Utilizar una conversión explícita para evitar errores de tipo
       const params = {
         user_id: userId,
         user_email: email,
         user_name: username,
-      };
+      } as unknown as Record<string, unknown>;
       
       await supabase.rpc('ensure_user_profile', params);
     } catch (rpcError) {
