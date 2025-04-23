@@ -3,66 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
 
-export const signInUser = async (
-  email: string, 
-  password: string
+export const confirmUserWithFunction = async (
+  email: string,
+  userId: string
 ): Promise<AuthResponse> => {
   try {
-    console.log("Iniciando sesión para:", email);
-    
-    // Intentamos iniciar sesión normal
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const payload = {
       email,
-      password,
+      user_id: userId,
+    } as unknown as Record<string, unknown>; // ✅ Solución a TS2352
+
+    const { data, error } = await supabase.functions.invoke('auto-signup', {
+      body: payload,
     });
 
-    if (error) {
-      console.error("Error de autenticación:", error);
-      
-      // Si el error es de email no confirmado, intentamos confirmar vía edge function
-      if (error.message.includes("Email not confirmed") || error.message.includes("Email no confirmado")) {
-        console.log("Email no confirmado, invocando función auto-signup");
-        
-        try {
-          // Obtener usuario actual para confirmar su email
-          const { data: authData } = await supabase.auth.getUser();
-          
-          if (authData?.user) {
-            // Definiendo correctamente el payload con tipo AutoSignupPayload
-            const payload: AutoSignupPayload = {
-              email, 
-              user_id: authData.user.id
-            };
-            
-            // Utilizando la función invoke con el tipo correcto en el body
-            const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
-              body: payload as Record<string, unknown>
-            });
-            
-            // Intentar iniciar sesión nuevamente
-            console.log("Reintentando inicio de sesión después de confirmar email");
-            const retrySignIn = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-            
-            if (!retrySignIn.error) {
-              console.log("Sesión iniciada después de confirmar email");
-              return { data: retrySignIn.data, error: null };
-            }
-          }
-        } catch (funcError) {
-          console.error("Error al confirmar email con función:", funcError);
-        }
-      }
-      
-      return { data: null, error: { message: error.message } };
-    }
-
-    console.log("Inicio de sesión exitoso");
-    return { data, error: null };
+    return { data, error: error ? { message: error.message } : null };
   } catch (error: any) {
-    console.error("Error inesperado en inicio de sesión:", error);
     return { data: null, error: { message: error.message } };
   }
 };

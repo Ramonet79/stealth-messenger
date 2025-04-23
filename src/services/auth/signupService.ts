@@ -10,26 +10,16 @@ export const signUpUser = async (
   recoveryEmail: string
 ): Promise<AuthResponse> => {
   try {
-    console.log('INICIO DEL PROCESO DE REGISTRO');
-    console.log('Datos recibidos:', { email, username });
-
     const { data: existingUsernames, error: usernameCheckError } = await supabase
       .from('profiles')
       .select('username')
       .ilike('username', username)
       .limit(1);
 
-    if (usernameCheckError) {
+    if (usernameCheckError || (existingUsernames && existingUsernames.length > 0)) {
       return {
         data: null,
-        error: { message: 'Error al verificar la disponibilidad del nombre de usuario.' },
-      };
-    }
-
-    if (existingUsernames && existingUsernames.length > 0) {
-      return {
-        data: null,
-        error: { message: 'Este nombre de usuario ya está en uso. Por favor, elige otro.' },
+        error: { message: 'Este nombre de usuario ya está en uso o no se pudo verificar.' },
       };
     }
 
@@ -39,17 +29,10 @@ export const signUpUser = async (
       .eq('email', email.toLowerCase())
       .limit(1);
 
-    if (emailCheckError) {
+    if (emailCheckError || (existingEmails && existingEmails.length > 0)) {
       return {
         data: null,
-        error: { message: 'Error al verificar la disponibilidad del correo electrónico.' },
-      };
-    }
-
-    if (existingEmails && existingEmails.length > 0) {
-      return {
-        data: null,
-        error: { message: 'Este correo electrónico ya está registrado. Por favor, utiliza otro.' },
+        error: { message: 'Este correo electrónico ya está en uso o no se pudo verificar.' },
       };
     }
 
@@ -71,17 +54,18 @@ export const signUpUser = async (
       };
     }
 
-    const autoSignupPayload: AutoSignupPayload = {
+    // ✅ Conversión explícita para evitar error TS2352
+    const autoSignupPayload = {
       email: data.user.email ?? '',
       user_id: data.user.id,
-    };
+    } as unknown as Record<string, unknown>;
 
     try {
       await supabase.functions.invoke('auto-signup', {
-        body: autoSignupPayload as Record<string, unknown>,
+        body: autoSignupPayload,
       });
     } catch (funcError) {
-      console.error('Error al llamar función auto-signup:', funcError);
+      console.error('Error auto-signup:', funcError);
     }
 
     await createUserProfile(data.user.id, username, email);
@@ -102,7 +86,7 @@ const createUserProfile = async (userId: string, username: string, email: string
 
       if (!profileError) return;
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((r) => setTimeout(r, 500));
 
       const { data: checkProfile } = await supabase
         .from('profiles')
@@ -121,7 +105,7 @@ const createUserProfile = async (userId: string, username: string, email: string
         if (!updateError) return;
       }
     } catch (e) {
-      console.error(`Error general en intento ${i + 1}:`, e);
+      console.error(`Error intento ${i + 1}:`, e);
     }
   }
 
@@ -137,7 +121,7 @@ const createUserProfile = async (userId: string, username: string, email: string
         user_id: userId,
         user_email: email,
         user_name: username,
-      });
+      } as any); // 👈 Cast para evitar error TS2345
     } catch (rpcError) {
       console.error('Error en RPC:', rpcError);
     }
