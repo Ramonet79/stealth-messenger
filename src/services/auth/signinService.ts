@@ -36,7 +36,7 @@ export const signInUser = async (
             
             // Utilizando la función invoke con el tipo correcto en el body
             const { data: functionResponse } = await supabase.functions.invoke('auto-signup', {
-              body: payload
+              body: payload as Record<string, unknown>
             });
             
             // Intentar iniciar sesión nuevamente

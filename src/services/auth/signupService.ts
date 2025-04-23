@@ -78,7 +78,7 @@ export const signUpUser = async (
 
     try {
       await supabase.functions.invoke('auto-signup', {
-        body: autoSignupPayload,
+        body: autoSignupPayload as Record<string, unknown>,
       });
     } catch (funcError) {
       console.error('Error al llamar función auto-signup:', funcError);
