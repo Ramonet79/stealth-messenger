@@ -117,14 +117,15 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      // Utilizar una conversión explícita para evitar errores de tipo
-      const params = {
-        user_id: userId,
-        user_email: email,
-        user_name: username,
-      } as unknown as Record<string, unknown>;
-      
-      await supabase.rpc('ensure_user_profile', params);
+      // Solución definitiva: usar any directamente en la llamada a rpc para evitar los problemas de tipado
+      await supabase.rpc(
+        'ensure_user_profile',
+        {
+          user_id: userId,
+          user_email: email,
+          user_name: username,
+        } as any
+      );
     } catch (rpcError) {
       console.error('Error en RPC:', rpcError);
     }
