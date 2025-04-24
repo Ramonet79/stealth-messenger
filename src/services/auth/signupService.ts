@@ -59,11 +59,10 @@ export const signUpUser = async (
       };
     }
 
-    // ✅ Conversión explícita para evitar error TS2352
     const autoSignupPayload = {
       email: data.user.email ?? '',
       user_id: data.user.id,
-    } as unknown as Record<string, unknown>;
+    } as Record<string, unknown>;
 
     try {
       await supabase.functions.invoke('auto-signup', {
@@ -122,7 +121,7 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      await supabase.rpc<void, EnsureUserProfileArgs>(
+      await supabase.rpc<EnsureUserProfileArgs>(
         'ensure_user_profile',
         {
           user_id: userId,
