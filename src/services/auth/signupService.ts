@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
@@ -122,8 +121,7 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      // Fix: Remove the type parameter as it's causing a constraint issue
-      await supabase.rpc(
+      await supabase.rpc<EnsureUserProfileArgs>(
         'ensure_user_profile',
         {
           user_id: userId,
