@@ -1,7 +1,12 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
+
+type EnsureUserProfileArgs = {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+};
 
 export const signUpUser = async (
   email: string,
@@ -117,14 +122,13 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      // Solución definitiva: usar any directamente en la llamada a rpc para evitar los problemas de tipado
-      await supabase.rpc(
+      await supabase.rpc<void, EnsureUserProfileArgs>(
         'ensure_user_profile',
         {
           user_id: userId,
           user_email: email,
           user_name: username,
-        } as any
+        }
       );
     } catch (rpcError) {
       console.error('Error en RPC:', rpcError);
