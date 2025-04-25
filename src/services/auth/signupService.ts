@@ -3,12 +3,6 @@ import { AuthResponse } from '@/types/auth';
 import { AutoSignupPayload } from '@/types/auth-functions';
 import { Database } from '@/integrations/supabase/types';
 
-type EnsureUserProfileArgs = {
-  user_id: string;
-  user_email: string;
-  user_name: string;
-};
-
 export const signUpUser = async (
   email: string,
   password: string,
