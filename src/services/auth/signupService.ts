@@ -116,13 +116,13 @@ const createUserProfile = async (userId: string, username: string, email: string
 
   if (!finalCheck || checkError) {
     try {
-      await supabase.rpc<'ensure_user_profile', Database['public']['Functions']['ensure_user_profile']['Args']>(
+      await supabase.rpc(
         'ensure_user_profile',
         {
           user_id: userId,
           user_email: email,
           user_name: username,
-        }
+        } as Database['public']['Functions']['ensure_user_profile']['Args']
       );
     } catch (rpcError) {
       console.error('Error en RPC:', rpcError);
