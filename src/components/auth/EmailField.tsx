@@ -49,7 +49,7 @@ export const EmailField = ({ control }: EmailFieldProps) => {
       if (profileData && profileData.length > 0) {
         console.log('Email encontrado en profiles:', profileData);
         setEmailAvailable(false);
-        setCheckingUsername(false);
+        setCheckingEmail(false);
         return;
       }
       
