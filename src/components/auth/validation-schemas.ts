@@ -1,6 +1,5 @@
 import * as z from 'zod';
 
-// Esquema de validación para el formulario de registro
 export const signupSchema = z.object({
   username: z
     .string()
