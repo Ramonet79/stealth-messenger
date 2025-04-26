@@ -23,10 +23,10 @@ export const useUsername = () => {
           .from('profiles')
           .select('id')
           .eq('username', finalUsername)
-          .limit(1);
+          .maybeSingle();
 
-        if (!error && (!data || data.length === 0)) {
-          break; // Nombre de usuario libre
+        if (!error && !data) {
+          break; // Nombre libre
         }
 
         finalUsername = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
