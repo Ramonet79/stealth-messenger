@@ -1,19 +1,42 @@
-
 import { useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useUsername = () => {
   const [username, setUsername] = useState<string>('');
   const { user } = useSupabaseAuth();
 
   useEffect(() => {
-    if (user && user.email) {
-      const extractedUsername = user.user_metadata?.username || 
-                              user.email.split('@')[0] || 
-                              `usuario_${user.id.substring(0, 8)}`;
-      setUsername(extractedUsername);
-      console.log('Username actualizado:', extractedUsername);
-    }
+    const generateUsername = async () => {
+      if (!user?.email) return;
+
+      let baseUsername =
+        user.user_metadata?.username ||
+        user.email.split('@')[0] ||
+        `usuario_${user.id.substring(0, 8)}`;
+
+      let finalUsername = baseUsername;
+      let attempts = 0;
+
+      while (attempts < 5) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', finalUsername)
+          .limit(1);
+
+        if (!error && (!data || data.length === 0)) {
+          break; // Nombre de usuario libre
+        }
+
+        finalUsername = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
+        attempts++;
+      }
+
+      setUsername(finalUsername);
+    };
+
+    generateUsername();
   }, [user]);
 
   return { username };
