@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
-import { AutoSignupPayload } from '@/types/auth-functions';
 import { Database } from '@/integrations/supabase/types';
 
 export const signUpUser = async (
