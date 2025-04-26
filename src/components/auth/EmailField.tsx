@@ -31,7 +31,6 @@ export const EmailField = ({ control }: EmailFieldProps) => {
     setCheckingEmail(true);
     
     try {
-      // CORREGIDO: Consulta para verificar si el email ya existe tanto en profiles como en auth.users
       // Primero verificamos en la tabla profiles
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -50,23 +49,26 @@ export const EmailField = ({ control }: EmailFieldProps) => {
       if (profileData && profileData.length > 0) {
         console.log('Email encontrado en profiles:', profileData);
         setEmailAvailable(false);
-        setCheckingEmail(false);
+        setCheckingUsername(false);
         return;
       }
       
-      // También verificamos en auth.users a través de una consulta a cualquier usuario existente
-      // ya que no podemos consultar auth.users directamente
-      const { data: authData, error: authError } = await supabase.auth.admin
-        .getUserByEmail(email.toLowerCase())
-        .catch(() => ({ data: null, error: null }));
+      // Verificamos si el correo existe mediante el método de inicio de sesión
+      // Esta es una manera indirecta pero efectiva de verificar si un correo ya está registrado
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email: email.toLowerCase(),
+        options: {
+          shouldCreateUser: false // Esto previene la creación de un nuevo usuario
+        }
+      });
       
-      // Si encontramos coincidencia en auth o hay error, no está disponible
-      if (authData || authError) {
-        console.log('Email posiblemente encontrado en auth:', authData || authError);
-        setEmailAvailable(false);
-      } else {
-        // Si no encontramos coincidencia en ninguna tabla, está disponible
+      // Si no hay error o el error indica que el usuario no existe, entonces el email está disponible
+      if (signInError && signInError.message.includes('No user found')) {
+        console.log('Email no encontrado en auth:', email);
         setEmailAvailable(true);
+      } else {
+        console.log('Email posiblemente encontrado en auth');
+        setEmailAvailable(false);
       }
     } catch (error) {
       console.error('Error al verificar email:', error);
