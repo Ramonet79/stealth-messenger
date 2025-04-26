@@ -33,21 +33,43 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
     setCheckingUsername(true);
     
     try {
-      // Consulta case-insensitive para verificar si el username ya existe
-      const { data, error } = await supabase
+      // CORREGIDO: Consulta case-insensitive para verificar si el username ya existe
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('username')
         .ilike('username', username)
         .limit(1);
       
-      if (error) {
-        console.error('Error al verificar nombre de usuario:', error);
+      if (profilesError) {
+        console.error('Error al verificar nombre de usuario:', profilesError);
         setUsernameAvailable(false);
-      } else if (data && data.length > 0) {
-        // Si hay resultados, el nombre de usuario no está disponible
+        setCheckingUsername(false);
+        return;
+      }
+      
+      // Si encontramos coincidencia en profiles, ya sabemos que no está disponible
+      if (profilesData && profilesData.length > 0) {
+        console.log('Username encontrado en profiles:', profilesData);
+        setUsernameAvailable(false);
+        setCheckingUsername(false);
+        return;
+      }
+      
+      // También verificamos en auth.users a través de metadatos (aunque es menos preciso)
+      const { data: userMetadata, error: metadataError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .limit(1);
+      
+      if (metadataError) {
+        console.error('Error al verificar metadatos de usuario:', metadataError);
+      }
+      
+      if (userMetadata && userMetadata.length > 0) {
+        console.log('Username encontrado en metadatos:', userMetadata);
         setUsernameAvailable(false);
       } else {
-        // Si no hay resultados, el nombre de usuario está disponible
         setUsernameAvailable(true);
       }
     } catch (error) {

@@ -31,21 +31,41 @@ export const EmailField = ({ control }: EmailFieldProps) => {
     setCheckingEmail(true);
     
     try {
-      // Consulta para verificar si el email ya existe
-      const { data, error } = await supabase
+      // CORREGIDO: Consulta para verificar si el email ya existe tanto en profiles como en auth.users
+      // Primero verificamos en la tabla profiles
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('email', email.toLowerCase())
+        .ilike('email', email.toLowerCase())
         .limit(1);
       
-      if (error) {
-        console.error('Error al verificar email:', error);
+      if (profileError) {
+        console.error('Error al verificar email en profiles:', profileError);
         setEmailAvailable(false);
-      } else if (data && data.length > 0) {
-        // Si hay resultados, el email no está disponible
+        setCheckingEmail(false);
+        return;
+      }
+      
+      // Si encontramos coincidencia en profiles, ya sabemos que no está disponible
+      if (profileData && profileData.length > 0) {
+        console.log('Email encontrado en profiles:', profileData);
+        setEmailAvailable(false);
+        setCheckingEmail(false);
+        return;
+      }
+      
+      // También verificamos en auth.users a través de una consulta a cualquier usuario existente
+      // ya que no podemos consultar auth.users directamente
+      const { data: authData, error: authError } = await supabase.auth.admin
+        .getUserByEmail(email.toLowerCase())
+        .catch(() => ({ data: null, error: null }));
+      
+      // Si encontramos coincidencia en auth o hay error, no está disponible
+      if (authData || authError) {
+        console.log('Email posiblemente encontrado en auth:', authData || authError);
         setEmailAvailable(false);
       } else {
-        // Si no hay resultados, el email está disponible
+        // Si no encontramos coincidencia en ninguna tabla, está disponible
         setEmailAvailable(true);
       }
     } catch (error) {
