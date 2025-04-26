@@ -9,32 +9,33 @@ export const signUpUser = async (
   recoveryEmail: string
 ): Promise<AuthResponse> => {
   try {
-    const { data: existingUsernames, error: usernameCheckError } = await supabase
+    // Validar que el nombre de usuario no esté en uso (tabla 'profiles')
+    const { data: existingUsernames, error: usernameError } = await supabase
       .from('profiles')
-      .select('username')
-      .ilike('username', username)
+      .select('id')
+      .eq('username', username)
       .limit(1);
 
-    if (usernameCheckError || (existingUsernames && existingUsernames.length > 0)) {
-      return {
-        data: null,
-        error: { message: 'Este nombre de usuario ya está en uso o no se pudo verificar.' },
-      };
+    if (usernameError) {
+      return { data: null, error: { message: 'Error al comprobar el nombre de usuario.' } };
     }
 
-    const { data: existingEmails, error: emailCheckError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('email', email.toLowerCase())
-      .limit(1);
-
-    if (emailCheckError || (existingEmails && existingEmails.length > 0)) {
-      return {
-        data: null,
-        error: { message: 'Este correo electrónico ya está en uso o no se pudo verificar.' },
-      };
+    if (existingUsernames && existingUsernames.length > 0) {
+      return { data: null, error: { message: 'Este nombre de usuario ya está en uso.' } };
     }
 
+    // Validar que el correo electrónico no esté en uso (Supabase Auth)
+    const { data: authUsers, error: emailError } = await supabase.auth.admin.listUsers();
+    if (emailError) {
+      return { data: null, error: { message: 'Error al comprobar el correo electrónico.' } };
+    }
+
+    const emailAlreadyInUse = authUsers?.users.some(user => user.email?.toLowerCase() === email.toLowerCase());
+    if (emailAlreadyInUse) {
+      return { data: null, error: { message: 'Este correo electrónico ya está en uso.' } };
+    }
+
+    // Crear el usuario en Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -47,86 +48,29 @@ export const signUpUser = async (
     });
 
     if (error || !data.user) {
-      return {
-        data: null,
-        error: { message: error?.message || 'Error al crear el usuario' },
-      };
+      return { data: null, error: { message: error?.message || 'Error al crear el usuario.' } };
     }
 
-    const autoSignupPayload = {
-      email: data.user.email ?? '',
-      user_id: data.user.id,
-    } as Record<string, unknown>;
-
-    try {
-      await supabase.functions.invoke('auto-signup', {
-        body: autoSignupPayload,
-      });
-    } catch (funcError) {
-      console.error('Error auto-signup:', funcError);
-    }
-
-    await createUserProfile(data.user.id, username, email);
-    sessionStorage.setItem('firstLogin', 'true');
-
-    return { data, error: null };
-  } catch (error: any) {
-    return { data: null, error: { message: error.message } };
-  }
-};
-
-const createUserProfile = async (userId: string, username: string, email: string) => {
-  for (let i = 0; i < 3; i++) {
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({ id: userId, username, email });
-
-      if (!profileError) return;
-
-      await new Promise((r) => setTimeout(r, 500));
-
-      const { data: checkProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (checkProfile) return;
-
-      if (i === 1) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ username, email })
-          .eq('id', userId);
-
-        if (!updateError) return;
-      }
-    } catch (e) {
-      console.error(`Error intento ${i + 1}:`, e);
-    }
-  }
-
-  const { data: finalCheck, error: checkError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (!finalCheck || checkError) {
+    // Crear el perfil con función RPC
     try {
       await supabase.rpc(
         'ensure_user_profile',
         {
-          user_id: userId,
+          user_id: data.user.id,
           user_email: email,
           user_name: username,
         } as Database['public']['Functions']['ensure_user_profile']['Args']
       );
-    } catch (rpcError) {
+    } catch (rpcError: any) {
       console.error('Error en RPC:', rpcError);
+      return { data: null, error: { message: 'Error al crear el perfil del usuario.' } };
     }
+
+    sessionStorage.setItem('firstLogin', 'true');
+
+    return { data, error: null };
+  } catch (error: any) {
+    console.error('Error general en signUpUser:', error);
+    return { data: null, error: { message: error.message || 'Error inesperado durante el registro.' } };
   }
 };
-
-export { createUserProfile };
