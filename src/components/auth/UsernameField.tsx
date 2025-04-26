@@ -31,9 +31,10 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
     }
 
     setCheckingUsername(true);
+    console.log('Verificando disponibilidad del username:', username);
     
     try {
-      // CORREGIDO: Consulta case-insensitive para verificar si el username ya existe
+      // Consulta case-insensitive para verificar si el username ya existe en profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('username')
@@ -41,7 +42,7 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
         .limit(1);
       
       if (profilesError) {
-        console.error('Error al verificar nombre de usuario:', profilesError);
+        console.error('Error al verificar nombre de usuario en profiles:', profilesError);
         setUsernameAvailable(false);
         setCheckingUsername(false);
         return;
@@ -55,23 +56,10 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
         return;
       }
       
-      // También verificamos en auth.users a través de metadatos (aunque es menos preciso)
-      const { data: userMetadata, error: metadataError } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username)
-        .limit(1);
-      
-      if (metadataError) {
-        console.error('Error al verificar metadatos de usuario:', metadataError);
-      }
-      
-      if (userMetadata && userMetadata.length > 0) {
-        console.log('Username encontrado en metadatos:', userMetadata);
-        setUsernameAvailable(false);
-      } else {
-        setUsernameAvailable(true);
-      }
+      // También podemos verificar en auth.users (aunque no es necesario para este caso)
+      // ya que usamos la tabla profiles como fuente de verdad para los usernames
+      console.log('Username no encontrado en profiles, está disponible');
+      setUsernameAvailable(true);
     } catch (error) {
       console.error('Error al verificar nombre de usuario:', error);
       setUsernameAvailable(false);
