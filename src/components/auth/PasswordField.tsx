@@ -6,13 +6,14 @@ import { Control } from 'react-hook-form';
 
 interface PasswordFieldProps {
   control: Control<any>;
+  name?: string;
 }
 
-export const PasswordField = ({ control }: PasswordFieldProps) => {
+export const PasswordField = ({ control, name = "password" }: PasswordFieldProps) => {
   return (
     <FormField
       control={control}
-      name="password"
+      name={name}
       render={({ field }) => (
         <FormItem>
           <FormLabel>Contraseña</FormLabel>
