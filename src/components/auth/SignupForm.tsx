@@ -11,7 +11,6 @@ import { UsernameField } from './UsernameField';
 import { EmailField } from './EmailField';
 import { PasswordField } from './PasswordField';
 import { signupSchema, SignupFormValues } from './validation-schemas';
-import { useCheckUsername } from '@/hooks/useCheckUsername';
 
 type SignupFormProps = {
   onSuccess: () => void;
@@ -21,7 +20,6 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const { signUp } = useSupabaseAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isAvailable, loading, checkUsername } = useCheckUsername();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -34,44 +32,47 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
 
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
-    const { error } = await signUp(values);
-    setIsSubmitting(false);
+    
+    try {
+      const { error } = await signUp(
+        values.email, 
+        values.password, 
+        values.username,
+        values.email // Usando el mismo email como recoveryEmail por ahora
+      );
+      
+      if (error) {
+        toast({
+          title: "Error al crear cuenta",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (error) {
       toast({
-        title: "Error al crear cuenta",
-        description: error.message,
+        title: "Cuenta creada con éxito",
+        description: "Ya puedes iniciar sesión.",
+      });
+
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Error inesperado",
+        description: error?.message || "Ha ocurrido un error",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    toast({
-      title: "Cuenta creada con éxito",
-      description: "Ya puedes iniciar sesión.",
-    });
-
-    onSuccess();
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <UsernameField
-            form={form}
-            onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-              const username = e.target.value;
-              checkUsername(username);
-            }}
-          />
-          {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>}
-          {isAvailable === true && <p className="text-sm text-green-600">Nombre de usuario disponible ✔</p>}
-          {isAvailable === false && <p className="text-sm text-red-600">Este nombre ya está en uso ❌</p>}
-        </div>
-
-        <EmailField form={form} />
-        <PasswordField form={form} />
+        <UsernameField control={form.control} name="username" />
+        <EmailField control={form.control} name="email" />
+        <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Registrarse"}

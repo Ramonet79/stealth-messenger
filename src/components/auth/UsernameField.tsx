@@ -4,8 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Control, useWatch } from 'react-hook-form';
-import * as z from "zod";
+import { Control } from 'react-hook-form';
 
 interface UsernameFieldProps {
   control: Control<any>;
@@ -16,78 +15,39 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  
-  // Use the useWatch hook to observe changes to the username field
-  const username = useWatch({
-    control,
-    name,
-  });
 
-  // Function to check username availability
-  const checkUsernameAvailability = async (username: string) => {
-    if (username.length < 8) {
+  const checkUsernameAvailability = async (value: string) => {
+    if (!value || value.length < 4) {
       setUsernameAvailable(null);
       return;
     }
 
     setCheckingUsername(true);
-    console.log('Verificando disponibilidad del username:', username);
     
     try {
-      // Consulta case-insensitive para verificar si el username ya existe en profiles
-      const { data: profilesData, error: profilesError } = await supabase
+      // Consulta case-insensitive para verificar si el username ya existe
+      const { data, error } = await supabase
         .from('profiles')
         .select('username')
-        .ilike('username', username)
+        .ilike('username', value)
         .limit(1);
       
-      if (profilesError) {
-        console.error('Error al verificar nombre de usuario en profiles:', profilesError);
+      if (error) {
+        console.error('Error al verificar nombre de usuario:', error);
         setUsernameAvailable(false);
-        setCheckingUsername(false);
         return;
       }
       
-      // Si encontramos coincidencia en profiles, ya sabemos que no está disponible
-      if (profilesData && profilesData.length > 0) {
-        console.log('Username encontrado en profiles:', profilesData);
-        setUsernameAvailable(false);
-        setCheckingUsername(false);
-        return;
-      }
+      // Si hay resultados, el username no está disponible
+      setUsernameAvailable(!(data && data.length > 0));
       
-      // También podemos verificar en auth.users (aunque no es necesario para este caso)
-      // ya que usamos la tabla profiles como fuente de verdad para los usernames
-      console.log('Username no encontrado en profiles, está disponible');
-      setUsernameAvailable(true);
     } catch (error) {
-      console.error('Error al verificar nombre de usuario:', error);
+      console.error('Error general:', error);
       setUsernameAvailable(false);
     } finally {
       setCheckingUsername(false);
     }
   };
-
-  // Watch for changes in the username field
-  useEffect(() => {
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-    
-    if (username && username.length >= 8) {
-      const timeout = setTimeout(() => {
-        checkUsernameAvailability(username);
-      }, 500);
-      
-      setTypingTimeout(timeout);
-    } else {
-      setUsernameAvailable(null);
-    }
-    
-    return () => {
-      if (typingTimeout) clearTimeout(typingTimeout);
-    };
-  }, [username]);
 
   return (
     <FormField
@@ -105,6 +65,20 @@ export const UsernameField = ({ control, name }: UsernameFieldProps) => {
                   usernameAvailable === true ? 'border-green-500' : 
                   usernameAvailable === false ? 'border-red-500' : ''
                 }`}
+                onChange={(e) => {
+                  field.onChange(e);
+                  
+                  // Implementar debounce
+                  if (typingTimeout) {
+                    clearTimeout(typingTimeout);
+                  }
+                  
+                  const timeout = setTimeout(() => {
+                    checkUsernameAvailability(e.target.value);
+                  }, 500);
+                  
+                  setTypingTimeout(timeout);
+                }}
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 {checkingUsername && (

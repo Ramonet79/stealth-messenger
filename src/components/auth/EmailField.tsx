@@ -4,22 +4,17 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Control, useWatch } from 'react-hook-form';
+import { Control } from 'react-hook-form';
 
 interface EmailFieldProps {
   control: Control<any>;
+  name: string;
 }
 
-export const EmailField = ({ control }: EmailFieldProps) => {
+export const EmailField = ({ control, name }: EmailFieldProps) => {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  
-  // Use the useWatch hook to observe changes to the email field
-  const email = useWatch({
-    control,
-    name: "email",
-  });
 
   // Function to check email availability
   const checkEmailAvailability = async (email: string) => {
@@ -78,31 +73,10 @@ export const EmailField = ({ control }: EmailFieldProps) => {
     }
   };
 
-  // Watch for changes in the email field
-  useEffect(() => {
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-    
-    if (email && email.includes('@')) {
-      const timeout = setTimeout(() => {
-        checkEmailAvailability(email);
-      }, 500);
-      
-      setTypingTimeout(timeout);
-    } else {
-      setEmailAvailable(null);
-    }
-    
-    return () => {
-      if (typingTimeout) clearTimeout(typingTimeout);
-    };
-  }, [email]);
-
   return (
     <FormField
       control={control}
-      name="email"
+      name={name}
       render={({ field }) => (
         <FormItem>
           <FormLabel>Correo electrónico</FormLabel>
@@ -116,6 +90,20 @@ export const EmailField = ({ control }: EmailFieldProps) => {
                   emailAvailable === true ? 'border-green-500' : 
                   emailAvailable === false ? 'border-red-500' : ''
                 }`}
+                onChange={(e) => {
+                  field.onChange(e);
+                  
+                  // Implementar debounce
+                  if (typingTimeout) {
+                    clearTimeout(typingTimeout);
+                  }
+                  
+                  const timeout = setTimeout(() => {
+                    checkEmailAvailability(e.target.value);
+                  }, 500);
+                  
+                  setTypingTimeout(timeout);
+                }}
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 {checkingEmail && (
