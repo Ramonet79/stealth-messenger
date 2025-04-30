@@ -20,6 +20,8 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const { signUp } = useSupabaseAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Importa y utiliza el hook para verificar username en tiempo real
   const { isAvailable, suggested, loading, checkUsername } = useCheckUsername();
 
   const form = useForm<SignupFormValues>({
@@ -66,16 +68,17 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div>
+          {/* UsernameField con verificación en tiempo real */}
           <UsernameField
             form={form}
             onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-              const username = e.target.value;
-              if (username) {
-                checkUsername(username);
-              }
+              const u = e.target.value;
+              if (u) checkUsername(u);
             }}
           />
-          {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>}
+          {loading && (
+            <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>
+          )}
           {isAvailable === true && (
             <p className="text-sm text-green-600">✔ Nombre de usuario disponible</p>
           )}
@@ -83,15 +86,16 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
             <p className="text-sm text-red-600">
               ❌ Este nombre ya está en uso
               {suggested && (
-                <>. Puedes probar con: <strong>{suggested}</strong></>
+                <>. Prueba: <strong>{suggested}</strong></>
               )}
             </p>
           )}
         </div>
 
-        {/* Use control and name props as EmailField expects */}
+        {/* EmailField espera control y name */}
         <EmailField control={form.control} name="email" />
 
+        {/* PasswordField espera control */}
         <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
