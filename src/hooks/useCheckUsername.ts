@@ -3,16 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useCheckUsername = () => {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [suggested, setSuggested] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const checkUsername = useCallback(async (username: string) => {
     if (!username || username.length < 4) {
       setIsAvailable(null);
+      setSuggested(null);
       return;
     }
 
     setLoading(true);
-
     const { data, error } = await supabase
       .from('profiles')
       .select('id')
@@ -20,14 +21,21 @@ export const useCheckUsername = () => {
       .maybeSingle();
 
     if (error) {
-      console.error('Error comprobando nombre de usuario:', error);
+      console.error('Error comprobando username:', error);
       setIsAvailable(null);
+      setSuggested(null);
+    } else if (data) {
+      setIsAvailable(false);
+      // Proponer una alternativa como username123 o username456
+      const alternative = `${username}${Math.floor(Math.random() * 900 + 100)}`;
+      setSuggested(alternative);
     } else {
-      setIsAvailable(!data); // true si no existe
+      setIsAvailable(true);
+      setSuggested(null);
     }
 
     setLoading(false);
   }, []);
 
-  return { isAvailable, loading, checkUsername };
+  return { isAvailable, suggested, loading, checkUsername };
 };
