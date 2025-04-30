@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -70,7 +71,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
             form={form}
             onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
               const username = e.target.value;
-              checkUsername(username);
+              if (username) {
+                checkUsername(username);
+              }
             }}
           />
           {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>}
@@ -89,8 +92,8 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
           )}
         </div>
 
-        <EmailField form={form} />
-        <PasswordField form={form} />
+        <EmailField form={form} name="email" />
+        <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Registrarse"}
