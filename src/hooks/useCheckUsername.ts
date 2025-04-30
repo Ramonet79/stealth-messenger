@@ -1,39 +1,39 @@
+// src/hooks/useCheckUsername.ts
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useCheckUsername = () => {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [suggested, setSuggested] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const checkUsername = useCallback(async (username: string) => {
-    if (!username || username.length < 4) {
+    // Si está vacío o muy corto, no comprobamos
+    if (!username || username.trim().length < 4) {
       setIsAvailable(null);
       setSuggested(null);
       return;
     }
-
     setLoading(true);
-    const { data, error } = await supabase
+
+    // Cuenta cuántos perfiles tienen exactamente ese username
+    const { count, error } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .maybeSingle();
+      .select('id', { count: 'exact', head: true })
+      .eq('username', username.trim());
 
     if (error) {
       console.error('Error comprobando username:', error);
       setIsAvailable(null);
       setSuggested(null);
-    } else if (data) {
+    } else if ((count ?? 0) > 0) {
       setIsAvailable(false);
-      // Proponer una alternativa como username123 o username456
-      const alternative = `${username}${Math.floor(Math.random() * 900 + 100)}`;
-      setSuggested(alternative);
+      // Sugerencia aleatoria
+      setSuggested(`${username.trim()}${Math.floor(Math.random() * 900 + 100)}`);
     } else {
       setIsAvailable(true);
       setSuggested(null);
     }
-
     setLoading(false);
   }, []);
 
