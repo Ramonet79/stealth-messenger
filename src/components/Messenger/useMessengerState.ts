@@ -65,7 +65,7 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     if (user && user.email) {
       const extractedUsername = user.user_metadata?.username || 
                                user.email.split('@')[0] || 
-                               `usuario_${user.id.substring(0, 8)}`;
+                               `usuario_${user?.id?.substring(0, 8) || Math.floor(Math.random() * 10000)}`
       setUsername(extractedUsername);
       console.log('Username actualizado:', extractedUsername);
     }
