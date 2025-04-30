@@ -21,43 +21,28 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Importa y utiliza el hook para verificar username en tiempo real
+  // Hook para comprobar username en tiempo real
   const { isAvailable, suggested, loading, checkUsername } = useCheckUsername();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: {
-      username: '',
-      email: '',
-      password: '',
-    },
+    defaultValues: { username: '', email: '', password: '' },
   });
 
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
-
     try {
       const { error } = await signUp(
         values.email,
         values.password,
         values.username,
-        values.email // recoveryEmail opcional
+        values.email
       );
-
       if (error) {
-        toast({
-          title: 'Error al crear cuenta',
-          description: error.message,
-          variant: 'destructive',
-        });
+        toast({ title: 'Error al crear cuenta', description: error.message, variant: 'destructive' });
         return;
       }
-
-      toast({
-        title: 'Cuenta creada con éxito',
-        description: 'Ya puedes iniciar sesión.',
-      });
-
+      toast({ title: 'Cuenta creada con éxito', description: 'Ya puedes iniciar sesión.' });
       onSuccess();
     } finally {
       setIsSubmitting(false);
@@ -68,42 +53,32 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          {/* UsernameField con verificación en tiempo real */}
           <UsernameField
             form={form}
-            onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+            onBlur={e => {
               const u = e.target.value;
               if (u) checkUsername(u);
             }}
           />
-          {loading && (
-            <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>
-          )}
-          {isAvailable === true && (
-            <p className="text-sm text-green-600">✔ Nombre de usuario disponible</p>
-          )}
+          {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>}
+          {isAvailable === true && <p className="text-sm text-green-600">✔ Nombre de usuario disponible</p>}
           {isAvailable === false && (
             <p className="text-sm text-red-600">
-              ❌ Este nombre ya está en uso
-              {suggested && (
-                <>. Prueba: <strong>{suggested}</strong></>
-              )}
+              ❌ Este nombre ya está en uso{suggested && <>. Prueba: <strong>{suggested}</strong></>}            
             </p>
           )}
         </div>
 
-        {/* EmailField espera control y name */}
-        <EmailField control={form.control} name="email" />
+        <div>
+          <EmailField control={form.control} name="email" />
+        </div>
 
-        {/* PasswordField espera control */}
-        <PasswordField control={form.control} />
+        <div>
+          <PasswordField control={form.control} />
+        </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            'Registrarse'
-          )}
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Registrarse'}
         </Button>
       </form>
     </Form>
