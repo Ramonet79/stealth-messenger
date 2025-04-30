@@ -1,12 +1,11 @@
-
 import React, { useState } from 'react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { Form } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Form } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { UsernameField } from './UsernameField';
 import { EmailField } from './EmailField';
 import { PasswordField } from './PasswordField';
@@ -26,9 +25,9 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      username: "",
-      email: "",
-      password: "",
+      username: '',
+      email: '',
+      password: '',
     },
   });
 
@@ -45,16 +44,16 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
 
       if (error) {
         toast({
-          title: "Error al crear cuenta",
+          title: 'Error al crear cuenta',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
         });
         return;
       }
 
       toast({
-        title: "Cuenta creada con éxito",
-        description: "Ya puedes iniciar sesión.",
+        title: 'Cuenta creada con éxito',
+        description: 'Ya puedes iniciar sesión.',
       });
 
       onSuccess();
@@ -84,19 +83,23 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
             <p className="text-sm text-red-600">
               ❌ Este nombre ya está en uso
               {suggested && (
-                <>
-                  . Puedes probar con: <strong>{suggested}</strong>
-                </>
+                <>. Puedes probar con: <strong>{suggested}</strong></>
               )}
             </p>
           )}
         </div>
 
-        <EmailField form={form} name="email" />
+        {/* Use control and name props as EmailField expects */}
+        <EmailField control={form.control} name="email" />
+
         <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Registrarse"}
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            'Registrarse'
+          )}
         </Button>
       </form>
     </Form>
