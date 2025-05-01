@@ -1,36 +1,31 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Control } from "react-hook-form";
+// src/components/auth/UsernameField.tsx
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { FormControl, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { ControllerRenderProps, UseFormReturn } from 'react-hook-form';
+import { SignupFormValues } from './validation-schemas';
 
 interface UsernameFieldProps {
-  form: {
-    control: Control<any>;
-  };
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  field: ControllerRenderProps<SignupFormValues, "username">;
+  form: UseFormReturn<SignupFormValues>;
+  onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
-export const UsernameField = ({ form, onBlur }: UsernameFieldProps) => {
+export const UsernameField = ({ field, form, onBlur }: UsernameFieldProps) => {
   return (
-    <FormField
-      control={form.control}
-      name="username"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Nombre de usuario</FormLabel>
-          <FormControl>
-            <Input 
-              placeholder="Tu nombre de usuario" 
-              {...field} 
-              onBlur={(e) => {
-                field.onBlur(); // Mantener el comportamiento original del field
-                if (onBlur) onBlur(e); // Ejecutar el onBlur personalizado si existe
-              }} 
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <FormItem>
+      <FormLabel htmlFor="username">Nombre de usuario</FormLabel>
+      <FormControl>
+        <Input
+          {...field}
+          id="username"
+          placeholder="Elige un nombre de usuario único"
+          autoComplete="username"
+          onBlur={onBlur}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
   );
 };

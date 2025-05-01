@@ -54,27 +54,48 @@ export const signUpUser = async (
 
     console.log("Usuario creado con ID:", data.user.id);
     
-    // Intentar crear el perfil manualmente 
+    // Intentar crear el perfil manualmente - esto es importante por si la función auto-signup falla
     try {
+      const profileData = {
+        id: data.user.id,
+        username: username,
+        email: email,
+        recovery_email: recoveryEmail || null,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Creando perfil con datos:", profileData);
+      
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: data.user.id,
-          username: username,
-          email: email,
-          recovery_email: recoveryEmail || null,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(profileData);
         
       if (profileError) {
         console.error("Error al insertar perfil manualmente:", profileError);
       } else {
         console.log("Perfil insertado manualmente con éxito");
       }
+      
+      // También intentamos crear un patrón de desbloqueo vacío para el usuario
+      // (se llenará después cuando el usuario cree su patrón)
+      const { error: patternError } = await supabase
+        .from('unlock_patterns')
+        .insert({
+          user_id: data.user.id,
+          pattern: '[]', // Patrón vacío inicial
+        });
+        
+      if (patternError) {
+        console.error("Error al crear patrón inicial:", patternError);
+      } else {
+        console.log("Patrón inicial creado con éxito");
+      }
+      
     } catch (profileError) {
       console.error("Error al insertar perfil:", profileError);
     }
 
+    // Establecer bandera de primer inicio de sesión para mostrar creación de patrón
     sessionStorage.setItem('firstLogin', 'true');
 
     return { data, error: null };

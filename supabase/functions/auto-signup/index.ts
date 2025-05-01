@@ -41,54 +41,92 @@ serve(async (req: Request) => {
       // Continuamos a pesar del error, ya que lo importante es crear el perfil
     }
 
-    // 4) Intentar insertar primero (si no existe)
-    const { data: existingProfile, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", id)
-      .single();
+    // 4) Intentar crear el perfil en la tabla profiles
+    try {
+      // Verificar si ya existe un perfil para este usuario
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
 
-    if (checkError && checkError.code !== "PGRST116") {
-      console.error("Error al verificar perfil existente:", checkError);
+      if (checkError) {
+        console.error("Error al verificar perfil existente:", checkError);
+      }
+
+      if (!existingProfile) {
+        console.log("Perfil no encontrado, creando nuevo perfil");
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id,
+            email,
+            username,
+            recovery_email,
+            updated_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error("Error al insertar perfil:", insertError);
+          throw insertError;
+        }
+        console.log("Perfil insertado correctamente");
+      } else {
+        console.log("Perfil existente, actualizando");
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            email,
+            username,
+            recovery_email,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", id);
+
+        if (updateError) {
+          console.error("Error al actualizar perfil:", updateError);
+          throw updateError;
+        }
+        console.log("Perfil actualizado correctamente");
+      }
+
+      // 5) Crear un patrón de desbloqueo vacío para el nuevo usuario
+      try {
+        // Verificar si ya existe un patrón para este usuario
+        const { data: existingPattern, error: checkPatternError } = await supabase
+          .from("unlock_patterns")
+          .select("id")
+          .eq("user_id", id)
+          .maybeSingle();
+
+        if (checkPatternError) {
+          console.error("Error al verificar patrón existente:", checkPatternError);
+        }
+
+        if (!existingPattern) {
+          console.log("Creando patrón inicial para el usuario");
+          const { error: patternError } = await supabase
+            .from("unlock_patterns")
+            .insert({
+              user_id: id,
+              pattern: '[]', // Patrón vacío inicial
+            });
+
+          if (patternError) {
+            console.error("Error al crear patrón inicial:", patternError);
+          } else {
+            console.log("Patrón inicial creado con éxito");
+          }
+        }
+      } catch (patternError) {
+        console.error("Error general al crear patrón:", patternError);
+      }
+    } catch (profileError) {
+      console.error("Error general al gestionar perfil:", profileError);
+      throw profileError;
     }
 
-    if (!existingProfile) {
-      console.log("Perfil no encontrado, creando nuevo perfil");
-      const { error: insertError } = await supabase
-        .from("profiles")
-        .insert({
-          id,
-          email,
-          username,
-          recovery_email,
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertError) {
-        console.error("Error al insertar perfil:", insertError);
-        throw insertError;
-      }
-      console.log("Perfil insertado correctamente");
-    } else {
-      console.log("Perfil existente, actualizando");
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          email,
-          username,
-          recovery_email,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id);
-
-      if (updateError) {
-        console.error("Error al actualizar perfil:", updateError);
-        throw updateError;
-      }
-      console.log("Perfil actualizado correctamente");
-    }
-
-    // 5) Responde OK
+    // 6) Responde OK
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
