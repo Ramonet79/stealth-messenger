@@ -27,6 +27,16 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   });
 
   const onSubmit = async (values: SignupFormValues) => {
+    // Verificar que el nombre de usuario esté disponible antes de enviar
+    if (isAvailable === false) {
+      toast({ 
+        title: 'Error', 
+        description: 'El nombre de usuario ya está en uso. Prueba con otro nombre.',
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       console.log("Iniciando registro con:", values);
@@ -55,6 +65,56 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         title: 'Registro exitoso', 
         description: 'Cuenta creada correctamente' 
       });
+      
+      // Verificación adicional para asegurar que se creó el perfil
+      const userId = data.user?.id;
+      if (userId) {
+        // Verificar que el perfil exista
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profileError || !profileData) {
+          console.log('Perfil no encontrado, intentando crear manualmente');
+          // Intentar crear el perfil manualmente si no existe
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              username: values.username,
+              email: values.email,
+              updated_at: new Date().toISOString()
+            });
+
+          if (insertError) {
+            console.error('Error al crear perfil manualmente:', insertError);
+          }
+        }
+
+        // Verificar que el patrón exista
+        const { data: patternData, error: patternError } = await supabase
+          .from('unlock_patterns')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (patternError || !patternData) {
+          console.log('Patrón no encontrado, intentando crear manualmente');
+          // Intentar crear el patrón manualmente si no existe
+          const { error: insertPatternError } = await supabase
+            .from('unlock_patterns')
+            .insert({
+              user_id: userId,
+              pattern: '[]' // Patrón vacío inicial
+            });
+
+          if (insertPatternError) {
+            console.error('Error al crear patrón manualmente:', insertPatternError);
+          }
+        }
+      }
       
       onSuccess();
     } catch (err: any) {

@@ -4,11 +4,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-);
-
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
@@ -21,9 +16,21 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Configuración de Supabase con variables de entorno
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Inicializamos el cliente con la clave de servicio para operaciones admin
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // 2) Leer payload estándar de Auth Hook
     //    Supabase envía { user: User, session: Session, ... }
     const { user } = (await req.json()) as { user: any };
+
+    if (!user || !user.id) {
+      console.error("Información de usuario incompleta:", user);
+      throw new Error("Información de usuario incompleta");
+    }
 
     const id = user.id as string;
     const email = user.email as string;
@@ -56,15 +63,17 @@ serve(async (req: Request) => {
 
       if (!existingProfile) {
         console.log("Perfil no encontrado, creando nuevo perfil");
+        const profileData = {
+          id,
+          email,
+          username,
+          recovery_email,
+          updated_at: new Date().toISOString()
+        };
+
         const { error: insertError } = await supabase
           .from("profiles")
-          .insert({
-            id,
-            email,
-            username,
-            recovery_email,
-            updated_at: new Date().toISOString()
-          });
+          .insert(profileData);
 
         if (insertError) {
           console.error("Error al insertar perfil:", insertError);
@@ -117,6 +126,8 @@ serve(async (req: Request) => {
           } else {
             console.log("Patrón inicial creado con éxito");
           }
+        } else {
+          console.log("Patrón existente, no es necesario crear uno nuevo");
         }
       } catch (patternError) {
         console.error("Error general al crear patrón:", patternError);

@@ -18,10 +18,14 @@ export const UsernameField = ({ field, form, onBlur }: UsernameFieldProps) => {
       <FormLabel htmlFor="username">Nombre de usuario</FormLabel>
       <FormControl>
         <Input
-          {...field}
           id="username"
+          type="text"
           placeholder="Elige un nombre de usuario único"
           autoComplete="username"
+          value={field.value as string}
+          onChange={field.onChange}
+          name={field.name}
+          ref={field.ref}
           onBlur={onBlur}
         />
       </FormControl>

@@ -30,11 +30,14 @@ export function EmailField<T extends FieldValues>({ control, name }: EmailFieldP
       </FormLabel>
       <FormControl>
         <Input
-          {...field}
           id="email"
           type="email"
           placeholder="tú@ejemplo.com"
           onBlur={handleBlur}
+          onChange={field.onChange}
+          value={field.value as string}
+          name={field.name}
+          ref={field.ref}
           className="w-full"
         />
       </FormControl>

@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
-import { Database } from '@/integrations/supabase/types';
 
 export const signUpUser = async (
   email: string,
@@ -54,7 +53,7 @@ export const signUpUser = async (
 
     console.log("Usuario creado con ID:", data.user.id);
     
-    // Intentar crear el perfil manualmente - esto es importante por si la función auto-signup falla
+    // Intentar crear el perfil manualmente
     try {
       const profileData = {
         id: data.user.id,
@@ -66,33 +65,68 @@ export const signUpUser = async (
       
       console.log("Creando perfil con datos:", profileData);
       
-      const { error: profileError } = await supabase
+      // Primero verificamos si ya existe un perfil para evitar conflictos
+      const { data: existingProfile, error: checkProfileError } = await supabase
         .from('profiles')
-        .upsert(profileData);
+        .select('id')
+        .eq('id', data.user.id)
+        .maybeSingle();
+        
+      if (checkProfileError) {
+        console.error("Error al verificar perfil existente:", checkProfileError);
+      }
+      
+      // Si no existe, lo insertamos, si existe, lo actualizamos
+      let profileError;
+      if (!existingProfile) {
+        const { error } = await supabase
+          .from('profiles')
+          .insert(profileData);
+        profileError = error;
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', data.user.id);
+        profileError = error;
+      }
         
       if (profileError) {
-        console.error("Error al insertar perfil manualmente:", profileError);
+        console.error("Error al insertar/actualizar perfil:", profileError);
+        // No retornamos error aquí, intentamos continuar con la creación del patrón
       } else {
-        console.log("Perfil insertado manualmente con éxito");
+        console.log("Perfil insertado/actualizado con éxito");
       }
       
-      // También intentamos crear un patrón de desbloqueo vacío para el usuario
-      // (se llenará después cuando el usuario cree su patrón)
-      const { error: patternError } = await supabase
+      // Verificamos si ya existe un patrón de desbloqueo para este usuario
+      const { data: existingPattern, error: checkPatternError } = await supabase
         .from('unlock_patterns')
-        .insert({
-          user_id: data.user.id,
-          pattern: '[]', // Patrón vacío inicial
-        });
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
         
-      if (patternError) {
-        console.error("Error al crear patrón inicial:", patternError);
-      } else {
-        console.log("Patrón inicial creado con éxito");
+      if (checkPatternError) {
+        console.error("Error al verificar patrón existente:", checkPatternError);
       }
       
+      // Si no existe, creamos uno vacío
+      if (!existingPattern) {
+        const { error: patternError } = await supabase
+          .from('unlock_patterns')
+          .insert({
+            user_id: data.user.id,
+            pattern: '[]', // Patrón vacío inicial
+          });
+          
+        if (patternError) {
+          console.error("Error al crear patrón inicial:", patternError);
+        } else {
+          console.log("Patrón inicial creado con éxito");
+        }
+      }
     } catch (profileError) {
-      console.error("Error al insertar perfil:", profileError);
+      console.error("Error al gestionar perfil/patrón:", profileError);
+      // No retornamos error, para que el usuario pueda continuar con el proceso
     }
 
     // Establecer bandera de primer inicio de sesión para mostrar creación de patrón
