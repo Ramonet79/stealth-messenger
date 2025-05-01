@@ -1,5 +1,5 @@
+// src/components/auth/SignupForm.tsx
 import React, { useState } from 'react';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -11,17 +11,13 @@ import { EmailField } from './EmailField';
 import { PasswordField } from './PasswordField';
 import { signupSchema, SignupFormValues } from './validation-schemas';
 import { useCheckUsername } from '@/hooks/useCheckUsername';
+import { supabase } from '@/integrations/supabase/client';
 
-type SignupFormProps = {
-  onSuccess: () => void;
-};
+type SignupFormProps = { onSuccess: () => void };
 
 export const SignupForm = ({ onSuccess }: SignupFormProps) => {
-  const { signUp } = useSupabaseAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Hook para comprobar username en tiempo real
   const { isAvailable, suggested, loading, checkUsername } = useCheckUsername();
 
   const form = useForm<SignupFormValues>({
@@ -32,18 +28,55 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
     try {
-      const { error } = await signUp(
-        values.email,
-        values.password,
-        values.username,
-        values.email
-      );
-      if (error) {
-        toast({ title: 'Error al crear cuenta', description: error.message, variant: 'destructive' });
+      // 1) Crea la cuenta en Auth
+      const { data, error: signError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+      }, {
+        data: { username: values.username } // puedes guardar metadata si quieres
+      });
+
+      if (signError || !data.user) {
+        toast({
+          title: 'Error al crear cuenta',
+          description: signError?.message ?? 'No se pudo registrar',
+          variant: 'destructive',
+        });
         return;
       }
-      toast({ title: 'Cuenta creada con éxito', description: 'Ya puedes iniciar sesión.' });
+
+      const userId = data.user.id;
+
+      // 2) Inserta el perfil en la tabla `profiles`
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          username: values.username,
+          email: values.email,
+          created_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error('No se pudo crear el perfil:', profileError);
+        toast({
+          title: 'Registro incompleto',
+          description: 'La cuenta se creó, pero no el perfil. Contacta soporte.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Cuenta creada con éxito',
+        description: 'Ya puedes iniciar sesión o revisar tu correo.',
+      });
+
       onSuccess();
+
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error inesperado', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -55,30 +88,22 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         <div>
           <UsernameField
             form={form}
-            onBlur={e => {
-              const u = e.target.value;
-              if (u) checkUsername(u);
-            }}
+            onBlur={e => { const u = e.target.value; if (u) checkUsername(u); }}
           />
-          {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario...</p>}
-          {isAvailable === true && <p className="text-sm text-green-600">✔ Nombre de usuario disponible</p>}
+          {loading && <p className="text-sm text-gray-500">Verificando usuario…</p>}
+          {isAvailable === true && <p className="text-sm text-green-600">✔ Disponible</p>}
           {isAvailable === false && (
             <p className="text-sm text-red-600">
-              ❌ Este nombre ya está en uso{suggested && <>. Prueba: <strong>{suggested}</strong></>}            
+              ❌ En uso {suggested && <>. Prueba: <strong>{suggested}</strong></>}
             </p>
           )}
         </div>
 
-        <div>
-          <EmailField control={form.control} name="email" />
-        </div>
-
-        <div>
-          <PasswordField control={form.control} />
-        </div>
+        <EmailField control={form.control} name="email" />
+        <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Registrarse'}
+          {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : 'Registrarse'}
         </Button>
       </form>
     </Form>
