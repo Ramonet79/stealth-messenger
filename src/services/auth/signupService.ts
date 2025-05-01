@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
 import { Database } from '@/integrations/supabase/types';
@@ -9,6 +10,8 @@ export const signUpUser = async (
   recoveryEmail: string
 ): Promise<AuthResponse> => {
   try {
+    console.log("SignupService: iniciando registro para", username);
+    
     // Validar que el username no esté en uso (tabla 'profiles')
     const { data: usernameData, error: usernameError } = await supabase
       .from('profiles')
@@ -32,6 +35,7 @@ export const signUpUser = async (
       options: {
         data: {
           username,
+          recovery_email: recoveryEmail,
           email_confirmed: true,
         },
       },
@@ -48,15 +52,28 @@ export const signUpUser = async (
       return { data: null, error: { message: 'Usuario no creado.' } };
     }
 
-    // Crear perfil en 'profiles' usando RPC
-    await supabase.rpc(
-      'ensure_user_profile',
-      {
-        user_id: data.user.id,
-        user_email: email,
-        user_name: username,
-      } as Database['public']['Functions']['ensure_user_profile']['Args']
-    );
+    console.log("Usuario creado con ID:", data.user.id);
+    
+    // Intentar crear el perfil manualmente 
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          username: username,
+          email: email,
+          recovery_email: recoveryEmail || null,
+          updated_at: new Date().toISOString()
+        });
+        
+      if (profileError) {
+        console.error("Error al insertar perfil manualmente:", profileError);
+      } else {
+        console.log("Perfil insertado manualmente con éxito");
+      }
+    } catch (profileError) {
+      console.error("Error al insertar perfil:", profileError);
+    }
 
     sessionStorage.setItem('firstLogin', 'true');
 

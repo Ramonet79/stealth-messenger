@@ -29,36 +29,72 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
     try {
+      console.log("Iniciando registro con:", values);
+
+      // Verificar disponibilidad del nombre de usuario antes de continuar
+      const { data: existingUsernames } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', values.username)
+        .maybeSingle();
+
+      if (existingUsernames) {
+        toast({ 
+          variant: 'destructive',
+          title: 'Nombre de usuario no disponible', 
+          description: 'Este nombre de usuario ya está en uso' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Registrar al usuario en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           data: {
-            username: values.username
+            username: values.username,
+            email_confirmed: true
           }
         }
       });
 
       if (error) throw error;
 
+      console.log("Usuario registrado:", data?.user?.id);
+
       // Intentar crear manualmente el perfil en caso de que la función auto-signup falle
-      try {
-        await supabase.from('profiles').insert({
-          id: data.user?.id,
-          username: values.username,
-          email: values.email,
-          updated_at: new Date().toISOString()
-        });
-        console.log("Perfil creado manualmente con éxito");
-      } catch (profileError) {
-        console.error("Error al crear el perfil manualmente:", profileError);
+      if (data.user) {
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              username: values.username,
+              email: values.email,
+              updated_at: new Date().toISOString()
+            });
+
+          if (profileError) {
+            console.error("Error al crear el perfil manualmente:", profileError);
+          } else {
+            console.log("Perfil creado manualmente con éxito");
+          }
+        } catch (profileError) {
+          console.error("Excepción al crear el perfil manualmente:", profileError);
+        }
       }
 
-      toast({ title: 'Revisa tu email para confirmar tu cuenta.' });
+      toast({ title: 'Registro exitoso', description: 'Cuenta creada correctamente' });
       onSuccess();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      console.error("Error en registro:", err);
+      toast({ 
+        title: 'Error', 
+        description: err.message || 'Error durante el registro', 
+        variant: 'destructive' 
+      });
     } finally {
       setIsSubmitting(false);
     }
