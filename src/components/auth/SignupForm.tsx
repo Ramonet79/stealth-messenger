@@ -28,55 +28,16 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
     try {
-      // 1) Crea la cuenta en Auth
-      const { data, error: signError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-      }, {
-        data: { username: values.username } // puedes guardar metadata si quieres
-      });
+      const { data, error } = await supabase.auth.signUp(
+        { email: values.email, password: values.password },
+        { data: { username: values.username } }
+      );
+      if (error) throw error;
 
-      if (signError || !data.user) {
-        toast({
-          title: 'Error al crear cuenta',
-          description: signError?.message ?? 'No se pudo registrar',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const userId = data.user.id;
-
-      // 2) Inserta el perfil en la tabla `profiles`
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          username: values.username,
-          email: values.email,
-          created_at: new Date().toISOString(),
-        });
-
-      if (profileError) {
-        console.error('No se pudo crear el perfil:', profileError);
-        toast({
-          title: 'Registro incompleto',
-          description: 'La cuenta se creó, pero no el perfil. Contacta soporte.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Cuenta creada con éxito',
-        description: 'Ya puedes iniciar sesión o revisar tu correo.',
-      });
-
+      toast({ title: 'Revisa tu email para confirmar tu cuenta.' });
       onSuccess();
-
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error inesperado', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -88,13 +49,16 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         <div>
           <UsernameField
             form={form}
-            onBlur={e => { const u = e.target.value; if (u) checkUsername(u); }}
+            onBlur={e => {
+              const u = e.target.value;
+              if (u) checkUsername(u);
+            }}
           />
-          {loading && <p className="text-sm text-gray-500">Verificando usuario…</p>}
+          {loading && <p className="text-sm text-gray-500">Verificando nombre de usuario…</p>}
           {isAvailable === true && <p className="text-sm text-green-600">✔ Disponible</p>}
           {isAvailable === false && (
             <p className="text-sm text-red-600">
-              ❌ En uso {suggested && <>. Prueba: <strong>{suggested}</strong></>}
+              ❌ En uso{suggested && <>. Prueba: <strong>{suggested}</strong></>}
             </p>
           )}
         </div>
@@ -103,7 +67,7 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
         <PasswordField control={form.control} />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : 'Registrarse'}
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Registrarse'}
         </Button>
       </form>
     </Form>
