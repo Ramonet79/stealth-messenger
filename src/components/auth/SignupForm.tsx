@@ -1,3 +1,4 @@
+
 // src/components/auth/SignupForm.tsx
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -28,11 +29,31 @@ export const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.signUp(
-        { email: values.email, password: values.password },
-        { data: { username: values.username } }
-      );
+      // Registrar al usuario en Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            username: values.username
+          }
+        }
+      });
+
       if (error) throw error;
+
+      // Intentar crear manualmente el perfil en caso de que la función auto-signup falle
+      try {
+        await supabase.from('profiles').insert({
+          id: data.user?.id,
+          username: values.username,
+          email: values.email,
+          updated_at: new Date().toISOString()
+        });
+        console.log("Perfil creado manualmente con éxito");
+      } catch (profileError) {
+        console.error("Error al crear el perfil manualmente:", profileError);
+      }
 
       toast({ title: 'Revisa tu email para confirmar tu cuenta.' });
       onSuccess();
