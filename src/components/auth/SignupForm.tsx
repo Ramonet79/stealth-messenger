@@ -13,6 +13,7 @@ import { PasswordField } from './PasswordField';
 import { signupSchema, SignupFormValues } from './validation-schemas';
 import { useCheckUsername } from '@/hooks/useCheckUsername';
 import { signUpUser } from '@/services/auth';
+import { supabase } from '@/integrations/supabase/client';
 
 type SignupFormProps = { onSuccess: () => void };
 

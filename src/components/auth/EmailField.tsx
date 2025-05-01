@@ -15,10 +15,10 @@ export function EmailField<T extends FieldValues>({ control, name }: EmailFieldP
   const { field } = useController({ control, name });
   const { isAvailable, loading, checkEmail } = useCheckEmail();
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value) {
-      checkEmail(value);
+      await checkEmail(value);
     }
     field.onBlur(); // Mantener el comportamiento onBlur original de react-hook-form
   };
