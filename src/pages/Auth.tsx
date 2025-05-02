@@ -2,11 +2,10 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
-// ▪️ Import absoluto usando tu alias “@” (apunta siempre a /src)
-// ▪️ Así no dependen de cuántos subdirectorios haya encima
-import PatternCreation from '@/components/auth/PatternCreation';
-import LoginForm       from '@/components/auth/LoginForm';
-import SignupForm      from '@/components/auth/SignupForm';
+// Import corregido, fija bien la ruta relativa
+import PatternCreation from '../components/auth/PatternCreation';
+import LoginForm       from '../components/auth/LoginForm';
+import SignupForm      from '../components/auth/SignupForm';
 
 import { useAuthState } from '../hooks/useAuthState';
 
@@ -22,10 +21,9 @@ const Auth: React.FC = () => {
     handleLogin,
     handleCompletePatternCreation,
   } = useAuthState();
-
   const [isSignup, setIsSignup] = useState(false);
 
-  // 1️⃣ Flujo “primer login → creación de patrón”
+  // 1️⃣ Flujo de creación de patrón
   if (isCreatePattern && user) {
     return (
       <PatternCreation
@@ -39,17 +37,17 @@ const Auth: React.FC = () => {
     );
   }
 
-  // 2️⃣ Usuario ya autenticado → al chat
+  // 2️⃣ Usuario autenticado → chat
   if (user) {
     return <Navigate to="/" replace />;
   }
 
-  // 3️⃣ Si no hay usuario, mostramos login o signup
+  // 3️⃣ Login / Signup
   return (
     <div className="auth-container">
       {isSignup
         ? <SignupForm onSubmit={handleSignup} />
-        : <LoginForm  onSubmit={handleLogin} />
+        : <LoginForm  onSubmit={handleLogin}  />
       }
       <button
         onClick={() => setIsSignup(!isSignup)}
