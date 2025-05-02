@@ -98,7 +98,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
           toast({
             title: 'Advertencia',
             description: 'Tu cuenta se creó pero hubo un problema con tu perfil. Por favor, inicia sesión para completar el proceso.',
-            variant: 'warning',
+            variant: 'destructive', // Cambiado de 'warning' a 'destructive'
           });
         }
       } else {
