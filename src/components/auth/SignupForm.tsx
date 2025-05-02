@@ -1,5 +1,4 @@
 
-// src/components/auth/SignupForm.tsx
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -63,6 +62,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       );
 
       if (error) {
+        console.error("Error en SignupForm:", error);
         toast({
           title: 'Error al registrarse',
           description: error.message,
@@ -76,33 +76,24 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         description: 'Bienvenido a Stealth Messenger.',
       });
       
-      // Verificamos que se haya creado el perfil correctamente
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data?.user?.id)
-        .single();
-        
-      if (profileError) {
-        console.error("El perfil no se creó correctamente:", profileError);
-        
-        // Intentamos crearlo de nuevo usando la función RPC
-        const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
-          user_id: data?.user?.id,
-          user_email: values.email,
-          user_name: values.username
-        });
-        
-        if (rpcError) {
-          console.error("Error al crear perfil con RPC:", rpcError);
-          toast({
-            title: 'Advertencia',
-            description: 'Tu cuenta se creó pero hubo un problema con tu perfil. Por favor, inicia sesión para completar el proceso.',
-            variant: 'destructive', // Cambiado de 'warning' a 'destructive'
+      // Intentamos crear el perfil directamente usando la función RPC
+      // Esto es una capa adicional de seguridad en caso de que la inserción inicial haya fallado
+      if (data?.user?.id) {
+        try {
+          const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+            user_id: data.user.id,
+            user_email: values.email,
+            user_name: values.username
           });
+          
+          if (rpcError) {
+            console.error("Error al crear perfil con RPC:", rpcError);
+          } else {
+            console.log("Perfil creado/actualizado correctamente con RPC");
+          }
+        } catch (err) {
+          console.error("Error al llamar a ensure_user_profile:", err);
         }
-      } else {
-        console.log("Perfil creado correctamente:", profile);
       }
       
       onSuccess();
