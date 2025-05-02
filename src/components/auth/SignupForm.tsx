@@ -29,7 +29,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     defaultValues: { username: '', email: '', password: '' },
   });
 
+  // Verificamos el estado del usuario y email antes de enviar el formulario
+  const handleUsernameBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      await checkUsername(e.target.value);
+    }
+  };
+
   const handleSubmit = async (values: SignupFormValues) => {
+    // Verificar de nuevo antes de enviar
+    await checkUsername(values.username);
+    
     // Si el username ya está en uso, no seguimos
     if (isAvailable === false) {
       toast({
@@ -42,6 +52,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
 
     setIsSubmitting(true);
     try {
+      console.log("Iniciando registro con:", values.email, values.username);
+      
       // Llamamos al servicio que hace signup + crea profile + unlock_pattern
       const { data, error } = await signUpUser(
         values.email,
@@ -63,6 +75,36 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         title: '¡Registro exitoso!',
         description: 'Bienvenido a Stealth Messenger.',
       });
+      
+      // Verificamos que se haya creado el perfil correctamente
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data?.user?.id)
+        .single();
+        
+      if (profileError) {
+        console.error("El perfil no se creó correctamente:", profileError);
+        
+        // Intentamos crearlo de nuevo usando la función RPC
+        const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+          user_id: data?.user?.id,
+          user_email: values.email,
+          user_name: values.username
+        });
+        
+        if (rpcError) {
+          console.error("Error al crear perfil con RPC:", rpcError);
+          toast({
+            title: 'Advertencia',
+            description: 'Tu cuenta se creó pero hubo un problema con tu perfil. Por favor, inicia sesión para completar el proceso.',
+            variant: 'warning',
+          });
+        }
+      } else {
+        console.log("Perfil creado correctamente:", profile);
+      }
+      
       onSuccess();
     } catch (err: any) {
       console.error('Error inesperado en SignupForm:', err);
@@ -86,7 +128,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
             <UsernameField
               field={field}
               form={form}
-              onBlur={(e) => e.target.value && checkUsername(e.target.value)}
+              onBlur={handleUsernameBlur}
             />
           )}
         />

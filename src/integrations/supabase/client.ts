@@ -31,6 +31,15 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       // Detecta tokens en la URL (confirmación por email, magic link, etc.)
       detectSessionInUrl: true,
+      // Storage (para sesiones persistentes)
+      storage: globalThis.localStorage
     },
+    global: {
+      // Habilitar los logs en modo desarrollo
+      fetch: (...args) => {
+        // @ts-ignore
+        return fetch(...args);
+      }
+    }
   }
 )

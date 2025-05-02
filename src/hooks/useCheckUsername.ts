@@ -1,3 +1,4 @@
+
 // src/hooks/useCheckUsername.ts
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,25 +17,49 @@ export const useCheckUsername = () => {
     }
     setLoading(true);
 
-    // Cuenta cuántos perfiles tienen exactamente ese username
-    const { count, error } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('username', username.trim());
+    try {
+      // Primero comprobamos en auth.users para usuarios recién registrados
+      // que aún no tengan perfil
+      const { data: userData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      // Si no podemos verificar en auth (porque no tenemos permisos), sólo revisamos profiles
+      if (authError || !userData) {
+        console.log("No se puede verificar en auth.users, comprobando solo en profiles");
+      } else {
+        // Buscar en los metadatos de usuarios si el username ya existe
+        const existingUsernames = userData.users.filter(
+          u => u.user_metadata && u.user_metadata.username === username.trim()
+        );
+        if (existingUsernames.length > 0) {
+          setIsAvailable(false);
+          setSuggested(`${username.trim()}${Math.floor(Math.random() * 900 + 100)}`);
+          setLoading(false);
+          return;
+        }
+      }
 
-    if (error) {
-      console.error('Error comprobando username:', error);
-      setIsAvailable(null);
-      setSuggested(null);
-    } else if ((count ?? 0) > 0) {
-      setIsAvailable(false);
-      // Sugerencia aleatoria
-      setSuggested(`${username.trim()}${Math.floor(Math.random() * 900 + 100)}`);
-    } else {
-      setIsAvailable(true);
-      setSuggested(null);
+      // Después comprobamos en la tabla de perfiles
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('username', username.trim());
+
+      if (error) {
+        console.error('Error comprobando username:', error);
+        setIsAvailable(null);
+        setSuggested(null);
+      } else if ((count ?? 0) > 0) {
+        setIsAvailable(false);
+        setSuggested(`${username.trim()}${Math.floor(Math.random() * 900 + 100)}`);
+      } else {
+        setIsAvailable(true);
+        setSuggested(null);
+      }
+    } catch (err) {
+      console.error('Error general verificando username:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   return { isAvailable, suggested, loading, checkUsername };

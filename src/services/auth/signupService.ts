@@ -1,3 +1,4 @@
+
 // src/services/auth/signupService.ts
 import { supabase } from '@/integrations/supabase/client';
 import { AuthResponse } from '@/types/auth';
@@ -26,31 +27,46 @@ export const signUpUser = async (
 
   const userId = data.user.id;
 
-  // 2) Insertar perfil en tu tabla 'profiles'
-  const { error: insertProfileError } = await supabase
-    .from('profiles')
-    .insert({
-      id: userId,
-      username,
-      email,
-      created_at: new Date().toISOString()
-      // las otras columnas (avatar_url, phone…) son opcionales
-    });
+  try {
+    // 2) Insertar perfil en tu tabla 'profiles'
+    const { error: insertProfileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        username,
+        email,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
-  if (insertProfileError) {
-    // Esto fallará si las policies están mal; ahora lo verás en consola
-    console.error('Error insertando profile:', insertProfileError);
-    return { data: null, error: { message: insertProfileError.message } };
+    if (insertProfileError) {
+      console.error('Error insertando profile:', insertProfileError);
+      
+      // Si el perfil falla por RLS, intentamos usar la función SQL segura
+      const { error: functionError } = await supabase.rpc('ensure_user_profile', {
+        user_id: userId,
+        user_email: email,
+        user_name: username
+      });
+      
+      if (functionError) {
+        console.error('Error usando ensure_user_profile:', functionError);
+        return { data: null, error: { message: 'Error al crear el perfil: ' + functionError.message } };
+      }
+    }
+
+    // 3) Crear patrón vacío
+    const { error: insertPatternError } = await supabase
+      .from('unlock_patterns')
+      .insert({ user_id: userId, pattern: '[]' });
+    if (insertPatternError) {
+      console.error('Error insertando unlock_pattern:', insertPatternError);
+      // no interrumpimos, pues es secundario
+    }
+
+    return { data, error: null };
+  } catch (err: any) {
+    console.error('Error general en signUpUser:', err);
+    return { data: null, error: { message: err.message || 'Error desconocido al registrar usuario' } };
   }
-
-  // 3) (Opcional) Crear patrón vacío
-  const { error: insertPatternError } = await supabase
-    .from('unlock_patterns')
-    .insert({ user_id: userId, pattern: '[]' });
-  if (insertPatternError) {
-    console.error('Error insertando unlock_pattern:', insertPatternError);
-    // no interrumpimos, pues es secundario
-  }
-
-  return { data, error: null };
 };

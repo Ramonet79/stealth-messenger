@@ -48,57 +48,21 @@ serve(async (req: Request) => {
       // Continuamos a pesar del error, ya que lo importante es crear el perfil
     }
 
-    // 4) Intentar crear el perfil en la tabla profiles
+    // 4) Intentar crear el perfil usando la función SQL segura
     try {
-      // Verificar si ya existe un perfil para este usuario
-      const { data: existingProfile, error: checkError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Error al verificar perfil existente:", checkError);
+      const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+        user_id: id,
+        user_email: email,
+        user_name: username
+      });
+      
+      if (rpcError) {
+        console.error("Error llamando a ensure_user_profile:", rpcError);
+        throw rpcError;
       }
-
-      if (!existingProfile) {
-        console.log("Perfil no encontrado, creando nuevo perfil");
-        const profileData = {
-          id,
-          email,
-          username,
-          recovery_email,
-          updated_at: new Date().toISOString()
-        };
-
-        const { error: insertError } = await supabase
-          .from("profiles")
-          .insert(profileData);
-
-        if (insertError) {
-          console.error("Error al insertar perfil:", insertError);
-          throw insertError;
-        }
-        console.log("Perfil insertado correctamente");
-      } else {
-        console.log("Perfil existente, actualizando");
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            email,
-            username,
-            recovery_email,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", id);
-
-        if (updateError) {
-          console.error("Error al actualizar perfil:", updateError);
-          throw updateError;
-        }
-        console.log("Perfil actualizado correctamente");
-      }
-
+      
+      console.log("Perfil creado/actualizado correctamente mediante RPC");
+      
       // 5) Crear un patrón de desbloqueo vacío para el nuevo usuario
       try {
         // Verificar si ya existe un patrón para este usuario
@@ -131,6 +95,7 @@ serve(async (req: Request) => {
         }
       } catch (patternError) {
         console.error("Error general al crear patrón:", patternError);
+        // No lanzamos el error para que no interrumpa el flujo principal
       }
     } catch (profileError) {
       console.error("Error general al gestionar perfil:", profileError);
