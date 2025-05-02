@@ -1,10 +1,13 @@
+// src/pages/Auth.tsx
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
-// 🔥 RUTAS CORREGIDAS: apunta al directorio `auth`
+// ————— RUTAS CORREGIDAS ————— 
+// Asegúrate de que estos tres archivos existen exactamente aquí:
 import PatternCreation from '../components/auth/PatternCreation';
 import LoginForm       from '../components/auth/LoginForm';
 import SignupForm      from '../components/auth/SignupForm';
+// ——————————————————————————
 
 import { useAuthState } from '../hooks/useAuthState';
 
@@ -20,10 +23,9 @@ const Auth: React.FC = () => {
     handleLogin,
     handleCompletePatternCreation,
   } = useAuthState();
-
   const [isSignup, setIsSignup] = useState(false);
 
-  // 1️⃣ Flujo de creación de patrón
+  // 1️⃣ Si estamos creando patrón, mostramos ese flujo
   if (isCreatePattern && user) {
     return (
       <PatternCreation
@@ -37,17 +39,17 @@ const Auth: React.FC = () => {
     );
   }
 
-  // 2️⃣ Usuario ya autenticado → redirige al /
+  // 2️⃣ Si ya hay usuario autenticado (y no creación de patrón), redirigimos al chat
   if (user) {
     return <Navigate to="/" replace />;
   }
 
-  // 3️⃣ Mostramos formularios de login o signup
+  // 3️⃣ Si no hay usuario, mostramos los formularios
   return (
     <div className="auth-container">
       {isSignup
         ? <SignupForm onSubmit={handleSignup} />
-        : <LoginForm onSubmit={handleLogin} />
+        : <LoginForm  onSubmit={handleLogin} />
       }
       <button
         onClick={() => setIsSignup(!isSignup)}
