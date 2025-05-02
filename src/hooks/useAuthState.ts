@@ -1,95 +1,91 @@
-
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../services/supabaseClient';
+import toast from 'react-hot-toast';
 
 export const useAuthState = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [isResetPassword, setIsResetPassword] = useState(false);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [user, setUser] = useState(supabase.auth.user());
   const [isCreatePattern, setIsCreatePattern] = useState(false);
+
+  // Estado interno para el componente PatternCreation
+  const [patternStep, setPatternStep] = useState<0 | 1>(0);
   const [newPattern, setNewPattern] = useState<number[]>([]);
-  const [step, setStep] = useState(1);
-  
-  const location = useLocation();
+
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, loading } = useSupabaseAuth();
-  
-  // Check for first login status
+
+  // 1️⃣ Escucha cambios en la sesión y guarda el user
   useEffect(() => {
-    // If user is logged in for the first time
-    if (user && sessionStorage.getItem('firstLogin') === 'true') {
-      console.log("First login detected, starting pattern creation");
-      startPatternCreation();
+    const session = supabase.auth.session();
+    setUser(session?.user ?? null);
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => {
+      listener?.unsubscribe();
+    };
+  }, []);
+
+  // 2️⃣ Si hay user, comprueba si es primer login para arrancar flujo patrón
+  useEffect(() => {
+    if (user) {
+      const firstLogin = sessionStorage.getItem('firstLogin') === 'true';
+      if (firstLogin) {
+        setIsCreatePattern(true);
+      }
     }
   }, [user]);
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-  };
-
-  const showResetPassword = () => setIsResetPassword(true);
-  const hideResetPassword = () => setIsResetPassword(false);
-  
-  const showRecoveryMode = () => setIsRecoveryMode(true);
-  const hideRecoveryMode = () => setIsRecoveryMode(false);
-
-  const startPatternCreation = () => {
-    setIsCreatePattern(true);
-  };
-  
-  const handlePatternStep = (pattern: number[], isComplete: boolean) => {
-    if (step === 1) {
-      setNewPattern(pattern);
-      setStep(2);
-      return true;
-    } else if (isComplete) {
-      setIsCreatePattern(false);
-      // Clear the first login flag
-      sessionStorage.removeItem('firstLogin');
-      sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
-      if (user) {
-        navigate('/');
-      }
-      return true;
-    }
-    return false;
-  };
-
-  const handleSignupSuccess = () => {
-    // After signup, return to login screen
-    toast({
-      title: "Registro exitoso",
-      description: "Por favor, inicia sesión con tus credenciales",
+  // → Función que lanzas desde SignupForm
+  const handleSignup = async (data: { email: string; password: string }) => {
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
     });
-    
-    // Switch to login mode
-    setIsLogin(true);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    // marcamos primer login y dejamos que el componente Auth.tsx redirija al mismo /auth
+    sessionStorage.setItem('firstLogin', 'true');
+    toast.success('Registro creado. Por favor confirma tu email y luego haz login.');
+  };
+
+  // → Función que lanzas desde LoginForm
+  const handleLogin = async (data: { email: string; password: string }) => {
+    const { error } = await supabase.auth.signIn({
+      email: data.email,
+      password: data.password,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    // login exitoso → Auth.tsx detectará user y redirigirá a Index
+  };
+
+  // → Callback que recibe PatternCreation cuando el usuario confirma su patrón
+  const handleCompletePatternCreation = async () => {
+    // aquí guardas el patrón en tu tabla (por ejemplo, via RPC)
+    // await supabase.from('patterns').insert({ user_id: user.id, pattern: newPattern });
+
+    // eliminamos la flag para no volver a pedir patrón
+    sessionStorage.removeItem('firstLogin');
+    setIsCreatePattern(false);
+
+    // y ya que terminó, le llevamos al /
+    navigate('/', { replace: true });
   };
 
   return {
-    // State
-    isLogin,
-    isResetPassword,
-    isRecoveryMode,
-    isCreatePattern,
-    newPattern,
-    step,
     user,
-    loading,
-    
-    // Actions
-    toggleMode,
-    showResetPassword,
-    hideResetPassword,
-    showRecoveryMode,
-    hideRecoveryMode,
-    startPatternCreation,
-    handlePatternStep,
-    handleSignupSuccess,
-    setStep,
-    setIsLogin
+    isCreatePattern,
+    patternStep,
+    newPattern,
+    setPatternStep,
+    setNewPattern,
+    handleSignup,
+    handleLogin,
+    handleCompletePatternCreation,
   };
 };
