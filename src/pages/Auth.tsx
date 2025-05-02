@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
-// Import corregido, fija bien la ruta relativa
 import PatternCreation from '../components/auth/PatternCreation';
 import LoginForm       from '../components/auth/LoginForm';
 import SignupForm      from '../components/auth/SignupForm';
