@@ -1,3 +1,4 @@
+
 // src/components/auth/SignupForm.tsx
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +13,7 @@ import { PasswordField } from './PasswordField';
 import { signupSchema, SignupFormValues } from './validation-schemas';
 import { useCheckUsername } from '@/hooks/useCheckUsername';
 import { signUpUser } from '@/services/auth'; // ajusta la ruta si tu export está en otro fichero
+import { supabase } from '@/integrations/supabase/client'; // Añadido import de supabase
 
 type SignupFormProps = {
   onSuccess: () => void;

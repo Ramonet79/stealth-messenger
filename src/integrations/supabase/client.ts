@@ -1,6 +1,11 @@
+
 // src/integrations/supabase/client.ts
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'  // Ajusta la ruta si tu alias difiere
+
+// Debug logs para verificar que las variables están disponibles
+console.log('URL env:', import.meta.env.VITE_SUPABASE_URL)
+console.log('KEY env:', import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 // Estas variables deben existir en tu .env(.local):
 // VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
