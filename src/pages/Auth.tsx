@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import PatternCreation from '../components/PatternCreation';
-import LoginForm from '../components/LoginForm';
-import SignupForm from '../components/SignupForm';
+
+// ← RUTAS CORREGIDAS aquí
+import PatternCreation from '../components/auth/PatternCreation';
+import LoginForm       from '../components/auth/LoginForm';
+import SignupForm      from '../components/auth/SignupForm';
+
 import { useAuthState } from '../hooks/useAuthState';
 
 const Auth: React.FC = () => {
@@ -20,7 +23,6 @@ const Auth: React.FC = () => {
 
   const [isSignup, setIsSignup] = useState(false);
 
-  // 1️⃣ Primero: si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
   if (isCreatePattern && user) {
     return (
       <PatternCreation
@@ -34,12 +36,10 @@ const Auth: React.FC = () => {
     );
   }
 
-  // 2️⃣ Segundo: si ya hay usuario (y no estamos creando patrón), vamos al /
   if (user) {
     return <Navigate to="/" replace />;
   }
 
-  // 3️⃣ Si no hay usuario, mostramos formularios de login/registro
   return (
     <div className="auth-container">
       {isSignup ? (
