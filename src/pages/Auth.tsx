@@ -1,85 +1,59 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LoginForm } from '@/components/auth/LoginForm';
-import { SignupForm } from '@/components/auth/SignupForm';
-import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
-import { RecoveryForm } from '@/components/auth/RecoveryForm';
-import { PatternCreation } from '@/components/auth/PatternCreation';
-import { Loader2 } from 'lucide-react';
-import { AuthContainer } from '@/components/auth/AuthContainer';
-import { AuthHeader } from '@/components/auth/AuthHeader';
-import { AuthFormToggle } from '@/components/auth/AuthFormToggle';
-import { useAuthState } from '@/hooks/useAuthState';
+import PatternCreation from '../components/PatternCreation';
+import LoginForm from '../components/LoginForm';
+import SignupForm from '../components/SignupForm';
+import { useAuthState } from '../hooks/useAuthState';
 
-const Auth = () => {
+const Auth: React.FC = () => {
   const {
-    isLogin,
-    isResetPassword,
-    isRecoveryMode,
-    isCreatePattern,
-    newPattern,
-    step,
     user,
-    loading,
-    toggleMode,
-    showResetPassword,
-    hideResetPassword,
-    showRecoveryMode,
-    hideRecoveryMode,
-    startPatternCreation,
-    handlePatternStep,
-    handleSignupSuccess,
-    setStep
+    isCreatePattern,
+    patternStep,
+    newPattern,
+    setPatternStep,
+    setNewPattern,
+    handleSignup,
+    handleLogin,
+    handleCompletePatternCreation,
   } = useAuthState();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
-      </div>
-    );
-  }
+  const [isSignup, setIsSignup] = useState(false);
 
-  if (user && !isCreatePattern) {
-    return <Navigate to="/" replace />;
-  }
-
+  // 1️⃣ Primero: si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
   if (isCreatePattern && user) {
     return (
-      <PatternCreation 
+      <PatternCreation
         userId={user.id}
-        step={step} 
-        setStep={setStep}
+        step={patternStep}
+        setStep={setPatternStep}
         newPattern={newPattern}
-        setNewPattern={newPattern => handlePatternStep(newPattern, false)}
-        onComplete={() => handlePatternStep([], true)}
+        setNewPattern={setNewPattern}
+        onComplete={handleCompletePatternCreation}
       />
     );
   }
 
+  // 2️⃣ Segundo: si ya hay usuario (y no estamos creando patrón), vamos al /
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 3️⃣ Si no hay usuario, mostramos formularios de login/registro
   return (
-    <AuthContainer>
-      {!isResetPassword && !isRecoveryMode ? (
-        <>
-          <AuthHeader 
-            title={isLogin ? "Iniciar sesión en dScrt" : "Crear cuenta en dScrt"} 
-          />
-          
-          {isLogin ? (
-            <LoginForm onResetClick={showResetPassword} onRecoveryClick={showRecoveryMode} />
-          ) : (
-            <SignupForm onSuccess={handleSignupSuccess} />
-          )}
-          
-          <AuthFormToggle isLogin={isLogin} onToggle={toggleMode} />
-        </>
-      ) : isResetPassword ? (
-        <ResetPasswordForm onCancel={hideResetPassword} />
+    <div className="auth-container">
+      {isSignup ? (
+        <SignupForm onSubmit={handleSignup} />
       ) : (
-        <RecoveryForm onCancel={hideRecoveryMode} />
+        <LoginForm onSubmit={handleLogin} />
       )}
-    </AuthContainer>
+      <button
+        onClick={() => setIsSignup(!isSignup)}
+        className="mt-4 underline text-sm text-blue-600"
+      >
+        {isSignup ? '¿Ya tienes cuenta? Iniciar sesión' : '¿No tienes cuenta? Regístrate'}
+      </button>
+    </div>
   );
 };
 
