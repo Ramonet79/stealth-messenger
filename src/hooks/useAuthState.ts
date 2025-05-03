@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { User } from '@supabase/supabase-js';
 
 export const useAuthState = () => {
-  const [user, setUser] = useState(supabase.auth.getUser().then(({ data }) => data?.user || null).catch(() => null));
+  const [user, setUser] = useState<User | null>(null);
   const [isCreatePattern, setIsCreatePattern] = useState(false);
 
   // Estado interno para el componente PatternCreation
