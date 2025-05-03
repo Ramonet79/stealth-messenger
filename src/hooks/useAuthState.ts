@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import toast from 'react-hot-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useAuthState = () => {
-  const [user, setUser] = useState(supabase.auth.user());
+  const [user, setUser] = useState(supabase.auth.getUser().then(({ data }) => data?.user || null).catch(() => null));
   const [isCreatePattern, setIsCreatePattern] = useState(false);
 
   // Estado interno para el componente PatternCreation
@@ -13,17 +13,22 @@ export const useAuthState = () => {
   const [newPattern, setNewPattern] = useState<number[]>([]);
 
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // 1️⃣ Escucha cambios en la sesión y guarda el user
   useEffect(() => {
-    const session = supabase.auth.session();
-    setUser(session?.user ?? null);
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    
     return () => {
-      listener?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -44,22 +49,33 @@ export const useAuthState = () => {
       password: data.password,
     });
     if (error) {
-      toast.error(error.message);
+      toast({
+        variant: "destructive",
+        title: "Error de registro",
+        description: error.message,
+      });
       return;
     }
     // marcamos primer login y dejamos que el componente Auth.tsx redirija al mismo /auth
     sessionStorage.setItem('firstLogin', 'true');
-    toast.success('Registro creado. Por favor confirma tu email y luego haz login.');
+    toast({
+      title: "Registro creado",
+      description: "Por favor confirma tu email y luego haz login."
+    });
   };
 
   // → Función que lanzas desde LoginForm
   const handleLogin = async (data: { email: string; password: string }) => {
-    const { error } = await supabase.auth.signIn({
+    const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
     if (error) {
-      toast.error(error.message);
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: error.message,
+      });
       return;
     }
     // login exitoso → Auth.tsx detectará user y redirigirá a Index

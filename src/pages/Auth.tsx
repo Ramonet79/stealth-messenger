@@ -29,7 +29,7 @@ const Auth: React.FC = () => {
       <PatternCreation
         userId={user.id}
         step={patternStep}
-        setStep={setPatternStep}
+        setStep={(step) => setPatternStep(step as 0 | 1)}
         newPattern={newPattern}
         setNewPattern={setNewPattern}
         onComplete={handleCompletePatternCreation}
