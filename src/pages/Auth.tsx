@@ -22,6 +22,8 @@ const Auth: React.FC = () => {
   } = useAuthState();
   
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
 
   console.log("Auth render - usuario:", user?.id, "isCreatePattern:", isCreatePattern);
 
@@ -44,34 +46,55 @@ const Auth: React.FC = () => {
   if (user) {
     console.log("Usuario autenticado, verificando si tiene patrón");
     
-    // Verificar si el usuario tiene patrón antes de redirigir
-    const checkPatternAndNavigate = async () => {
-      try {
-        const { data, error } = await patternService.getPattern(user.id);
-        
-        if (error || !data || data.length === 0) {
-          console.log("Usuario sin patrón detectado - activando creación de patrón");
-          // Marcar para que se cree el patrón
-          sessionStorage.setItem('firstLogin', 'true');
-          // Recargar la página para que entre en el flujo de creación
-          window.location.reload();
-          return null;
-        } else {
-          console.log("Usuario tiene patrón, redirigiendo al index");
-          return <Navigate to="/" replace />;
-        }
-      } catch (err) {
-        console.error("Error al verificar patrón:", err);
-        // Por precaución, si hay error marcamos para crear patrón
-        sessionStorage.setItem('firstLogin', 'true');
-        // Recargar la página para entrar al flujo de creación
-        window.location.reload();
-        return null;
-      }
-    };
+    // Si ya determinamos que debe redirigir, lo hacemos
+    if (shouldRedirect) {
+      return <Navigate to={shouldRedirect} replace />;
+    }
     
-    // Renderizado condicional basado en verificación de patrón
-    return checkPatternAndNavigate() || (
+    // Si estamos cargando, mostramos spinner
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      );
+    }
+    
+    // Verificar si el usuario tiene patrón antes de redirigir
+    React.useEffect(() => {
+      const checkPatternAndNavigate = async () => {
+        if (!user) return;
+        
+        setIsLoading(true);
+        try {
+          const { data, error } = await patternService.getPattern(user.id);
+          
+          if (error || !data || data.length === 0) {
+            console.log("Usuario sin patrón detectado - activando creación de patrón");
+            // Marcar para que se cree el patrón
+            sessionStorage.setItem('firstLogin', 'true');
+            // Recargar la página para que entre en el flujo de creación
+            window.location.reload();
+          } else {
+            console.log("Usuario tiene patrón, redirigiendo al index");
+            setShouldRedirect("/");
+          }
+        } catch (err) {
+          console.error("Error al verificar patrón:", err);
+          // Por precaución, si hay error marcamos para crear patrón
+          sessionStorage.setItem('firstLogin', 'true');
+          // Recargar la página para entrar al flujo de creación
+          window.location.reload();
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      checkPatternAndNavigate();
+    }, [user]);
+    
+    // Mientras verifica, muestra spinner
+    return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
       </div>

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@supabase/supabase-js';
+import { patternService } from '@/services/patternService';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -152,4 +153,3 @@ export const useAuthState = () => {
     handleCompletePatternCreation,
   };
 };
-

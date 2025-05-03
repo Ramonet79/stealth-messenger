@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +31,7 @@ export const useSupabaseAuth = () => {
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log("Auth event:", event);
         
         // Si el evento es SIGNED_OUT, asegurarse de limpiar estado
@@ -46,7 +47,7 @@ export const useSupabaseAuth = () => {
           console.log("Usuario ha iniciado sesión");
           
           // Verificar si es un nuevo usuario mediante consulta a patrones
-          const checkIfNewUser = async (userId: string) => {
+          const checkIfNeedsPattern = async (userId: string) => {
             try {
               const { data, error } = await patternService.getPattern(userId);
               if (error || !data || data.length === 0) {
@@ -63,7 +64,7 @@ export const useSupabaseAuth = () => {
           
           if (session?.user) {
             // Verificar si el usuario tiene patrón configurado
-            checkIfNewUser(session.user.id);
+            await checkIfNeedsPattern(session.user.id);
           }
           
           setAuthState({
@@ -83,12 +84,12 @@ export const useSupabaseAuth = () => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log("Initial session check:", session ? "Session found" : "No session");
       
       if (session?.user) {
         // También verificar aquí si el usuario tiene patrón
-        const checkIfNewUser = async (userId: string) => {
+        const checkIfNeedsPattern = async (userId: string) => {
           try {
             const { data, error } = await patternService.getPattern(userId);
             if (error || !data || data.length === 0) {
@@ -102,7 +103,7 @@ export const useSupabaseAuth = () => {
           }
         };
         
-        checkIfNewUser(session.user.id);
+        await checkIfNeedsPattern(session.user.id);
       }
       
       setAuthState({
