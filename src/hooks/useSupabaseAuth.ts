@@ -15,6 +15,7 @@ import {
   sendPasswordReset, 
   recoverAccountWithEmail 
 } from '@/services/auth';
+import { patternService } from '@/services/patternService';
 
 export const useSupabaseAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -40,16 +41,36 @@ export const useSupabaseAuth = () => {
             user: null,
             loading: false,
           });
-        // First login after signup (SIGNED_IN event)
-        } else if (event === 'SIGNED_IN' && sessionStorage.getItem('firstLogin') === 'true') {
-          console.log("Primera sesión después del registro - activando modo de creación de patrón");
+        // IMPORTANTE: Verificar si es primera vez después de verificación de email
+        } else if (event === 'SIGNED_IN') {
+          console.log("Usuario ha iniciado sesión");
+          
+          // Verificar si es un nuevo usuario mediante consulta a patrones
+          const checkIfNewUser = async (userId: string) => {
+            try {
+              const { data, error } = await patternService.getPattern(userId);
+              if (error || !data || data.length === 0) {
+                console.log("Usuario nuevo detectado o sin patrón - activando modo de creación de patrón");
+                // Marcar como primera sesión para que se muestre el patrón
+                sessionStorage.setItem('firstLogin', 'true');
+              }
+            } catch (err) {
+              console.error("Error al verificar si es usuario nuevo:", err);
+              // Por seguridad, si hay error asumimos que es nuevo usuario
+              sessionStorage.setItem('firstLogin', 'true');
+            }
+          };
+          
+          if (session?.user) {
+            // Verificar si el usuario tiene patrón configurado
+            checkIfNewUser(session.user.id);
+          }
+          
           setAuthState({
             session,
             user: session?.user ?? null,
             loading: false,
           });
-          // Establecer bandera para que Index.tsx muestre instrucciones de creación de patrón
-          sessionStorage.setItem('firstLoginAfterConfirmation', 'true');
         } else {
           console.log("Actualización del estado de autenticación:", event);
           setAuthState({
@@ -64,6 +85,26 @@ export const useSupabaseAuth = () => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log("Initial session check:", session ? "Session found" : "No session");
+      
+      if (session?.user) {
+        // También verificar aquí si el usuario tiene patrón
+        const checkIfNewUser = async (userId: string) => {
+          try {
+            const { data, error } = await patternService.getPattern(userId);
+            if (error || !data || data.length === 0) {
+              console.log("Usuario sin patrón detectado en verificación inicial - activando modo de creación");
+              // Marcar como primera sesión para que se muestre el patrón
+              sessionStorage.setItem('firstLogin', 'true');
+            }
+          } catch (err) {
+            console.error("Error al verificar si es usuario nuevo en inicio:", err);
+            sessionStorage.setItem('firstLogin', 'true');
+          }
+        };
+        
+        checkIfNewUser(session.user.id);
+      }
+      
       setAuthState({
         session,
         user: session?.user ?? null,

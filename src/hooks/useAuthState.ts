@@ -35,7 +35,36 @@ export const useAuthState = () => {
 
   // 2️⃣ Si hay user, comprueba si es primer login para arrancar flujo patrón
   useEffect(() => {
+    const checkIfNeedsPattern = async () => {
+      if (!user) return;
+      
+      // Comprobar si ya existe patrón para este usuario
+      try {
+        const { data, error } = await patternService.getPattern(user.id);
+        
+        // No hay patrón guardado, activamos el flujo de creación
+        if (error || !data || data.length === 0) {
+          console.log("No se encontró patrón para el usuario, activando creación de patrón");
+          setIsCreatePattern(true);
+          return;
+        }
+        
+        console.log("Usuario ya tiene patrón configurado");
+        // El usuario ya tiene un patrón, no necesita crear uno nuevo
+        setIsCreatePattern(false);
+        
+      } catch (error) {
+        console.error("Error al verificar patrón existente:", error);
+        // En caso de error, por seguridad activamos el flujo de creación
+        setIsCreatePattern(true);
+      }
+    };
+    
     if (user) {
+      // Siempre verificamos si el usuario necesita crear un patrón
+      checkIfNeedsPattern();
+      
+      // También mantenemos la lógica de firstLogin para compatibilidad
       const firstLogin = sessionStorage.getItem('firstLogin') === 'true';
       if (firstLogin) {
         setIsCreatePattern(true);
@@ -84,15 +113,31 @@ export const useAuthState = () => {
 
   // → Callback que recibe PatternCreation cuando el usuario confirma su patrón
   const handleCompletePatternCreation = async () => {
-    // aquí guardas el patrón en tu tabla (por ejemplo, via RPC)
-    // await supabase.from('patterns').insert({ user_id: user.id, pattern: newPattern });
+    if (!user) return;
+    
+    try {
+      // Guardar el patrón en la base de datos
+      await patternService.savePattern(user.id, newPattern);
+      
+      // eliminamos la flag para no volver a pedir patrón
+      sessionStorage.removeItem('firstLogin');
+      setIsCreatePattern(false);
 
-    // eliminamos la flag para no volver a pedir patrón
-    sessionStorage.removeItem('firstLogin');
-    setIsCreatePattern(false);
-
-    // y ya que terminó, le llevamos al /
-    navigate('/', { replace: true });
+      // y ya que terminó, le llevamos al /
+      navigate('/', { replace: true });
+      
+      toast({
+        title: "Patrón guardado",
+        description: "Tu patrón de desbloqueo ha sido configurado correctamente."
+      });
+    } catch (error) {
+      console.error("Error al guardar patrón:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al guardar patrón",
+        description: "No se pudo guardar el patrón. Por favor intenta de nuevo."
+      });
+    }
   };
 
   return {
@@ -107,3 +152,4 @@ export const useAuthState = () => {
     handleCompletePatternCreation,
   };
 };
+

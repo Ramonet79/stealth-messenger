@@ -114,7 +114,28 @@ const Index = () => {
         setIsCreatingFirstPattern(true);
         setIsAuthenticated(false);
       } else {
-        setIsAuthenticated(false);
+        // Verificar si el usuario ya tiene patrón configurado
+        const checkUserPattern = async () => {
+          try {
+            const { data, error } = await patternService.getPattern(user.id);
+            
+            if (error || !data || data.length === 0) {
+              console.log("Usuario sin patrón detectado - activando creación de patrón");
+              setIsCreatingFirstPattern(true);
+              setIsAuthenticated(false);
+              sessionStorage.setItem('firstLogin', 'true');
+            } else {
+              setIsAuthenticated(false);
+            }
+          } catch (err) {
+            console.error("Error al verificar patrón del usuario:", err);
+            // Por seguridad, si hay error mostramos la creación de patrón
+            setIsCreatingFirstPattern(true);
+            setIsAuthenticated(false);
+          }
+        };
+        
+        checkUserPattern();
       }
       
       const isFirstTimeAfterConfirmation = sessionStorage.getItem('firstLoginAfterConfirmation') === 'true';
