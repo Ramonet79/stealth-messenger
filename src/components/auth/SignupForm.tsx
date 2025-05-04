@@ -12,7 +12,7 @@ import { PasswordField } from './PasswordField';
 import { signupSchema, SignupFormValues } from './validation-schemas';
 import { useCheckUsername } from '@/hooks/useCheckUsername';
 import { signUpUser } from '@/services/auth'; // ajusta la ruta si tu export está en otro fichero
-import { supabase } from '@/integrations/supabase/client'; // Añadido import de supabase
+import { supabase } from '@/integrations/supabase/client';
 
 type SignupFormProps = {
   onSuccess: () => void;
@@ -53,13 +53,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     try {
       console.log("Iniciando registro con:", values.email, values.username);
       
-      // Llamamos al servicio que hace signup + crea profile + unlock_pattern
-      const { data, error } = await signUpUser(
-        values.email,
-        values.password,
-        values.username,
-        '' // recoveryEmail opcional, si no lo usas déjalo vacío
-      );
+      // Modificamos para asegurarnos de que el nombre de usuario se guarda correctamente
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            username: values.username,
+            full_name: values.username // También guardamos en full_name para redundancia
+          }
+        }
+      });
 
       if (error) {
         console.error("Error en SignupForm:", error);
@@ -76,10 +80,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         description: 'Bienvenido a Stealth Messenger.',
       });
       
-      // Intentamos crear el perfil directamente usando la función RPC
-      // Esto es una capa adicional de seguridad en caso de que la inserción inicial haya fallado
+      // Una vez registrado, asegurémonos de crear el perfil explícitamente
       if (data?.user?.id) {
         try {
+          // Llamamos directamente a la función RPC para garantizar la creación del perfil
           const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
             user_id: data.user.id,
             user_email: values.email,
@@ -88,11 +92,26 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
           
           if (rpcError) {
             console.error("Error al crear perfil con RPC:", rpcError);
+            
+            // Si falla la RPC, intentamos insertar directamente
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({ 
+                id: data.user.id,
+                email: values.email,
+                username: values.username 
+              });
+              
+            if (insertError) {
+              console.error("También falló la inserción directa:", insertError);
+            } else {
+              console.log("Perfil creado mediante inserción directa");
+            }
           } else {
-            console.log("Perfil creado/actualizado correctamente con RPC");
+            console.log("Perfil creado correctamente con RPC");
           }
         } catch (err) {
-          console.error("Error al llamar a ensure_user_profile:", err);
+          console.error("Error al crear perfil de usuario:", err);
         }
       }
       
