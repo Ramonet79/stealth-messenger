@@ -9,6 +9,7 @@ import { patternService } from '@/services/patternService';
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isCreatePattern, setIsCreatePattern] = useState(false);
+  const [isCheckingPattern, setIsCheckingPattern] = useState(false);
 
   // Estado interno para el componente PatternCreation
   const [patternStep, setPatternStep] = useState<0 | 1>(0);
@@ -37,7 +38,10 @@ export const useAuthState = () => {
   // 2️⃣ Si hay user, comprueba si es primer login para arrancar flujo patrón
   useEffect(() => {
     const checkIfNeedsPattern = async () => {
-      if (!user) return;
+      if (!user || isCheckingPattern) return;
+      
+      // Prevenir múltiples ejecuciones
+      setIsCheckingPattern(true);
       
       // Comprobar si ya existe patrón para este usuario
       try {
@@ -47,31 +51,34 @@ export const useAuthState = () => {
         if (error || !data || data.length === 0) {
           console.log("No se encontró patrón para el usuario, activando creación de patrón");
           setIsCreatePattern(true);
-          return;
+        } else {
+          console.log("Usuario ya tiene patrón configurado");
+          // El usuario ya tiene un patrón, no necesita crear uno nuevo
+          setIsCreatePattern(false);
         }
-        
-        console.log("Usuario ya tiene patrón configurado");
-        // El usuario ya tiene un patrón, no necesita crear uno nuevo
-        setIsCreatePattern(false);
-        
       } catch (error) {
         console.error("Error al verificar patrón existente:", error);
         // En caso de error, por seguridad activamos el flujo de creación
         setIsCreatePattern(true);
+      } finally {
+        // Siempre liberar el flag de comprobación
+        setIsCheckingPattern(false);
       }
     };
     
     if (user) {
-      // Siempre verificamos si el usuario necesita crear un patrón
-      checkIfNeedsPattern();
+      // Verificamos si el usuario necesita crear un patrón, pero solo si no está ya en proceso
+      if (!isCheckingPattern) {
+        checkIfNeedsPattern();
+      }
       
-      // También mantenemos la lógica de firstLogin para compatibilidad
+      // También mantenemos la lógica de firstLogin para compatibilidad, pero evitando loops
       const firstLogin = sessionStorage.getItem('firstLogin') === 'true';
-      if (firstLogin) {
+      if (firstLogin && !isCreatePattern && !isCheckingPattern) {
         setIsCreatePattern(true);
       }
     }
-  }, [user]);
+  }, [user, isCheckingPattern]);
 
   // → Función que lanzas desde SignupForm
   const handleSignup = async (data: { email: string; password: string }) => {
@@ -144,6 +151,7 @@ export const useAuthState = () => {
   return {
     user,
     isCreatePattern,
+    isCheckingPattern,
     patternStep,
     newPattern,
     setPatternStep,

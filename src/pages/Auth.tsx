@@ -14,6 +14,7 @@ const Auth: React.FC = () => {
   const { 
     user, 
     isCreatePattern, 
+    isCheckingPattern,
     patternStep, 
     newPattern,
     setPatternStep,
@@ -24,46 +25,46 @@ const Auth: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
+  const [patternVerified, setPatternVerified] = useState(false);
 
-  console.log("Auth render - usuario:", user?.id, "isCreatePattern:", isCreatePattern);
+  console.log("Auth render - usuario:", user?.id, "isCreatePattern:", isCreatePattern, "isCheckingPattern:", isCheckingPattern);
 
-  // Effects are moved outside of conditionals to ensure consistent hook execution
+  // Efecto único para verificar patrón y redirección cuando hay usuario autenticado
   useEffect(() => {
-    // Only proceed with pattern verification if there's a user and we're not in pattern creation mode
-    if (user && !isCreatePattern) {
-      console.log("Usuario autenticado, verificando si tiene patrón");
-      
-      const checkPatternAndNavigate = async () => {
-        setIsLoading(true);
-        try {
-          const { data, error } = await patternService.getPattern(user.id);
-          
-          if (error || !data || data.length === 0) {
-            console.log("Usuario sin patrón detectado - activando creación de patrón");
-            // Marcar para que se cree el patrón
-            sessionStorage.setItem('firstLogin', 'true');
-            // Recargar la página para que entre en el flujo de creación
-            window.location.reload();
-          } else {
-            console.log("Usuario tiene patrón, redirigiendo al index");
-            setShouldRedirect("/");
-          }
-        } catch (err) {
-          console.error("Error al verificar patrón:", err);
-          // Por precaución, si hay error marcamos para crear patrón
-          sessionStorage.setItem('firstLogin', 'true');
-          // Recargar la página para entrar al flujo de creación
-          window.location.reload();
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      checkPatternAndNavigate();
+    // Evitamos ejecutar este efecto si estamos en modo creación de patrón o ya estamos cargando
+    if (!user || isCreatePattern || isLoading || patternVerified) {
+      return;
     }
-  }, [user, isCreatePattern]);
 
-  // 1️⃣ Primero: si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
+    const checkPatternAndNavigate = async () => {
+      // Marcamos que estamos en proceso de verificación
+      setIsLoading(true);
+      setPatternVerified(true);
+      
+      try {
+        console.log("Usuario autenticado, verificando si tiene patrón");
+        const { data, error } = await patternService.getPattern(user.id);
+        
+        if (error || !data || data.length === 0) {
+          console.log("Usuario sin patrón detectado - activando creación de patrón");
+          // Marcar para que se cree el patrón
+          sessionStorage.setItem('firstLogin', 'true');
+          // No recargamos la página, sino que dejamos que el state cambie naturalmente
+        } else {
+          console.log("Usuario tiene patrón, redirigiendo al index");
+          setShouldRedirect("/");
+        }
+      } catch (err) {
+        console.error("Error al verificar patrón:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkPatternAndNavigate();
+  }, [user, isCreatePattern, isLoading, patternVerified]);
+
+  // 1️⃣ Si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
   if (isCreatePattern && user) {
     console.log("Mostrando creación de patrón para usuario:", user.id);
     return (
@@ -78,7 +79,7 @@ const Auth: React.FC = () => {
     );
   }
   
-  // 2️⃣ Segundo: si hay usuario (y no estamos creando patrón), redirigimos según el estado
+  // 2️⃣ Si hay usuario (y no estamos creando patrón), redirigimos según el estado
   if (user) {
     // Si ya determinamos que debe redirigir, lo hacemos
     if (shouldRedirect) {
@@ -95,7 +96,7 @@ const Auth: React.FC = () => {
     }
   }
 
-  // 3️⃣ Tercero: si no hay usuario, mostramos formulario de login/signup
+  // 3️⃣ Si no hay usuario, mostramos formulario de login/signup
   return (
     <AuthContainer>
       <AuthHeader title={isLogin ? 'Iniciar sesión' : 'Regístrate'} />

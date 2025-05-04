@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PatternLock from '@/components/PatternLock';
 import { patternService } from '@/services/patternService';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +26,14 @@ export const PatternCreation = ({
 }: PatternCreationProps) => {
   const { toast } = useToast();
   const [showPatternModal, setShowPatternModal] = useState(false);
+  
+  // Mostrar el modal automáticamente al cargar
+  useEffect(() => {
+    if (!showPatternModal) {
+      setShowPatternModal(true);
+      setStep(1);
+    }
+  }, []);
   
   // Manejar creación de patrón
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {
@@ -114,33 +122,14 @@ export const PatternCreation = ({
         </AlertDescription>
       </Alert>
       
-      <div className="flex flex-col items-center">
-        <Button 
-          onClick={() => {
-            setStep(1);
-            setShowPatternModal(true);
-          }}
-          size="lg"
-          className="mb-4"
-        >
-          Crear Patrón de Acceso al Chat dScrt
-        </Button>
-        
-        <p className="text-sm text-gray-600 mt-4 text-center max-w-md">
-          Después de crear tu patrón, podrás acceder al chat dScrt 
-          pulsando el icono de configuración en la app camuflada.
-        </p>
-      </div>
-      
       <Dialog 
         open={showPatternModal} 
         onOpenChange={(open) => {
-          if (!open) {
-            // Solo permitir cerrar el modal si no estamos en medio de la confirmación
-            if (step !== 2) {
-              setShowPatternModal(false);
-            }
+          // No permitir cerrar el modal manualmente durante la configuración
+          if (!open && step === 2) {
+            return;
           }
+          setShowPatternModal(open);
         }}
       >
         <DialogContent className="sm:max-w-md h-[90vh] flex flex-col">
