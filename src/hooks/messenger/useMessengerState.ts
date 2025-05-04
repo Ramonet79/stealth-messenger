@@ -46,6 +46,8 @@ export const useMessengerState = (onUnreadMessagesChange?: (hasUnread: boolean) 
     handlePatternComplete,
     handleSaveContactPattern
   } = usePatternLock();
+
+  console.log("useMessengerState - Contactos actuales:", contacts);
   
   // Effect to check for unread messages and notify
   useEffect(() => {

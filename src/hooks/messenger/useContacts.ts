@@ -8,36 +8,65 @@ import { supabase } from '@/integrations/supabase/client';
 import { patternService } from '@/services/patternService';
 
 export const useContacts = () => {
-  const [contacts, setContacts] = useState<Contact[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      phone: '+1234567890',
-      lastMessage: 'Hola, ¿cómo estás?',
-      timestamp: '10:45',
-      unread: true
-    },
-    {
-      id: '2',
-      name: 'María García',
-      phone: '+34612345678',
-      lastMessage: '¿Te llegaron los archivos que envié?',
-      timestamp: 'Ayer',
-      unread: false
-    },
-    {
-      id: '3',
-      name: 'Alex Smith',
-      phone: '+44712345678',
-      lastMessage: 'Ok, nos vemos mañana entonces.',
-      timestamp: 'Lun',
-      unread: false
-    }
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   
   const [contactsWithActiveLock, setContactsWithActiveLock] = useState<string[]>([]);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+
+  // Cargar contactos desde Supabase cuando el usuario se autentica
+  useEffect(() => {
+    const loadContactsFromDatabase = async () => {
+      if (!user) return;
+      
+      try {
+        console.log("Cargando contactos para el usuario:", user.id);
+        
+        const { data, error } = await supabase
+          .from('contacts')
+          .select(`
+            id, 
+            name, 
+            full_name, 
+            notes, 
+            contact_id,
+            created_at,
+            updated_at
+          `)
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error("Error al cargar contactos:", error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          console.log(`Se encontraron ${data.length} contactos en la base de datos:`, data);
+          
+          // Transformar los datos de Supabase al formato Contact
+          const formattedContacts: Contact[] = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            phone: '',  // Este campo podría cargarse de profiles si es necesario
+            fullName: item.full_name,
+            notes: item.notes,
+            lastMessage: 'Sin mensajes',
+            timestamp: new Date(item.created_at).toLocaleTimeString(),
+            unread: false
+          }));
+          
+          setContacts(formattedContacts);
+        } else {
+          console.log("No se encontraron contactos en la base de datos");
+          setContacts([]);
+        }
+      } catch (err) {
+        console.error("Error inesperado al cargar contactos:", err);
+      }
+    };
+    
+    loadContactsFromDatabase();
+  }, [user]);
 
   useEffect(() => {
     const checkContactsWithLock = async () => {
@@ -65,7 +94,7 @@ export const useContacts = () => {
     };
     
     checkContactsWithLock();
-  }, [user]);
+  }, [user, contacts.length]);
 
   const handleCreateChat = async (contactUsername: string, contactAlias: string) => {
     if (!user) return;
@@ -118,13 +147,13 @@ export const useContacts = () => {
       
       console.log("Contacto encontrado:", foundProfile);
       
-      // Verificar si el contacto ya existe
+      // Verificar si el contacto ya existe - CORREGIDO: Usar contact_id, no compareIds
       const { data: existingContact, error: existingError } = await supabase
         .from('contacts')
         .select('id')
         .eq('user_id', user.id)
         .eq('contact_id', foundProfile.id)
-        .single();
+        .maybeSingle();
         
       if (!existingError && existingContact) {
         console.log("Este contacto ya existe en la agenda:", existingContact);
@@ -173,7 +202,7 @@ export const useContacts = () => {
         fullName: foundProfile.username
       };
       
-      setContacts([newContact, ...contacts]);
+      setContacts(prevContacts => [newContact, ...prevContacts]);
       
       toast({
         title: "Contacto creado",
@@ -197,6 +226,24 @@ export const useContacts = () => {
       contact.id === contactId ? { ...contact, ...data } : contact
     ));
     
+    if (user) {
+      // También actualizar en la base de datos
+      supabase
+        .from('contacts')
+        .update({
+          name: data.name,
+          full_name: data.fullName,
+          notes: data.notes
+        })
+        .eq('id', contactId)
+        .eq('user_id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error al actualizar contacto en la base de datos:", error);
+          }
+        });
+    }
+    
     toast({
       title: "Contacto actualizado",
       description: "La información del contacto ha sido actualizada",
@@ -204,7 +251,21 @@ export const useContacts = () => {
   };
 
   const handleDeleteContact = (contactId: string) => {
-    setContacts(contacts.filter(contact => contact.id !== contactId));
+    setContacts(prevContacts => prevContacts.filter(contact => contact.id !== contactId));
+    
+    if (user) {
+      // También eliminar de la base de datos
+      supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactId)
+        .eq('user_id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error al eliminar contacto de la base de datos:", error);
+          }
+        });
+    }
     
     toast({
       title: "Contacto eliminado",
@@ -229,7 +290,7 @@ export const useContacts = () => {
   };
 
   const markContactAsRead = (contactId: string) => {
-    setContacts(contacts.map(contact => 
+    setContacts(prevContacts => prevContacts.map(contact => 
       contact.id === contactId ? { ...contact, unread: false } : contact
     ));
   };

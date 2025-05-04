@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, LogOut, Plus, UserPlus, Bell, BookOpen, Copy } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -39,6 +40,8 @@ const ChatList: React.FC<ChatListProps> = ({
 }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
+
+  console.log("ChatList - Renderizando con contactos:", contacts);
 
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(username);

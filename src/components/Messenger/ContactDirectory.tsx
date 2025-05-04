@@ -31,6 +31,8 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({
     notes: ''
   });
 
+  console.log("ContactDirectory - Contactos recibidos:", contacts);
+
   const handleEdit = (contact: Contact) => {
     setSelectedContact(contact);
     setEditForm({
