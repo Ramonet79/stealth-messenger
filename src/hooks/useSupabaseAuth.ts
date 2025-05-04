@@ -63,8 +63,12 @@ export const useSupabaseAuth = () => {
           };
           
           if (session?.user) {
-            // Verificar si el usuario tiene patrón configurado
-            await checkIfNeedsPattern(session.user.id);
+            // Asegurarnos de no realizar operaciones asíncronas en el callback principal
+            // para evitar problemas con los hooks de React
+            setTimeout(async () => {
+              // Verificar si el usuario tiene patrón configurado
+              await checkIfNeedsPattern(session.user.id);
+            }, 0);
           }
           
           setAuthState({
@@ -103,14 +107,23 @@ export const useSupabaseAuth = () => {
           }
         };
         
-        await checkIfNeedsPattern(session.user.id);
+        // Usar setTimeout para evitar problemas de hooks
+        setTimeout(async () => {
+          await checkIfNeedsPattern(session.user.id);
+          
+          setAuthState({
+            session,
+            user: session.user,
+            loading: false,
+          });
+        }, 0);
+      } else {
+        setAuthState({
+          session,
+          user: null,
+          loading: false,
+        });
       }
-      
-      setAuthState({
-        session,
-        user: session?.user ?? null,
-        loading: false,
-      });
     });
 
     return () => subscription.unsubscribe();

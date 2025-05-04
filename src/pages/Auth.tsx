@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthContainer }   from '@/components/auth/AuthContainer';
 import { AuthHeader }      from '@/components/auth/AuthHeader';
 import { AuthFormToggle }  from '@/components/auth/AuthFormToggle';
@@ -27,44 +27,13 @@ const Auth: React.FC = () => {
 
   console.log("Auth render - usuario:", user?.id, "isCreatePattern:", isCreatePattern);
 
-  // 1️⃣ Primero: si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
-  if (isCreatePattern && user) {
-    console.log("Mostrando creación de patrón para usuario:", user.id);
-    return (
-      <PatternCreation
-        userId={user.id}
-        step={patternStep}
-        setStep={(step) => setPatternStep(step as 0 | 1)}
-        newPattern={newPattern}
-        setNewPattern={setNewPattern}
-        onComplete={handleCompletePatternCreation}
-      />
-    );
-  }
-  
-  // 2️⃣ Segundo: si ya hay usuario (y no estamos creando patrón), comprobamos si tiene patrón definido
-  if (user) {
-    console.log("Usuario autenticado, verificando si tiene patrón");
-    
-    // Si ya determinamos que debe redirigir, lo hacemos
-    if (shouldRedirect) {
-      return <Navigate to={shouldRedirect} replace />;
-    }
-    
-    // Si estamos cargando, mostramos spinner
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-        </div>
-      );
-    }
-    
-    // Verificar si el usuario tiene patrón antes de redirigir
-    React.useEffect(() => {
+  // Effects are moved outside of conditionals to ensure consistent hook execution
+  useEffect(() => {
+    // Only proceed with pattern verification if there's a user and we're not in pattern creation mode
+    if (user && !isCreatePattern) {
+      console.log("Usuario autenticado, verificando si tiene patrón");
+      
       const checkPatternAndNavigate = async () => {
-        if (!user) return;
-        
         setIsLoading(true);
         try {
           const { data, error } = await patternService.getPattern(user.id);
@@ -91,16 +60,42 @@ const Auth: React.FC = () => {
       };
       
       checkPatternAndNavigate();
-    }, [user]);
-    
-    // Mientras verifica, muestra spinner
+    }
+  }, [user, isCreatePattern]);
+
+  // 1️⃣ Primero: si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
+  if (isCreatePattern && user) {
+    console.log("Mostrando creación de patrón para usuario:", user.id);
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
+      <PatternCreation
+        userId={user.id}
+        step={patternStep}
+        setStep={(step) => setPatternStep(step as 0 | 1)}
+        newPattern={newPattern}
+        setNewPattern={setNewPattern}
+        onComplete={handleCompletePatternCreation}
+      />
     );
   }
+  
+  // 2️⃣ Segundo: si hay usuario (y no estamos creando patrón), redirigimos según el estado
+  if (user) {
+    // Si ya determinamos que debe redirigir, lo hacemos
+    if (shouldRedirect) {
+      return <Navigate to={shouldRedirect} replace />;
+    }
+    
+    // Si estamos cargando, mostramos spinner
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      );
+    }
+  }
 
+  // 3️⃣ Tercero: si no hay usuario, mostramos formulario de login/signup
   return (
     <AuthContainer>
       <AuthHeader title={isLogin ? 'Iniciar sesión' : 'Regístrate'} />
