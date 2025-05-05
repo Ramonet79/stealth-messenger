@@ -14,7 +14,7 @@ export const signUpUser = async (
     username,
     recovery_email: recoveryEmail || '',
     full_name: username, // También guardamos en full_name para redundancia
-    name: username // Añadimos el campo name para el display_name
+    name: username // IMPORTANTE: Añadimos el campo name para el display_name
   };
   
   console.log("Registrando usuario con metadata:", userData);
