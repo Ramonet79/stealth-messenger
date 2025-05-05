@@ -7,19 +7,42 @@ SECURITY DEFINER -- Ejecutado con privilegios del creador
 SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, username, created_at, updated_at)
-  VALUES (
-    NEW.id, 
-    NEW.email, 
-    COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
-    now(),
-    now()
-  )
-  ON CONFLICT (id) DO UPDATE
-  SET email = EXCLUDED.email,
-      username = COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
-      updated_at = now();
-  RETURN NEW;
+  -- Extraer nombre de usuario de diferentes fuentes posibles en el orden de prioridad
+  DECLARE
+    username TEXT := COALESCE(
+      NEW.raw_user_meta_data->>'username',     -- Primero intentamos con username directo
+      NEW.raw_user_meta_data->>'name',         -- Luego con name
+      NEW.raw_user_meta_data->>'full_name',    -- Luego con full_name
+      split_part(NEW.email, '@', 1)            -- Finalmente usamos la parte del email
+    );
+  BEGIN
+    -- Guardar también en el display_name si no está configurado
+    IF NEW.raw_user_meta_data->>'name' IS NULL THEN
+      UPDATE auth.users SET raw_user_meta_data = 
+        jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(username))
+      WHERE id = NEW.id;
+    END IF;
+    
+    -- Crear o actualizar el perfil
+    INSERT INTO public.profiles (id, email, username, created_at, updated_at)
+    VALUES (
+      NEW.id, 
+      NEW.email, 
+      username,
+      now(),
+      now()
+    )
+    ON CONFLICT (id) DO UPDATE
+    SET email = EXCLUDED.email,
+        username = EXCLUDED.username,
+        updated_at = now();
+        
+    RETURN NEW;
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't break the signup flow
+    RAISE NOTICE 'Error creating profile: %', SQLERRM;
+    RETURN NEW;
+  END;
 END;
 $$;
 
@@ -37,6 +60,13 @@ SECURITY DEFINER -- Ejecutado con privilegios del creador
 SET search_path = ''
 AS $$
 BEGIN
+  -- Update the auth.users table to ensure display_name is set
+  UPDATE auth.users 
+  SET raw_user_meta_data = 
+    jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(user_name))
+  WHERE id = user_id;
+  
+  -- Create or update the profile
   INSERT INTO public.profiles (id, email, username, created_at, updated_at)
   VALUES (user_id, user_email, user_name, now(), now())
   ON CONFLICT (id) DO UPDATE

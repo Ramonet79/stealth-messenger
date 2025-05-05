@@ -34,17 +34,27 @@ serve(async (req: Request) => {
 
     const id = user.id as string;
     const email = user.email as string;
-    const username = (user.user_metadata?.username as string) || email.split("@")[0];
+    const username = user.user_metadata?.username as string || 
+                     user.user_metadata?.name as string ||
+                     user.user_metadata?.full_name as string ||
+                     email.split("@")[0];
     const recovery_email = (user.user_metadata?.recovery_email as string) || null;
 
     console.log("Auto-signup procesando usuario:", { id, email, username });
 
     // 3) Confirma el email automáticamente
     try {
-      await supabase.auth.admin.updateUserById(id, { email_confirm: true });
+      await supabase.auth.admin.updateUserById(id, { 
+        email_confirm: true,
+        user_metadata: {
+          ...user.user_metadata,
+          name: username,  // Importante: aseguramos que name esté establecido para display_name
+          username: username
+        }
+      });
       console.log("Email confirmado automáticamente para:", email);
     } catch (confirmError) {
-      console.error("Error al confirmar email:", confirmError);
+      console.error("Error al confirmar email o actualizar metadatos:", confirmError);
       // Continuamos a pesar del error, ya que lo importante es crear el perfil
     }
 

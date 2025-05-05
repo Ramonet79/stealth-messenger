@@ -9,11 +9,12 @@ export const signUpUser = async (
   username: string,
   recoveryEmail: string
 ): Promise<AuthResponse> => {
-  // Aseguramos que el username siempre se pase en el user_metadata
+  // Aseguramos que el username siempre se pase en el user_metadata y raw_user_meta_data
   const userData = {
     username,
     recovery_email: recoveryEmail || '',
-    full_name: username // También guardamos en full_name para redundancia
+    full_name: username, // También guardamos en full_name para redundancia
+    name: username // Añadimos el campo name para el display_name
   };
   
   console.log("Registrando usuario con metadata:", userData);
@@ -23,7 +24,8 @@ export const signUpUser = async (
     email,
     password,
     options: {
-      data: userData
+      data: userData,
+      emailRedirectTo: window.location.origin + '/auth' // Asegura que la redirección funcione en todas las plataformas
     }
   });
 
@@ -65,15 +67,6 @@ export const signUpUser = async (
     }
   } catch (err) {
     console.error("Error inesperado al crear perfil:", err);
-  }
-
-  // 4) Creamos el patrón de desbloqueo (opcional)
-  const { error: patternError } = await supabase
-    .from('unlock_patterns')
-    .insert({ user_id: userId, pattern: '[]' });
-
-  if (patternError) {
-    console.warn('unlock_pattern no creado:', patternError.message);
   }
 
   // Devolvemos los datos del registro
