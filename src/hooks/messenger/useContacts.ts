@@ -123,7 +123,8 @@ export const useContacts = () => {
           id: newContactId,
           user_id: user.id,
           name: contactName,
-          full_name: username // Guardamos el username en full_name
+          full_name: username, // Guardamos el username en full_name
+          contact_id: uuidv4() // Añadimos el campo contact_id requerido
         })
         .select();
         
