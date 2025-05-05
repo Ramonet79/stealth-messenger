@@ -26,13 +26,15 @@ const Auth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
   const [patternVerified, setPatternVerified] = useState(false);
+  const [patternCheckCompleted, setPatternCheckCompleted] = useState(false);
 
   console.log("Auth render - usuario:", user?.id, "isCreatePattern:", isCreatePattern, "isCheckingPattern:", isCheckingPattern);
 
   // Efecto único para verificar patrón y redirección cuando hay usuario autenticado
   useEffect(() => {
     // Evitamos ejecutar este efecto si estamos en modo creación de patrón o ya estamos cargando
-    if (!user || isCreatePattern || isLoading || patternVerified) {
+    // o ya hemos verificado el patrón o estamos en proceso de verificación
+    if (!user || isCreatePattern || isLoading || patternVerified || patternCheckCompleted) {
       return;
     }
 
@@ -58,11 +60,12 @@ const Auth: React.FC = () => {
         console.error("Error al verificar patrón:", err);
       } finally {
         setIsLoading(false);
+        setPatternCheckCompleted(true);
       }
     };
     
     checkPatternAndNavigate();
-  }, [user, isCreatePattern, isLoading, patternVerified]);
+  }, [user, isCreatePattern, isLoading, patternVerified, patternCheckCompleted]);
 
   // 1️⃣ Si estamos en el flujo de CREACIÓN de patrón, mostramos PatternCreation
   if (isCreatePattern && user) {

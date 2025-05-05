@@ -26,14 +26,17 @@ export const PatternCreation = ({
 }: PatternCreationProps) => {
   const { toast } = useToast();
   const [showPatternModal, setShowPatternModal] = useState(false);
+  const [modalInitialized, setModalInitialized] = useState(false);
   
-  // Mostrar el modal automáticamente al cargar
+  // Mostrar el modal automáticamente al cargar, pero solo una vez
   useEffect(() => {
-    if (!showPatternModal) {
+    if (!modalInitialized) {
+      console.log("Inicializando modal de patrón");
       setShowPatternModal(true);
+      setModalInitialized(true);
       setStep(1);
     }
-  }, []);
+  }, [modalInitialized, setStep]);
   
   // Manejar creación de patrón
   const handlePatternComplete = async (pattern: number[]): Promise<boolean> => {

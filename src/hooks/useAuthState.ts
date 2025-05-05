@@ -43,21 +43,30 @@ export const useAuthState = () => {
       // Prevenir múltiples ejecuciones
       setIsCheckingPattern(true);
       
-      // Comprobar si ya existe patrón para este usuario
       try {
+        // Verificar si ya existe patrón en sessionStorage para evitar múltiples comprobaciones
+        const firstLogin = sessionStorage.getItem('firstLogin') === 'true';
+        
+        if (firstLogin) {
+          console.log("First login detected, activating pattern creation");
+          setIsCreatePattern(true);
+          setIsCheckingPattern(false);
+          return;
+        }
+        
+        // Si no hay flag en sesión, verificamos en base de datos
         const { data, error } = await patternService.getPattern(user.id);
         
-        // No hay patrón guardado, activamos el flujo de creación
         if (error || !data || data.length === 0) {
-          console.log("No se encontró patrón para el usuario, activando creación de patrón");
+          console.log("No pattern found for user, activating pattern creation");
           setIsCreatePattern(true);
+          sessionStorage.setItem('firstLogin', 'true');
         } else {
-          console.log("Usuario ya tiene patrón configurado");
-          // El usuario ya tiene un patrón, no necesita crear uno nuevo
+          console.log("User already has pattern configured");
           setIsCreatePattern(false);
         }
       } catch (error) {
-        console.error("Error al verificar patrón existente:", error);
+        console.error("Error checking existing pattern:", error);
         // En caso de error, por seguridad activamos el flujo de creación
         setIsCreatePattern(true);
       } finally {
@@ -66,17 +75,8 @@ export const useAuthState = () => {
       }
     };
     
-    if (user) {
-      // Verificamos si el usuario necesita crear un patrón, pero solo si no está ya en proceso
-      if (!isCheckingPattern) {
-        checkIfNeedsPattern();
-      }
-      
-      // También mantenemos la lógica de firstLogin para compatibilidad, pero evitando loops
-      const firstLogin = sessionStorage.getItem('firstLogin') === 'true';
-      if (firstLogin && !isCreatePattern && !isCheckingPattern) {
-        setIsCreatePattern(true);
-      }
+    if (user && !isCheckingPattern) {
+      checkIfNeedsPattern();
     }
   }, [user, isCheckingPattern]);
 
