@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Contact } from '@/components/Messenger/types';
@@ -34,13 +35,13 @@ export const useContacts = () => {
       const formattedContacts: Contact[] = data.map(contact => ({
         id: contact.id,
         name: contact.name,
-        phone: contact.phone || '',
-        lastMessage: contact.last_message || 'Sin mensajes',
-        timestamp: contact.last_message_time || '00:00',
-        unread: contact.unread || false,
+        phone: '', // Usamos valor por defecto ya que no existe en la BD
+        lastMessage: 'Sin mensajes', // Valor por defecto
+        timestamp: '00:00', // Valor por defecto
+        unread: false, // Valor por defecto
         fullName: contact.full_name || null,
         notes: contact.notes || null,
-        hasCustomLock: contact.has_custom_lock || false
+        hasCustomLock: false // Inicializamos en false y luego actualizamos
       }));
 
       console.log("Contactos cargados:", formattedContacts.length);
@@ -59,18 +60,26 @@ export const useContacts = () => {
     
     try {
       const { data, error } = await supabase
-        .from('contact_patterns')
+        .from('contact_unlock_patterns')
         .select('contact_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_enabled', true);
         
       if (error) {
         console.error("Error al cargar patrones de contactos:", error);
         return;
       }
       
+      // Extraer IDs de contactos con patrón
       const contactsWithLock = data.map(item => item.contact_id);
       console.log("Contactos con patrón personalizado:", contactsWithLock);
       setContactsWithActiveLock(contactsWithLock);
+      
+      // Actualizar el estado de los contactos con el flag hasCustomLock
+      setContacts(prevContacts => prevContacts.map(contact => ({
+        ...contact,
+        hasCustomLock: contactsWithLock.includes(contact.id)
+      })));
     } catch (err) {
       console.error("Error al cargar contactos con patrón:", err);
     }
@@ -105,26 +114,16 @@ export const useContacts = () => {
       const now = new Date();
       const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
       
-      const newContact: Contact = {
-        id: uuidv4(),
-        name: contactName,
-        phone: '',
-        lastMessage: 'Nuevo chat creado',
-        timestamp,
-        unread: false
-      };
+      const newContactId = uuidv4();
       
-      // Guardar en Supabase
+      // Guardar en Supabase - asegurándonos de usar solo campos que existen en la tabla
       const { data, error } = await supabase
         .from('contacts')
         .insert({
-          id: newContact.id,
+          id: newContactId,
           user_id: user.id,
           name: contactName,
-          username: username,
-          last_message: newContact.lastMessage,
-          last_message_time: timestamp,
-          unread: false
+          full_name: username // Guardamos el username en full_name
         })
         .select();
         
@@ -137,6 +136,17 @@ export const useContacts = () => {
         });
         return null;
       }
+      
+      // Crear objeto Contact para la UI
+      const newContact: Contact = {
+        id: newContactId,
+        name: contactName,
+        phone: '',
+        lastMessage: 'Nuevo chat creado',
+        timestamp,
+        unread: false,
+        fullName: username
+      };
       
       // Actualizar estado local
       setContacts(prev => [...prev, newContact]);
@@ -163,14 +173,17 @@ export const useContacts = () => {
     if (!user) return;
     
     try {
+      // Solo enviamos a Supabase los campos que existen en la tabla
+      const dbUpdateData: any = {
+        name: data.name,
+        full_name: data.fullName,
+        notes: data.notes
+      };
+      
       // Actualizar en Supabase
       const { error } = await supabase
         .from('contacts')
-        .update({
-          name: data.name,
-          full_name: data.fullName,
-          notes: data.notes
-        })
+        .update(dbUpdateData)
         .eq('id', id)
         .eq('user_id', user.id);
         
@@ -227,7 +240,7 @@ export const useContacts = () => {
       
       // Eliminar también los patrones asociados si existen
       await supabase
-        .from('contact_patterns')
+        .from('contact_unlock_patterns')
         .delete()
         .eq('contact_id', id)
         .eq('user_id', user.id);
@@ -261,25 +274,7 @@ export const useContacts = () => {
     if (type === 'audio') displayMessage = '🎵 Audio';
     if (type === 'video') displayMessage = '🎬 Video';
     
-    // Actualizar en Supabase
-    if (user) {
-      supabase
-        .from('contacts')
-        .update({
-          last_message: displayMessage,
-          last_message_time: timestamp,
-          unread: true
-        })
-        .eq('id', contactId)
-        .eq('user_id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error("Error al actualizar último mensaje:", error);
-          }
-        });
-    }
-    
-    // Actualizar estado local
+    // Actualizamos solo en la UI, ya que la tabla en BD no tiene estos campos
     setContacts(prev => prev.map(contact => 
       contact.id === contactId 
         ? { 
@@ -294,21 +289,7 @@ export const useContacts = () => {
 
   // Marcar un contacto como leído
   const markContactAsRead = (contactId: string) => {
-    // Actualizar en Supabase
-    if (user) {
-      supabase
-        .from('contacts')
-        .update({ unread: false })
-        .eq('id', contactId)
-        .eq('user_id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error("Error al marcar contacto como leído:", error);
-          }
-        });
-    }
-    
-    // Actualizar estado local
+    // Actualizamos solo en la UI, ya que la tabla en BD no tiene estos campos
     setContacts(prev => prev.map(contact => 
       contact.id === contactId 
         ? { ...contact, unread: false } 
@@ -323,7 +304,7 @@ export const useContacts = () => {
     try {
       // Verificar si ya existe un patrón para este contacto
       const { data, error: checkError } = await supabase
-        .from('contact_patterns')
+        .from('contact_unlock_patterns')
         .select('*')
         .eq('user_id', user.id)
         .eq('contact_id', contactId);
@@ -336,7 +317,7 @@ export const useContacts = () => {
       // Si existe, actualizar; si no, insertar
       if (data && data.length > 0) {
         const { error } = await supabase
-          .from('contact_patterns')
+          .from('contact_unlock_patterns')
           .update({ pattern: JSON.stringify(pattern) })
           .eq('user_id', user.id)
           .eq('contact_id', contactId);
@@ -347,11 +328,12 @@ export const useContacts = () => {
         }
       } else {
         const { error } = await supabase
-          .from('contact_patterns')
+          .from('contact_unlock_patterns')
           .insert({
             user_id: user.id,
             contact_id: contactId,
-            pattern: JSON.stringify(pattern)
+            pattern: JSON.stringify(pattern),
+            is_enabled: true
           });
           
         if (error) {
@@ -363,13 +345,8 @@ export const useContacts = () => {
         setContactsWithActiveLock(prev => [...prev, contactId]);
       }
       
-      // Actualizar el contacto para indicar que tiene patrón personalizado
-      await supabase
-        .from('contacts')
-        .update({ has_custom_lock: true })
-        .eq('id', contactId)
-        .eq('user_id', user.id);
-        
+      // No necesitamos actualizar la tabla contacts ya que no tiene el campo has_custom_lock
+      
       // Actualizar estado local
       setContacts(prev => prev.map(contact => 
         contact.id === contactId 
