@@ -13,7 +13,11 @@ export interface AuthError {
 
 // Interface for authentication responses
 export interface AuthResponse {
-  data?: any;
+  data?: {
+    user?: any;
+    session?: any;
+  };
+  user?: any;
   error: AuthError | null;
 }
 

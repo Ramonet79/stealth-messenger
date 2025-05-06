@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -52,12 +51,11 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     try {
       console.log("Iniciando registro con:", values.email, values.username);
       
-      // Usar el servicio centralizado para el registro
+      // Usar el servicio centralizado para el registro con la firma actualizada
       const response = await signUpUser(
         values.email, 
         values.password,
-        values.username,
-        '' // No recovery email for now
+        values.username
       );
       
       if (response.error) {

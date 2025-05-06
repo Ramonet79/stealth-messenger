@@ -141,7 +141,7 @@ export const useSupabaseAuth = () => {
         description: response.error.message,
       });
     } else {
-      console.log("Registro exitoso:", response.data?.user?.id);
+      console.log("Registro exitoso:", response.user?.id);
       toast({
         title: "Registro exitoso",
         description: "Tu cuenta ha sido creada correctamente",
@@ -151,7 +151,7 @@ export const useSupabaseAuth = () => {
       sessionStorage.setItem('firstLogin', 'true');
       
       // Log in the user immediately after successful registration
-      if (response.data?.user) {
+      if (response.user) {
         console.log("Auto-iniciando sesión después del registro");
         await signIn(email, password);
       }
