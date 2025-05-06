@@ -1,4 +1,5 @@
-import { supabase } from "../supabaseClient";
+
+import { supabase } from "../../integrations/supabase/client";
 
 /**
  * Parámetros necesarios para registrar un usuario.
@@ -28,7 +29,10 @@ export async function signUpUser({
   username,
 }: SignUpParams): Promise<SignUpResponse> {
   // Construimos el metadata con el username
-  const userData = { username };
+  const userData = { 
+    username, 
+    name: username // Añadimos name explícitamente para display_name
+  };
   console.log("📥 Enviando a signUp options.data =", userData);
 
   // 1) Llamada a Supabase Auth para crear el usuario
