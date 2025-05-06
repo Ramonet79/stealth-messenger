@@ -33,10 +33,11 @@ export async function signUpUser(
   username: string,
   recoveryEmail?: string
 ): Promise<SignUpResponse> {
-  // Construimos el metadata con el username
+  // Construimos el metadata con el username y name explícitamente
   const userData = { 
     username, 
-    name: username // Añadimos name explícitamente para display_name
+    name: username, // IMPORTANTE: añadimos name explícitamente para display_name
+    full_name: username // Añadimos también full_name como respaldo
   };
   
   // Si hay email de recuperación, lo añadimos al metadata
@@ -65,6 +66,18 @@ export async function signUpUser(
   }
 
   console.log("✅ Registro exitoso:", data.user);
+  
+  // 2) Llamando a función auto-signup para confirmar email automáticamente
+  try {
+    console.log("Llamando a función auto-signup para confirmar email automáticamente");
+    await supabase.functions.invoke('auto-signup', {
+      body: { user: data.user }
+    });
+  } catch (fnError) {
+    console.error("Error al invocar auto-signup:", fnError);
+    // No bloqueamos el registro si falla la función
+  }
+  
   return { 
     user: data.user, 
     error: null,

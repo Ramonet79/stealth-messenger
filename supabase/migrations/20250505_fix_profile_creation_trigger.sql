@@ -16,14 +16,15 @@ BEGIN
       split_part(NEW.email, '@', 1)            -- Finalmente usamos la parte del email
     );
   BEGIN
-    -- Guardar también en el display_name si no está configurado
-    IF NEW.raw_user_meta_data->>'name' IS NULL THEN
-      UPDATE auth.users SET raw_user_meta_data = 
-        jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(username))
-      WHERE id = NEW.id;
-    END IF;
+    -- Guardamos en el user_metadata para asegurarnos que está disponible en todas partes
+    UPDATE auth.users SET raw_user_meta_data = 
+      jsonb_set(
+        jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(username)),
+        '{username}', to_jsonb(username)
+      )
+    WHERE id = NEW.id;
     
-    -- Crear o actualizar el perfil
+    -- Crear o actualizar el perfil con el username
     INSERT INTO public.profiles (id, email, username, created_at, updated_at)
     VALUES (
       NEW.id, 
@@ -36,6 +37,9 @@ BEGIN
     SET email = EXCLUDED.email,
         username = EXCLUDED.username,
         updated_at = now();
+        
+    -- Log para debug
+    RAISE NOTICE 'Profile created for % with username %', NEW.email, username;
         
     RETURN NEW;
   EXCEPTION WHEN OTHERS THEN
@@ -63,7 +67,10 @@ BEGIN
   -- Update the auth.users table to ensure display_name is set
   UPDATE auth.users 
   SET raw_user_meta_data = 
-    jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(user_name))
+    jsonb_set(
+      jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(user_name)),
+      '{username}', to_jsonb(user_name)
+    )
   WHERE id = user_id;
   
   -- Create or update the profile
@@ -73,5 +80,8 @@ BEGIN
   SET email = COALESCE(EXCLUDED.email, public.profiles.email),
       username = COALESCE(EXCLUDED.username, public.profiles.username),
       updated_at = now();
+      
+  -- Log para debug
+  RAISE NOTICE 'Profile ensured for % with username %', user_email, user_name;
 END;
 $$;

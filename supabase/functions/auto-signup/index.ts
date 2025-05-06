@@ -38,21 +38,21 @@ serve(async (req: Request) => {
                      user.user_metadata?.name as string ||
                      user.user_metadata?.full_name as string ||
                      email.split("@")[0];
-    const recovery_email = (user.user_metadata?.recovery_email as string) || null;
 
     console.log("Auto-signup procesando usuario:", { id, email, username });
+    console.log("User metadata recibido:", user.user_metadata);
 
-    // 3) Confirma el email automáticamente
+    // 3) Confirma el email automáticamente y asegura que el username esté en metadata
     try {
       await supabase.auth.admin.updateUserById(id, { 
         email_confirm: true,
         user_metadata: {
           ...user.user_metadata,
-          name: username,  // Importante: aseguramos que name esté establecido para display_name
-          username: username
+          username: username,
+          name: username  // Importante: aseguramos que name esté establecido para display_name
         }
       });
-      console.log("Email confirmado automáticamente para:", email);
+      console.log("Email confirmado y metadata actualizado para:", email);
     } catch (confirmError) {
       console.error("Error al confirmar email o actualizar metadatos:", confirmError);
       // Continuamos a pesar del error, ya que lo importante es crear el perfil
@@ -102,7 +102,22 @@ serve(async (req: Request) => {
         console.log("Perfil creado correctamente mediante inserción directa");
       }
     } else {
-      console.log("El perfil ya existe, no es necesario crearlo");
+      console.log("El perfil ya existe, actualizando username si es necesario");
+      
+      // Actualizar el perfil para asegurarnos de que tiene el username correcto
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          username,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+        
+      if (updateError) {
+        console.error("Error al actualizar perfil:", updateError);
+      } else {
+        console.log("Perfil actualizado correctamente con username:", username);
+      }
     }
       
     // 5) Crear un patrón de desbloqueo vacío para el nuevo usuario
