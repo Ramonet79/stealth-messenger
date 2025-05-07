@@ -1,54 +1,24 @@
+// src/services/auth/signupService.ts
+import { supabase } from '@/integrations/supabase/client'
+import { AuthResponse } from '@/types/auth'
 
-import { supabase } from "../../integrations/supabase/client";
-
-/**
- * Parámetros necesarios para registrar un usuario.
- */
-export interface SignUpParams {
-  email: string;
-  password: string;
-  username: string;
-  recoveryEmail?: string;
-}
-
-/**
- * Resultado de la operación de registro.
- */
-export interface SignUpResponse {
-  user: any | null;
-  error: any | null;
-  data?: {
-    user: any | null;
-  };
-}
-
-/**
- * Registra un nuevo usuario en Supabase.
- * Envía únicamente el metadata necesario y deja que el trigger en base de datos
- * cree automáticamente la fila en la tabla `profiles`.
- */
-export async function signUpUser(
+export const signUpUser = async (
   email: string,
   password: string,
   username: string,
-  recoveryEmail?: string
-): Promise<SignUpResponse> {
-  // Construimos el metadata con el username y name explícitamente
-  const userData = { 
-    username, 
-    name: username, // IMPORTANTE: añadimos name explícitamente para display_name
-    full_name: username // Añadimos también full_name como respaldo
+  recoveryEmail: string
+): Promise<AuthResponse> => {
+  const userData = {
+    username,
+    recovery_email: recoveryEmail || '',
+    full_name: username,
+    name: username
   };
-  
-  // Si hay email de recuperación, lo añadimos al metadata
-  if (recoveryEmail) {
-    userData['recovery_email'] = recoveryEmail;
-  }
-  
-  console.log("📥 Enviando a signUp options.data =", userData);
 
-  // 1) Llamada a Supabase Auth para crear el usuario
-  const { data, error } = await supabase.auth.signUp({
+  console.log("Registrando usuario con metadata:", userData);
+
+  // REGISTRO en Supabase Auth (sin emailRedirectTo)
+  const { data, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -56,33 +26,45 @@ export async function signUpUser(
     }
   });
 
-  if (error) {
-    console.error("❌ Error en registro:", error);
-    return { 
-      user: null, 
-      error,
-      data: null
-    };
+  if (signUpError) {
+    console.error("Error en signUpUser:", signUpError);
+    return { data: null, error: { message: signUpError.message } }
   }
 
-  console.log("✅ Registro exitoso:", data.user);
-  
-  // 2) Llamando a función auto-signup para confirmar email automáticamente
+  const userId = data.user!.id;
+  console.log("Usuario registrado con ID:", userId);
+
+  // Crear perfil en base de datos
   try {
-    console.log("Llamando a función auto-signup para confirmar email automáticamente");
-    await supabase.functions.invoke('auto-signup', {
-      body: { user: data.user }
+    const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+      user_id: userId,
+      user_email: email,
+      user_name: username
     });
-  } catch (fnError) {
-    console.error("Error al invocar auto-signup:", fnError);
-    // No bloqueamos el registro si falla la función
-  }
-  
-  return { 
-    user: data.user, 
-    error: null,
-    data: {
-      user: data.user
+
+    if (rpcError) {
+      console.error("Error al crear perfil con RPC:", rpcError);
+
+      // Fallback directo si falla RPC
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({ 
+          id: userId,
+          email: email,
+          username: username 
+        });
+
+      if (insertError) {
+        console.error("También falló la inserción directa del perfil:", insertError);
+      } else {
+        console.log("Perfil creado mediante inserción directa");
+      }
+    } else {
+      console.log("Perfil creado correctamente con RPC");
     }
-  };
+  } catch (err) {
+    console.error("Error inesperado al crear perfil:", err);
+  }
+
+  return { data, error: null }
 }
