@@ -12,7 +12,7 @@ const CORS_HEADERS = {
 };
 
 serve(async (req: Request) => {
-  // 1) Preflight CORS
+  // Preflight CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { 
       status: 204,
@@ -28,17 +28,17 @@ serve(async (req: Request) => {
     // Inicializamos el cliente con la clave de servicio para operaciones admin
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 2) Leer payload estándar de Auth Hook o del request directo
+    // Leer payload
     let payload;
     try {
       payload = await req.json();
+      console.log("Payload recibido:", JSON.stringify(payload));
     } catch (err) {
       console.error("Error al parsear JSON:", err);
       throw new Error("JSON inválido en el request");
     }
 
-    console.log("Payload recibido:", JSON.stringify(payload));
-
+    // Extraer información del usuario
     const user = payload.user || payload.record;
 
     if (!user || !user.id) {
@@ -49,10 +49,11 @@ serve(async (req: Request) => {
     const id = user.id as string;
     const email = user.email as string;
     
-    // Extract username from multiple possible locations to ensure we get it
+    // Extraer username de múltiples posibles ubicaciones
     const userMetadata = user.user_metadata || {};
     console.log("Metadata recibido:", JSON.stringify(userMetadata));
     
+    // Intentamos extraer el username de varias fuentes posibles
     const username = userMetadata.username || 
                      userMetadata.name || 
                      userMetadata.full_name ||
@@ -61,7 +62,7 @@ serve(async (req: Request) => {
 
     console.log("Auto-signup procesando usuario:", { id, email, username });
 
-    // 3) Confirma el email automáticamente y asegura que el username esté en metadata
+    // Confirmar el email automáticamente y asegurar que el username esté en metadata
     try {
       await supabase.auth.admin.updateUserById(id, { 
         email_confirm: true,
@@ -76,10 +77,9 @@ serve(async (req: Request) => {
       console.log("Email confirmado y metadata actualizado para:", email);
     } catch (confirmError) {
       console.error("Error al confirmar email o actualizar metadatos:", confirmError);
-      // Continuamos a pesar del error, ya que lo importante es crear el perfil
     }
 
-    // 4) Verificar si el perfil ya existe
+    // Verificar si el perfil ya existe
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
       .select('id, username')
@@ -91,7 +91,7 @@ serve(async (req: Request) => {
     if (!existingProfile) {
       console.log("Creando nuevo perfil para usuario:", id);
       
-      // Insertar el perfil directamente (con nombre de usuario)
+      // Insertar el perfil directamente
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -143,7 +143,7 @@ serve(async (req: Request) => {
       console.log("El perfil ya existe con username:", existingProfile.username);
     }
       
-    // 5) Crear un patrón de desbloqueo vacío para el nuevo usuario
+    // Crear un patrón de desbloqueo vacío para el nuevo usuario
     const { data: existingPattern, error: checkPatternError } = await supabase
       .from("unlock_patterns")
       .select("id")
@@ -168,7 +168,7 @@ serve(async (req: Request) => {
       console.log("Patrón existente, no es necesario crear uno nuevo");
     }
 
-    // 6) Responde OK
+    // Responde OK
     return new Response(JSON.stringify({ success: true, username }), {
       status: 200,
       headers: CORS_HEADERS
