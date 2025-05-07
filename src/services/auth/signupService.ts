@@ -2,6 +2,7 @@
 // src/services/auth/signupService.ts
 import { supabase } from '@/integrations/supabase/client'
 import { AuthResponse } from '@/types/auth'
+import { Capacitor } from '@capacitor/core';
 
 export const signUpUser = async (
   email: string,
@@ -19,6 +20,7 @@ export const signUpUser = async (
   };
 
   console.log("Registrando usuario con metadata completo:", userData);
+  console.log("Plataforma:", Capacitor.getPlatform(), "Es nativo:", Capacitor.isNativePlatform());
 
   // REGISTRO en Supabase Auth (sin emailRedirectTo)
   const { data, error: signUpError } = await supabase.auth.signUp({
@@ -26,7 +28,8 @@ export const signUpUser = async (
     password,
     options: {
       data: userData,
-      emailRedirectTo: window.location.origin // Add redirect URL for email confirmation
+      // No incluir emailRedirectTo en plataformas nativas
+      ...(Capacitor.isNativePlatform() ? {} : { emailRedirectTo: window.location.origin })
     }
   });
 
@@ -37,61 +40,69 @@ export const signUpUser = async (
 
   const userId = data.user!.id;
   console.log("Usuario registrado con ID:", userId);
+  console.log("Metadata guardado:", data.user?.user_metadata);
 
-  // Crear perfil en base de datos
+  // Crear perfil en base de datos usando múltiples intentos
   try {
-    // First try with RPC
-    const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
-      user_id: userId,
-      user_email: email,
-      user_name: username
-    });
+    // Esperar un momento para asegurarnos que el usuario esté completamente creado
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Primero intento directo de inserción (prioridad en móvil)
+    console.log("Intentando inserción directa del perfil");
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert({ 
+        id: userId,
+        email: email,
+        username: username 
+      });
 
-    if (rpcError) {
-      console.error("Error al crear perfil con RPC:", rpcError);
+    if (insertError) {
+      console.error("Error en inserción directa del perfil:", insertError);
+      
+      // Segundo intento con RPC
+      console.log("Intentando con función RPC");
+      const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+        user_id: userId,
+        user_email: email,
+        user_name: username
+      });
 
-      // Try direct insertion as fallback
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({ 
-          id: userId,
-          email: email,
-          username: username 
-        });
-
-      if (insertError) {
-        console.error("También falló la inserción directa del perfil:", insertError);
+      if (rpcError) {
+        console.error("Error al crear perfil con RPC:", rpcError);
       } else {
-        console.log("Perfil creado mediante inserción directa");
+        console.log("Perfil creado correctamente con RPC");
       }
     } else {
-      console.log("Perfil creado correctamente con RPC");
+      console.log("Perfil creado mediante inserción directa");
     }
     
-    // Additional call to auto-signup function to ensure profile creation
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({ 
-          user: {
-            id: userId,
-            email: email,
-            user_metadata: userData
-          }
-        })
-      });
-      
-      if (response.ok) {
-        console.log("Auto-signup confirmó el perfil correctamente");
-      } else {
-        console.error("Error en auto-signup:", await response.text());
+    // Llamada adicional a auto-signup como último recurso
+    if (Capacitor.isNativePlatform()) {
+      console.log("Dispositivo nativo detectado, usando llamada directa a auto-signup");
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'x-client-info': 'capacitor-app'
+          },
+          body: JSON.stringify({ 
+            user: {
+              id: userId,
+              email: email,
+              user_metadata: userData
+            }
+          })
+        });
+        
+        const responseText = await response.text();
+        console.log("Respuesta de auto-signup:", response.status, responseText);
+        
+      } catch (err) {
+        console.error("Error al llamar a auto-signup:", err);
       }
-    } catch (err) {
-      console.error("Error al llamar a auto-signup:", err);
     }
   } catch (err) {
     console.error("Error inesperado al crear perfil:", err);

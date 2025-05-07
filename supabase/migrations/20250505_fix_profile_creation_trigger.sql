@@ -1,5 +1,4 @@
 
-
 -- Función para garantizar que exista un perfil para cada usuario
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -46,7 +45,7 @@ BEGIN
     )
     ON CONFLICT (id) DO UPDATE
     SET email = EXCLUDED.email,
-        username = EXCLUDED.username,
+        username = COALESCE(EXCLUDED.username, public.profiles.username),
         updated_at = now();
         
     -- Log para debug
@@ -61,7 +60,7 @@ BEGIN
 END;
 $$;
 
--- Disparador que ejecuta la función cada vez que se crea un usuario
+-- Asegúrese de que el trigger exista
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
@@ -106,4 +105,3 @@ BEGIN
   RAISE NOTICE 'Profile ensured for % with username %', user_email, username_to_use;
 END;
 $$;
-

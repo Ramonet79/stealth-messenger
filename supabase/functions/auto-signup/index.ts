@@ -6,13 +6,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json"
 };
 
 serve(async (req: Request) => {
   // 1) Preflight CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { 
+      status: 204,
+      headers: CORS_HEADERS 
+    });
   }
 
   try {
@@ -24,7 +29,16 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 2) Leer payload estándar de Auth Hook o del request directo
-    const payload = await req.json();
+    let payload;
+    try {
+      payload = await req.json();
+    } catch (err) {
+      console.error("Error al parsear JSON:", err);
+      throw new Error("JSON inválido en el request");
+    }
+
+    console.log("Payload recibido:", JSON.stringify(payload));
+
     const user = payload.user || payload.record;
 
     if (!user || !user.id) {
@@ -37,6 +51,8 @@ serve(async (req: Request) => {
     
     // Extract username from multiple possible locations to ensure we get it
     const userMetadata = user.user_metadata || {};
+    console.log("Metadata recibido:", JSON.stringify(userMetadata));
+    
     const username = userMetadata.username || 
                      userMetadata.name || 
                      userMetadata.full_name ||
@@ -44,7 +60,6 @@ serve(async (req: Request) => {
                      email.split("@")[0];
 
     console.log("Auto-signup procesando usuario:", { id, email, username });
-    console.log("User metadata completo:", userMetadata);
 
     // 3) Confirma el email automáticamente y asegura que el username esté en metadata
     try {
@@ -76,7 +91,7 @@ serve(async (req: Request) => {
     if (!existingProfile) {
       console.log("Creando nuevo perfil para usuario:", id);
       
-      // Intentar insertar el perfil directamente (como servicio admin)
+      // Insertar el perfil directamente (con nombre de usuario)
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -156,13 +171,13 @@ serve(async (req: Request) => {
     // 6) Responde OK
     return new Response(JSON.stringify({ success: true, username }), {
       status: 200,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: CORS_HEADERS
     });
   } catch (err: any) {
     console.error("auto-signup error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: CORS_HEADERS
     });
   }
 });
