@@ -1,4 +1,5 @@
 
+
 -- Función para garantizar que exista un perfil para cada usuario
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -12,15 +13,25 @@ BEGIN
     username TEXT := COALESCE(
       NEW.raw_user_meta_data->>'username',     -- Primero intentamos con username directo
       NEW.raw_user_meta_data->>'name',         -- Luego con name
+      NEW.raw_user_meta_data->>'display_name', -- Luego con display_name
       NEW.raw_user_meta_data->>'full_name',    -- Luego con full_name
       split_part(NEW.email, '@', 1)            -- Finalmente usamos la parte del email
     );
   BEGIN
+    -- Log para debug
+    RAISE NOTICE 'Creating profile for % with username %', NEW.email, username;
+    RAISE NOTICE 'Raw metadata: %', NEW.raw_user_meta_data;
+
     -- Guardamos en el user_metadata para asegurarnos que está disponible en todas partes
     UPDATE auth.users SET raw_user_meta_data = 
       jsonb_set(
-        jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(username)),
-        '{username}', to_jsonb(username)
+        jsonb_set(
+          jsonb_set(
+            jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), 
+              '{name}', to_jsonb(username)),
+            '{username}', to_jsonb(username)),
+          '{full_name}', to_jsonb(username)),
+        '{display_name}', to_jsonb(username)
       )
     WHERE id = NEW.id;
     
@@ -63,25 +74,36 @@ LANGUAGE plpgsql
 SECURITY DEFINER -- Ejecutado con privilegios del creador
 SET search_path = ''
 AS $$
+DECLARE
+  username_to_use TEXT := COALESCE(user_name, split_part(user_email, '@', 1));
 BEGIN
+  -- Log para debug
+  RAISE NOTICE 'Ensuring profile for % with username %', user_email, username_to_use;
+
   -- Update the auth.users table to ensure display_name is set
   UPDATE auth.users 
   SET raw_user_meta_data = 
     jsonb_set(
-      jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{name}', to_jsonb(user_name)),
-      '{username}', to_jsonb(user_name)
+      jsonb_set(
+        jsonb_set(
+          jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), 
+            '{name}', to_jsonb(username_to_use)),
+          '{username}', to_jsonb(username_to_use)),
+        '{full_name}', to_jsonb(username_to_use)),
+      '{display_name}', to_jsonb(username_to_use)
     )
   WHERE id = user_id;
   
   -- Create or update the profile
   INSERT INTO public.profiles (id, email, username, created_at, updated_at)
-  VALUES (user_id, user_email, user_name, now(), now())
+  VALUES (user_id, user_email, username_to_use, now(), now())
   ON CONFLICT (id) DO UPDATE
   SET email = COALESCE(EXCLUDED.email, public.profiles.email),
       username = COALESCE(EXCLUDED.username, public.profiles.username),
       updated_at = now();
       
   -- Log para debug
-  RAISE NOTICE 'Profile ensured for % with username %', user_email, user_name;
+  RAISE NOTICE 'Profile ensured for % with username %', user_email, username_to_use;
 END;
 $$;
+

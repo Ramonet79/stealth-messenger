@@ -23,9 +23,9 @@ serve(async (req: Request) => {
     // Inicializamos el cliente con la clave de servicio para operaciones admin
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 2) Leer payload estándar de Auth Hook
-    //    Supabase envía { user: User, session: Session, ... }
-    const { user } = (await req.json()) as { user: any };
+    // 2) Leer payload estándar de Auth Hook o del request directo
+    const payload = await req.json();
+    const user = payload.user || payload.record;
 
     if (!user || !user.id) {
       console.error("Información de usuario incompleta:", user);
@@ -34,22 +34,28 @@ serve(async (req: Request) => {
 
     const id = user.id as string;
     const email = user.email as string;
-    const username = user.user_metadata?.username as string || 
-                     user.user_metadata?.name as string ||
-                     user.user_metadata?.full_name as string ||
+    
+    // Extract username from multiple possible locations to ensure we get it
+    const userMetadata = user.user_metadata || {};
+    const username = userMetadata.username || 
+                     userMetadata.name || 
+                     userMetadata.full_name ||
+                     userMetadata.display_name ||
                      email.split("@")[0];
 
     console.log("Auto-signup procesando usuario:", { id, email, username });
-    console.log("User metadata recibido:", user.user_metadata);
+    console.log("User metadata completo:", userMetadata);
 
     // 3) Confirma el email automáticamente y asegura que el username esté en metadata
     try {
       await supabase.auth.admin.updateUserById(id, { 
         email_confirm: true,
         user_metadata: {
-          ...user.user_metadata,
+          ...userMetadata,
           username: username,
-          name: username  // Importante: aseguramos que name esté establecido para display_name
+          name: username,
+          full_name: username,
+          display_name: username
         }
       });
       console.log("Email confirmado y metadata actualizado para:", email);
@@ -61,7 +67,7 @@ serve(async (req: Request) => {
     // 4) Verificar si el perfil ya existe
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, username')
       .eq('id', id)
       .maybeSingle();
       
@@ -101,10 +107,10 @@ serve(async (req: Request) => {
       } else {
         console.log("Perfil creado correctamente mediante inserción directa");
       }
-    } else {
-      console.log("El perfil ya existe, actualizando username si es necesario");
+    } else if (!existingProfile.username) {
+      console.log("El perfil existe pero sin username, actualizando username:", username);
       
-      // Actualizar el perfil para asegurarnos de que tiene el username correcto
+      // Actualizar el perfil para asignar el username
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -114,10 +120,12 @@ serve(async (req: Request) => {
         .eq('id', id);
         
       if (updateError) {
-        console.error("Error al actualizar perfil:", updateError);
+        console.error("Error al actualizar username en perfil:", updateError);
       } else {
         console.log("Perfil actualizado correctamente con username:", username);
       }
+    } else {
+      console.log("El perfil ya existe con username:", existingProfile.username);
     }
       
     // 5) Crear un patrón de desbloqueo vacío para el nuevo usuario
@@ -146,7 +154,7 @@ serve(async (req: Request) => {
     }
 
     // 6) Responde OK
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, username }), {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });

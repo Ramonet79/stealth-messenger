@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       const response = await signUpUser(
         values.email, 
         values.password,
-        values.username
+        values.username,
+        '' // Recovery email opcional
       );
       
       if (response.error) {
@@ -67,6 +69,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         });
         return;
       }
+
+      console.log("Registro exitoso, usuario creado:", response.data?.user?.id);
+      console.log("Estableciendo firstLogin=true en sessionStorage");
+      sessionStorage.setItem('firstLogin', 'true');
       
       toast({
         title: '¡Registro exitoso!',
