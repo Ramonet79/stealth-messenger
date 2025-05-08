@@ -32,17 +32,17 @@ serve(async (req: Request) => {
     let payload;
     try {
       payload = await req.json();
-      console.log("Payload recibido:", JSON.stringify(payload));
+      console.log("[auto-signup] Payload recibido:", JSON.stringify(payload));
     } catch (err) {
-      console.error("Error al parsear JSON:", err);
+      console.error("[auto-signup] Error al parsear JSON:", err);
       throw new Error("JSON inválido en el request");
     }
 
-    // Extraer información del usuario
+    // Extraer información del usuario - aceptamos múltiples formatos para mayor compatibilidad
     const user = payload.user || payload.record;
 
     if (!user || !user.id) {
-      console.error("Información de usuario incompleta:", user);
+      console.error("[auto-signup] Información de usuario incompleta:", user);
       throw new Error("Información de usuario incompleta");
     }
 
@@ -51,16 +51,16 @@ serve(async (req: Request) => {
     
     // Extraer username de múltiples posibles ubicaciones
     const userMetadata = user.user_metadata || {};
-    console.log("Metadata recibido:", JSON.stringify(userMetadata));
+    console.log("[auto-signup] Metadata recibido:", JSON.stringify(userMetadata));
     
     // Intentamos extraer el username de varias fuentes posibles
     const username = userMetadata.username || 
                      userMetadata.name || 
                      userMetadata.full_name ||
                      userMetadata.display_name ||
-                     email.split("@")[0];
+                     (email ? email.split("@")[0] : "user" + Math.floor(Math.random() * 10000));
 
-    console.log("Auto-signup procesando usuario:", { id, email, username });
+    console.log("[auto-signup] Procesando usuario:", { id, email, username });
 
     // Confirmar el email automáticamente y asegurar que el username esté en metadata
     try {
@@ -74,9 +74,9 @@ serve(async (req: Request) => {
           display_name: username
         }
       });
-      console.log("Email confirmado y metadata actualizado para:", email);
+      console.log("[auto-signup] Email confirmado y metadata actualizado para:", email);
     } catch (confirmError) {
-      console.error("Error al confirmar email o actualizar metadatos:", confirmError);
+      console.error("[auto-signup] Error al confirmar email o actualizar metadatos:", confirmError);
     }
 
     // Verificar si el perfil ya existe
@@ -86,10 +86,10 @@ serve(async (req: Request) => {
       .eq('id', id)
       .maybeSingle();
       
-    console.log("Verificación de perfil existente:", existingProfile || "No existe");
+    console.log("[auto-signup] Verificación de perfil existente:", existingProfile || "No existe");
 
     if (!existingProfile) {
-      console.log("Creando nuevo perfil para usuario:", id);
+      console.log("[auto-signup] Creando nuevo perfil para usuario:", id);
       
       // Insertar el perfil directamente
       const { error: insertError } = await supabase
@@ -103,10 +103,10 @@ serve(async (req: Request) => {
         });
         
       if (insertError) {
-        console.error("Error al insertar perfil directamente:", insertError);
+        console.error("[auto-signup] Error al insertar perfil directamente:", insertError);
         
         // Si falla, intentamos usar la función RPC segura
-        console.log("Intentando con función RPC segura");
+        console.log("[auto-signup] Intentando con función RPC segura");
         const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
           user_id: id,
           user_email: email,
@@ -114,16 +114,15 @@ serve(async (req: Request) => {
         });
         
         if (rpcError) {
-          console.error("Error llamando a ensure_user_profile:", rpcError);
-          throw rpcError;
+          console.error("[auto-signup] Error llamando a ensure_user_profile:", rpcError);
+        } else {
+          console.log("[auto-signup] Perfil creado correctamente mediante RPC");
         }
-        
-        console.log("Perfil creado correctamente mediante RPC");
       } else {
-        console.log("Perfil creado correctamente mediante inserción directa");
+        console.log("[auto-signup] Perfil creado correctamente mediante inserción directa");
       }
     } else if (!existingProfile.username) {
-      console.log("El perfil existe pero sin username, actualizando username:", username);
+      console.log("[auto-signup] El perfil existe pero sin username, actualizando username:", username);
       
       // Actualizar el perfil para asignar el username
       const { error: updateError } = await supabase
@@ -135,12 +134,12 @@ serve(async (req: Request) => {
         .eq('id', id);
         
       if (updateError) {
-        console.error("Error al actualizar username en perfil:", updateError);
+        console.error("[auto-signup] Error al actualizar username en perfil:", updateError);
       } else {
-        console.log("Perfil actualizado correctamente con username:", username);
+        console.log("[auto-signup] Perfil actualizado correctamente con username:", username);
       }
     } else {
-      console.log("El perfil ya existe con username:", existingProfile.username);
+      console.log("[auto-signup] El perfil ya existe con username:", existingProfile.username);
     }
       
     // Crear un patrón de desbloqueo vacío para el nuevo usuario
@@ -151,7 +150,7 @@ serve(async (req: Request) => {
       .maybeSingle();
 
     if (!existingPattern) {
-      console.log("Creando patrón inicial para el usuario");
+      console.log("[auto-signup] Creando patrón inicial para el usuario");
       const { error: patternError } = await supabase
         .from("unlock_patterns")
         .insert({
@@ -160,21 +159,34 @@ serve(async (req: Request) => {
         });
 
       if (patternError) {
-        console.error("Error al crear patrón inicial:", patternError);
+        console.error("[auto-signup] Error al crear patrón inicial:", patternError);
       } else {
-        console.log("Patrón inicial creado con éxito");
+        console.log("[auto-signup] Patrón inicial creado con éxito");
       }
     } else {
-      console.log("Patrón existente, no es necesario crear uno nuevo");
+      console.log("[auto-signup] Patrón existente, no es necesario crear uno nuevo");
     }
 
+    // Verificación final del perfil creado
+    const { data: finalCheck } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .eq('id', id)
+      .maybeSingle();
+      
+    console.log("[auto-signup] Verificación final del perfil:", finalCheck);
+
     // Responde OK
-    return new Response(JSON.stringify({ success: true, username }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      username,
+      profile: finalCheck || null
+    }), {
       status: 200,
       headers: CORS_HEADERS
     });
   } catch (err: any) {
-    console.error("auto-signup error:", err);
+    console.error("[auto-signup] Error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: CORS_HEADERS

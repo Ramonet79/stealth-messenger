@@ -50,7 +50,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
 
     setIsSubmitting(true);
     try {
-      console.log("Iniciando registro con:", values.email, values.username);
+      console.log("[SignupForm] Iniciando registro con:", values.email, values.username);
       
       // Usar el servicio centralizado para el registro con la firma actualizada
       const response = await signUpUser(
@@ -61,7 +61,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       );
       
       if (response.error) {
-        console.error("Error en SignupForm:", response.error);
+        console.error("[SignupForm] Error en registro:", response.error);
         toast({
           title: 'Error al registrarse',
           description: response.error.message,
@@ -70,8 +70,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         return;
       }
 
-      console.log("Registro exitoso, usuario creado:", response.data?.user?.id);
-      console.log("Estableciendo firstLogin=true en sessionStorage");
+      console.log("[SignupForm] Registro exitoso, usuario creado:", response.data?.user?.id);
+      console.log("[SignupForm] Estableciendo firstLogin=true en sessionStorage");
       sessionStorage.setItem('firstLogin', 'true');
       
       toast({
@@ -79,9 +79,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         description: 'Bienvenido a Stealth Messenger.',
       });
       
-      onSuccess();
+      // Esperar un momento para que se complete el proceso de creación de perfil
+      setTimeout(() => {
+        onSuccess();
+      }, 1000);
     } catch (err: any) {
-      console.error('Error inesperado en SignupForm:', err);
+      console.error('[SignupForm] Error inesperado:', err);
       toast({
         title: 'Error inesperado',
         description: err.message || 'Ha ocurrido un error.',
